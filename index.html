@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.24.5";
+    var APP_VERSION = "2026.03.24.7";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1220,7 +1220,7 @@
           gameMemo: {},
           saveTimeout: null,
           saveScheduled: false,
-          saveDelayMs: 180,
+          saveDelayMs: 450,
           panelOpenStartedAt: 0,
           panelOpenKey: "",
           weeklyRefresh: {}
@@ -2570,7 +2570,135 @@
       };
     }
 
-    function buildSaveSnapshot() {
+    function sameStatBlocks(left, right) {
+      var keys = ["str", "tec", "spd", "end", "vit"];
+      var i;
+      for (i = 0; i < keys.length; i += 1) {
+        if ((left && left[keys[i]]) !== (right && right[keys[i]])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function compactFighterEntityForSave(fighter) {
+      if (!fighter || typeof fighter !== "object") {
+        return fighter;
+      }
+      if (sameStatBlocks(fighter.attributes, fighter.stats)) {
+        delete fighter.stats;
+      }
+      if (fighter.gymId === fighter.currentGymId) {
+        delete fighter.gymId;
+      }
+      if (fighter.trainerId === fighter.currentTrainerId) {
+        delete fighter.trainerId;
+      }
+      if (fighter.currentCoachId === fighter.currentTrainerId) {
+        delete fighter.currentCoachId;
+      }
+      if (fighter.name && fighter.fullName && fighter.name === fighter.fullName) {
+        delete fighter.name;
+      }
+      if (!fighter.nickname) {
+        delete fighter.nickname;
+      }
+      if (fighter.tags instanceof Array && fighter.reputationTags instanceof Array && JSON.stringify(fighter.tags) === JSON.stringify(fighter.reputationTags)) {
+        delete fighter.tags;
+      }
+      return fighter;
+    }
+
+    function pruneSaveObject(value) {
+      var keys;
+      var i;
+      var key;
+      if (!value || typeof value !== "object") {
+        return value;
+      }
+      if (value instanceof Array) {
+        for (i = value.length - 1; i >= 0; i -= 1) {
+          pruneSaveObject(value[i]);
+          if (value[i] && typeof value[i] === "object" && !(value[i] instanceof Array) && !Object.keys(value[i]).length) {
+            value.splice(i, 1);
+          }
+        }
+        return value;
+      }
+      keys = Object.keys(value);
+      for (i = 0; i < keys.length; i += 1) {
+        key = keys[i];
+        if (value[key] === "" || value[key] == null) {
+          delete value[key];
+          continue;
+        }
+        pruneSaveObject(value[key]);
+        if (value[key] instanceof Array && !value[key].length) {
+          delete value[key];
+          continue;
+        }
+        if (value[key] && typeof value[key] === "object" && !(value[key] instanceof Array) && !Object.keys(value[key]).length) {
+          delete value[key];
+        }
+      }
+      return value;
+    }
+
+    function compactGameStateForSave(gameState) {
+      var compact = clonePlainData(gameState);
+      var fighterIds;
+      var gymIds;
+      var trainerIds;
+      var i;
+      var fighter;
+      var gym;
+      var trainer;
+      if (compact.ui) {
+        compact.ui.savedPreview = null;
+        if (compact.ui.debug) {
+          compact.ui.debug.open = false;
+        }
+      }
+      delete compact.debug;
+      if (compact.world && compact.world.offers) {
+        compact.world.offers.available = [];
+        compact.world.offers.fightOffers = [];
+        compact.world.offers.contractOffers = [];
+        compact.world.offers.headline = "";
+        compact.world.offers.weekStamp = 0;
+      }
+      if (compact.world) {
+        compact.world.opponents = [];
+      }
+      if (compact.rosterState && compact.rosterState.fightersById) {
+        fighterIds = compact.rosterState.fighterIds instanceof Array ? compact.rosterState.fighterIds : Object.keys(compact.rosterState.fightersById);
+        for (i = 0; i < fighterIds.length; i += 1) {
+          fighter = compact.rosterState.fightersById[fighterIds[i]];
+          compactFighterEntityForSave(fighter);
+        }
+      }
+      if (compact.rosterState && compact.rosterState.gymsById) {
+        gymIds = compact.rosterState.gymIds instanceof Array ? compact.rosterState.gymIds : Object.keys(compact.rosterState.gymsById);
+        for (i = 0; i < gymIds.length; i += 1) {
+          gym = compact.rosterState.gymsById[gymIds[i]];
+          if (gym && gym.coachIds instanceof Array && gym.trainerIds instanceof Array && JSON.stringify(gym.coachIds) === JSON.stringify(gym.trainerIds)) {
+            delete gym.coachIds;
+          }
+        }
+      }
+      if (compact.rosterState && compact.rosterState.trainersById) {
+        trainerIds = compact.rosterState.trainerIds instanceof Array ? compact.rosterState.trainerIds : Object.keys(compact.rosterState.trainersById);
+        for (i = 0; i < trainerIds.length; i += 1) {
+          trainer = compact.rosterState.trainersById[trainerIds[i]];
+          if (trainer && trainer.boxerIds instanceof Array && !trainer.boxerIds.length) {
+            delete trainer.boxerIds;
+          }
+        }
+      }
+      return pruneSaveObject(compact);
+    }
+
+    function buildSaveSnapshot(compactMode) {
       var gameState;
       var sanitizedFight;
       if (!state.fighter) {
@@ -2580,17 +2708,18 @@
       if (state.fight && !sanitizedFight) {
         return null;
       }
-      gameState = syncGameStateFromRuntime();
+      gameState = syncGameStateFromRuntime({ lightweightWorld: true });
       gameState.battle.current = sanitizedFight;
       gameState.meta.appVersion = APP_VERSION;
       gameState.meta.saveVersion = SAVE_VERSION;
       gameState.meta.rng = RNG.cloneState(state.rng);
       gameState.ui.savedPreview = buildSavePreview({ game: gameState });
+      gameState = compactMode ? compactGameStateForSave(gameState) : clonePlainData(gameState);
       return {
         version: SAVE_VERSION,
         saveVersion: SAVE_VERSION,
         appVersion: APP_VERSION,
-        game: clonePlainData(gameState)
+        game: gameState
       };
     }
 
@@ -2653,6 +2782,18 @@
           debugMode: DEBUG_MODE
         });
       }
+      if (sourceVersion > 0 && sourceVersion < 33) {
+        migrated = normalizeGameState(migrated, {
+          appVersion: migrated.meta && migrated.meta.appVersion ? migrated.meta.appVersion : (saveData.appVersion || APP_VERSION),
+          debugMode: DEBUG_MODE
+        });
+      }
+      if (sourceVersion > 0 && sourceVersion < 34) {
+        migrated = normalizeGameState(migrated, {
+          appVersion: migrated.meta && migrated.meta.appVersion ? migrated.meta.appVersion : (saveData.appVersion || APP_VERSION),
+          debugMode: DEBUG_MODE
+        });
+      }
       migrated.meta.appVersion = saveData.appVersion || APP_VERSION;
       migrated.meta.saveVersion = SAVE_VERSION;
       migrated.ui.savedPreview = buildSavePreview({ game: migrated });
@@ -2680,15 +2821,17 @@
       if (state.isSimulationMode) {
         return true;
       }
-      snapshot = buildSaveSnapshot();
+      snapshot = buildSaveSnapshot(true);
       if (!snapshot) {
         return false;
       }
       payload = JSON.stringify(snapshot);
-      state.savedPreview = buildSavePreview(snapshot);
       state.debug.metrics.saveBytes = payload.length;
       state.debug.metrics.saveCount += 1;
-      state.debug.metrics.lastSaveOk = SaveManager.save(SAVE_KEY, snapshot);
+      state.debug.metrics.lastSaveOk = SaveManager.saveRaw ? SaveManager.saveRaw(SAVE_KEY, payload) : SaveManager.save(SAVE_KEY, snapshot);
+      if (state.debug.metrics.lastSaveOk) {
+        state.savedPreview = buildSavePreview(snapshot);
+      }
       return state.debug.metrics.lastSaveOk;
     }
 
@@ -2757,9 +2900,7 @@
       ensureLifeState();
       ensureNpcWorld();
       normalizeWorldOffers();
-      if (!state.world.offers.available.length || !(state.world.offers.fightOffers instanceof Array) || !(state.world.offers.contractOffers instanceof Array) || offersNeedRosterRefresh(state.world.offers.fightOffers)) {
-        refreshWorldState(true);
-      }
+      bootstrapWorldStateForCurrentWeek();
       if (!validation.valid) {
         state.log.unshift({ text: "Сохранение было частично восстановлено через адаптер совместимости.", tone: "warn" });
       }
@@ -7262,7 +7403,7 @@
         render();
         return;
       }
-      gameState = syncGameStateFromRuntime();
+      gameState = ensurePersistentGameState(false);
       result = typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.signGym ? WorldFacilityEngine.signGym(gameState, currentPlayerEntityId(), gym.id, state.fighter.week) : { ok: true };
       if (!result.ok) {
         pushLog(result.reason || "Не удалось перейти в зал.", "bad");
@@ -7323,7 +7464,7 @@
         render();
         return;
       }
-      gameState = syncGameStateFromRuntime();
+      gameState = ensurePersistentGameState(false);
       result = typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.followTrainer ? WorldFacilityEngine.followTrainer(gameState, currentPlayerEntityId(), trainerType.id, state.fighter.week) : { ok: true };
       if (!result.ok) {
         pushLog(result.reason || "Не удалось договориться с тренером.", "bad");
@@ -7361,7 +7502,7 @@
       if (!gym) {
         return;
       }
-      gameState = syncGameStateFromRuntime();
+      gameState = ensurePersistentGameState(false);
       result = typeof WorldFacilityEngine !== "undefined" && WorldFacilityEngine.leaveGym ? WorldFacilityEngine.leaveGym(gameState, currentPlayerEntityId(), state.fighter.week, "боец покинул зал") : { ok: true };
       if (!result.ok) {
         pushLog(result.reason || "Не удалось выйти из зала.", "bad");
@@ -7372,7 +7513,6 @@
       syncLegacyFacilityStateFromPlayerEntity(gameState);
       pushLog("Ты покидаешь зал " + gym.name + ".", "warn");
       addBiographyHistory("Покидает зал " + gym.name + ".", "gym");
-      refreshWorldState();
       if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
         render();
       }
@@ -8688,6 +8828,10 @@
       }
       if (!snapshotOverride) {
         persistentEntity = choosePersistentOpponentEntity(tier, opponentCountryKey);
+        if (!persistentEntity) {
+          ensurePersistentGameState(false);
+          persistentEntity = choosePersistentOpponentEntity(tier, opponentCountryKey);
+        }
         if (persistentEntity) {
           snapshotOverride = buildPersistentOpponentSnapshot(persistentEntity, null);
           opponentCountryKey = snapshotOverride.countryKey || persistentEntity.country || opponentCountryKey;
@@ -8730,6 +8874,7 @@
         applyOpponentMetadata(opponentClone, opponentType, gym, trainerType, tier);
         return opponentClone;
       }
+      return null;
       opponentCountryKey = countryKeyOverride || fighter.currentCountry;
       country = getCountryInfo(opponentCountryKey);
       arena = ContentLoader.getRandomArena(opponentCountryKey);
@@ -8846,6 +8991,9 @@
         opponent = buildOpponentSnapshot(proOfferContext.targetSnapshot);
       } else {
         opponent = generateOpponent(template.tier, countryKey, rematchSnapshot || null);
+      }
+      if (!opponent) {
+        return null;
       }
       if (arena) {
         opponent.venue = arena.name;
@@ -9139,6 +9287,9 @@
       if (!offer) {
         return offer;
       }
+      if (offer.normalizedWeekStamp === (state.fighter ? state.fighter.week : 0) && offer.opponent && !offersNeedRosterRefresh([offer])) {
+        return offer;
+      }
       if (!offer.trackId) {
         offer.trackId = currentCareerTrackId();
       }
@@ -9238,6 +9389,7 @@
       if (!offer.venue && offer.opponent.venue) {
         offer.venue = offer.opponent.venue;
       }
+      offer.normalizedWeekStamp = state.fighter ? state.fighter.week : 0;
       return annotateOfferEncounterMemory(offer);
     }
 
@@ -9797,7 +9949,6 @@
       }
       recordResolvedEvent(activeEvent, choice);
       applyBounds(state.fighter);
-      refreshWorldState();
       pushLog(safeTitle + ": " + safeUiText(choice.label, "Выбор сделан") + ".", "warn");
       state.activeEvent = null;
       if (state.screen === "game") {
@@ -9806,7 +9957,9 @@
       if (evaluateEndState()) {
         return;
       }
-      render();
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
+      }
     }
 
     function weeklyEvent(gameState) {
@@ -10862,6 +11015,28 @@
       syncAllNpcRelationSnapshots();
     }
 
+    function bootstrapWorldStateForCurrentWeek() {
+      var gameState;
+      var rosterChanged = false;
+      ensureLifeState();
+      ensureBiographyState();
+      ensureNpcWorld();
+      gameState = ensurePersistentGameState(false);
+      if (typeof WorldRankingsEngine !== "undefined") {
+        if (WorldRankingsEngine.ensureMinimumRoster) {
+          rosterChanged = WorldRankingsEngine.ensureMinimumRoster(gameState) || rosterChanged;
+        }
+        if (WorldRankingsEngine.ensureRosterAttributeBands) {
+          rosterChanged = WorldRankingsEngine.ensureRosterAttributeBands(gameState) || rosterChanged;
+        }
+      }
+      if (rosterChanged) {
+        syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
+      }
+      rebuildWeeklyRuntimeViews();
+      normalizeWorldOffers();
+    }
+
     function runWeeklyCacheRefresh(action, gameState) {
       var fighter = state.fighter;
       var refreshPlan = buildWeeklyRefreshPlan(action, fighter && typeof fighter.week === "number" ? fighter.week : 1);
@@ -11492,7 +11667,7 @@
         if (!state.fighter || state.screen !== "game") {
           return;
         }
-        refreshWorldState(true);
+        bootstrapWorldStateForCurrentWeek();
         if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
           render();
         }
@@ -11997,7 +12172,8 @@
     function openFightSelect() {
       ensureLifeState();
       if (!state.world.offers || state.world.offers.weekStamp !== state.fighter.week || !(state.world.offers.fightOffers instanceof Array) || !state.world.offers.fightOffers.length || offersNeedRosterRefresh(state.world.offers.fightOffers)) {
-        refreshWorldState();
+        rebuildWeeklyRuntimeViews();
+        normalizeWorldOffers();
       } else {
         normalizeWorldOffers();
       }
@@ -12012,7 +12188,9 @@
       }
       state.world.opponents = state.opponents;
       state.panel = "fightSelect";
-      render();
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
+      }
     }
 
     function fightStateBySide(fight, side) {
@@ -12268,21 +12446,37 @@
       if (evaluateEndState()) {
         return;
       }
-      advanceWeek();
-      if (evaluateEndState()) {
-        return;
-      }
+      fight.pendingWeekAdvance = true;
       state.panel = "fightResult";
       if (!updateBattleSubtree({ suppressSave: false })) {
         render();
       }
       endBattleRenderCounting();
+      window.setTimeout(function () {
+        if (!state.fight || !state.fight.pendingWeekAdvance || state.panel !== "fightResult") {
+          return;
+        }
+        processPendingFightWeekAdvance();
+      }, 16);
+    }
+
+    function processPendingFightWeekAdvance() {
+      if (!state.fight || !state.fight.pendingWeekAdvance) {
+        return false;
+      }
+      state.fight.pendingWeekAdvance = false;
+      advanceWeek();
+      if (evaluateEndState()) {
+        return true;
+      }
+      return true;
     }
 
     function closeFightResult() {
       clearFightTimers();
+      processPendingFightWeekAdvance();
       state.fight = null;
-      state.panel = "home";
+      state.panel = state.activeEvent ? "worldEvent" : "home";
       render();
     }
 
@@ -15240,7 +15434,6 @@
       var opponentFighter = currentFightSideFighter(fight, "opponent");
       var styleSnapshot = currentStyleSnapshot(opponentFighter);
       var styleId = styleSnapshot && styleSnapshot.style ? styleSnapshot.style.id : "";
-      var context = fightContextBySide(fight, "opponent");
       var distance = attackZone(ai.position, player.position);
       var boundaryPenalty = ringDangerPenalty(ai.position);
       var threatPenalty = ringThreatPenalty(ai.position, player.position);
@@ -15265,7 +15458,7 @@
       }
 
       if (approachMove) {
-        score = 18 + styleAttackBias(styleId, "move") + (context.ai.chaseBias || 0);
+        score = 18 + styleAttackBias(styleId, "move");
         if (distance !== "close") {
           score += 8;
         }
@@ -15275,7 +15468,7 @@
         best = considerAiAction(best, approachMove, score + rand(0, 4));
       }
       if (retreatMove) {
-        score = 14 + (context.ai.retreatBias || 0);
+        score = 14;
         if (retreat) {
           score += 14;
         }
@@ -15289,7 +15482,7 @@
       }
 
       if (canUseFightAction(fight, "opponent", "block")) {
-        score = 18 + styleAttackBias(styleId, "block") + (context.ai.defenseBias || 0);
+        score = 18 + styleAttackBias(styleId, "block");
         if (retreat) {
           score += 10;
         }
@@ -15299,7 +15492,7 @@
         best = considerAiAction(best, "block", score + rand(0, 4));
       }
       if (!mustBreakCounterRhythm && canUseFightAction(fight, "opponent", "counter")) {
-        score = 16 + styleAttackBias(styleId, "counter") + (context.ai.counterBias || 0);
+        score = 16 + styleAttackBias(styleId, "counter");
         if (player.actedAttack) {
           score += 6;
         }
@@ -15317,20 +15510,9 @@
         if (!canUseFightAction(fight, "opponent", key)) {
           continue;
         }
-        score = 20 + styleAttackBias(styleId, key) + (context.ai.attackBias || 0);
-        if (key === "jab") {
-          score += context.ai.jabBias || 0;
-        } else if (key === "cross") {
-          score += context.ai.crossBias || 0;
-        } else if (key === "body") {
-          score += context.ai.bodyBias || 0;
-        } else if (key === "hook") {
-          score += context.ai.hookBias || 0;
-        } else if (key === "uppercut") {
-          score += context.ai.uppercutBias || 0;
-        }
+        score = 20 + styleAttackBias(styleId, key);
         if (player.hp < player.maxHp * 0.4 && (key === "hook" || key === "uppercut" || key === "cross")) {
-          score += 10 + (context.ai.finishBias || 0);
+          score += 10;
         }
         if (distance === "close" && (key === "hook" || key === "uppercut")) {
           score += 6;
@@ -16815,6 +16997,16 @@
 
     window.onbeforeunload = function () {
       saveGameState();
+    };
+
+    window.onpagehide = function () {
+      saveGameState();
+    };
+
+    document.onvisibilitychange = function () {
+      if (document.hidden) {
+        saveGameState();
+      }
     };
   </script>
 </head>
