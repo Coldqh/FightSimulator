@@ -1251,6 +1251,48 @@ function buildGameStateFromLegacySnapshot(snapshot, options) {
   return normalizeGameState(gameState, options);
 }
 
+function sectionHasMeaningfulData(sectionName, section) {
+  if (!section || typeof section !== "object") {
+    return false;
+  }
+  if (sectionName === "rosterState") {
+    return !!((section.fighterIds instanceof Array && section.fighterIds.length) || (section.fightersById && Object.keys(section.fightersById).length));
+  }
+  if (sectionName === "organizationState") {
+    return !!((section.organizationIds instanceof Array && section.organizationIds.length) || (section.organizationsById && Object.keys(section.organizationsById).length));
+  }
+  if (sectionName === "competitionState") {
+    return !!((section.competitionIds instanceof Array && section.competitionIds.length) ||
+      (section.competitionsById && Object.keys(section.competitionsById).length) ||
+      (section.proOfferIds instanceof Array && section.proOfferIds.length) ||
+      (section.proOffersById && Object.keys(section.proOffersById).length));
+  }
+  if (sectionName === "narrativeState") {
+    return !!((section.worldMediaIds instanceof Array && section.worldMediaIds.length) ||
+      (section.noticeIds instanceof Array && section.noticeIds.length) ||
+      (section.availableTransitionIds instanceof Array && section.availableTransitionIds.length));
+  }
+  if (sectionName === "worldState") {
+    return !!(section.timeline || section.worldCareer || section.careerTrack);
+  }
+  if (sectionName === "playerState") {
+    return !!(section.currentTrackId || section.careerTrack || section.fighterEntityId);
+  }
+  return true;
+}
+
+function chooseRuntimeSection(runtimeState, sectionName) {
+  var runtimeSection = runtimeState && runtimeState[sectionName] ? runtimeState[sectionName] : null;
+  var canonicalSection = runtimeState && runtimeState.game && runtimeState.game[sectionName] ? runtimeState.game[sectionName] : null;
+  if (sectionHasMeaningfulData(sectionName, runtimeSection)) {
+    return clonePlainData(runtimeSection);
+  }
+  if (sectionHasMeaningfulData(sectionName, canonicalSection)) {
+    return clonePlainData(canonicalSection);
+  }
+  return runtimeSection ? clonePlainData(runtimeSection) : null;
+}
+
 function buildGameStateFromRuntime(runtimeState, options) {
   var gameState = buildGameStateFromLegacySnapshot({
     appVersion: options && options.appVersion ? options.appVersion : "",
@@ -1273,22 +1315,22 @@ function buildGameStateFromRuntime(runtimeState, options) {
     debug: runtimeState ? runtimeState.debug : null
   }, options);
   if (runtimeState && runtimeState.playerState) {
-    gameState.playerState = clonePlainData(runtimeState.playerState);
+    gameState.playerState = chooseRuntimeSection(runtimeState, "playerState");
   }
-  if (runtimeState && runtimeState.worldState) {
-    gameState.worldState = clonePlainData(runtimeState.worldState);
+  if (runtimeState && (runtimeState.worldState || (runtimeState.game && runtimeState.game.worldState))) {
+    gameState.worldState = chooseRuntimeSection(runtimeState, "worldState");
   }
-  if (runtimeState && runtimeState.rosterState) {
-    gameState.rosterState = clonePlainData(runtimeState.rosterState);
+  if (runtimeState && (runtimeState.rosterState || (runtimeState.game && runtimeState.game.rosterState))) {
+    gameState.rosterState = chooseRuntimeSection(runtimeState, "rosterState");
   }
-  if (runtimeState && runtimeState.organizationState) {
-    gameState.organizationState = clonePlainData(runtimeState.organizationState);
+  if (runtimeState && (runtimeState.organizationState || (runtimeState.game && runtimeState.game.organizationState))) {
+    gameState.organizationState = chooseRuntimeSection(runtimeState, "organizationState");
   }
-  if (runtimeState && runtimeState.competitionState) {
-    gameState.competitionState = clonePlainData(runtimeState.competitionState);
+  if (runtimeState && (runtimeState.competitionState || (runtimeState.game && runtimeState.game.competitionState))) {
+    gameState.competitionState = chooseRuntimeSection(runtimeState, "competitionState");
   }
-  if (runtimeState && runtimeState.narrativeState) {
-    gameState.narrativeState = clonePlainData(runtimeState.narrativeState);
+  if (runtimeState && (runtimeState.narrativeState || (runtimeState.game && runtimeState.game.narrativeState))) {
+    gameState.narrativeState = chooseRuntimeSection(runtimeState, "narrativeState");
   }
   gameState = normalizeGameState(gameState, options);
   return gameState;

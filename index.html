@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.24.9";
+var APP_VERSION = "2026.03.25.2";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -2930,7 +2930,6 @@
       if (!validation.valid) {
         state.log.unshift({ text: "Сохранение было частично восстановлено через адаптер совместимости.", tone: "warn" });
       }
-      syncGameStateFromRuntime({ lightweightWorld: true });
       render();
     }
 
@@ -13234,6 +13233,14 @@
       return html.join("");
     }
 
+    function renderEmergencyMenuShell() {
+      var app = document.getElementById("app");
+      if (!app) {
+        return;
+      }
+      app.innerHTML = "<div class='shell'><div class='hero menu-hero'><div class='menu-stack'><div class='menu-title'><span>Fight Club</span></div><div class='menu-actions'><button class='button' onclick='resetCreate(); render();'>Начать новую игру</button><button class='ghost' onclick='continueSavedGame()'>Продолжить</button><button class='ghost' onclick='openLegendArchive()'>Архив легенд</button></div></div></div></div>";
+    }
+
     function renderCreate() {
       var html = [];
       var countries = listCountries();
@@ -17007,10 +17014,25 @@
     };
 
     window.onload = function () {
-      refreshSavedPreview();
       state.screen = "menu";
-      render();
-      checkForAppUpdate();
+      try {
+        render();
+      } catch (error) {
+        renderEmergencyMenuShell();
+      }
+      window.setTimeout(function () {
+        try {
+          refreshSavedPreview();
+          if (state.screen === "menu") {
+            try {
+              render();
+            } catch (renderError) {
+              renderEmergencyMenuShell();
+            }
+          }
+        } catch (error) {}
+        checkForAppUpdate();
+      }, 0);
     };
 
     window.onresize = function () {

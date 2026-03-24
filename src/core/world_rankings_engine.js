@@ -1024,7 +1024,7 @@ var WorldRankingsEngine = (function () {
         fame: typeof fighter.fame === "number" ? fighter.fame : 0
       };
       expected = buildAttributeSpread(trackId, i + 1, details);
-      currentTotal = fighterTotal(fighter);
+      currentTotal = statTotal(fighter);
       expectedTotal = (expected.str || 0) + (expected.tec || 0) + (expected.spd || 0) + (expected.end || 0) + (expected.vit || 0);
       if ((trackId === "pro" && currentTotal < 500) || currentTotal < expectedTotal) {
         fighter.attributes = clone(expected);
@@ -1050,6 +1050,11 @@ var WorldRankingsEngine = (function () {
     var draws = record && typeof record.draws === "number" ? record.draws : 0;
     var kos = record && typeof record.kos === "number" ? record.kos : 0;
     return wins + "-" + losses + "-" + draws + (kos ? (" (KO " + kos + ")") : "");
+  }
+
+  function statTotal(source) {
+    var stats = source && (source.attributes || source.stats) ? (source.attributes || source.stats) : {};
+    return (stats.str || 0) + (stats.tec || 0) + (stats.spd || 0) + (stats.end || 0) + (stats.vit || 0);
   }
 
   function fighterDisplayName(fighter) {
@@ -1610,8 +1615,8 @@ var WorldRankingsEngine = (function () {
         recordWins: fighter.record && typeof fighter.record.wins === "number" ? fighter.record.wins : ((fighter.proRecord && fighter.proRecord.wins) || (fighter.amateurRecord && fighter.amateurRecord.wins) || 0),
         fame: typeof fighter.fame === "number" ? fighter.fame : 0
       });
-      currentTotal = fighterTotal(fighter);
-      if ((currentTrackId(fighter) === "pro" && currentTotal < 500) || currentTotal < fighterTotal({ attributes: expectedAttributes })) {
+      currentTotal = statTotal(fighter);
+      if ((currentTrackId(fighter) === "pro" && currentTotal < 500) || currentTotal < statTotal({ attributes: expectedAttributes })) {
         fighter.attributes = clone(expectedAttributes);
         fighter.stats = clone(expectedAttributes);
       }

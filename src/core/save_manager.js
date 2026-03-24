@@ -56,8 +56,8 @@ var SaveManager = (function () {
     }
     try {
       text = String(payloadText || "");
+      removeChunks(storage, key);
       if (text.length <= CHUNK_SIZE) {
-        removeChunks(storage, key);
         storage.setItem(key, text);
         return true;
       }
