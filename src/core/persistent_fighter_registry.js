@@ -350,8 +350,8 @@ var PersistentFighterRegistry = (function () {
     entity.trainerId = entity.currentTrainerId;
     entity.streetRating = typeof seed.streetRating === "number" ? seed.streetRating : 0;
     entity.streetData = seed.streetData ? clone(seed.streetData) : clone(entity.streetData);
-    entity.amateurClass = seed.amateurClass || "";
-    entity.amateurRank = canonicalSeedAmateurRank(seed.amateurRank || entity.amateurClass || "", entity.age, seed.amateurRecord || entity.amateurRecord);
+    entity.amateurRank = canonicalSeedAmateurRank(seed.amateurRank || seed.amateurClass || "", entity.age, seed.amateurRecord || entity.amateurRecord);
+    entity.amateurClass = entity.amateurRank;
     entity.amateurRecord = clone(seed.amateurRecord || entity.amateurRecord);
     entity.nationalTeamStatus = canonicalSeedNationalTeamStatus(seed.nationalTeamStatus || "none", entity.amateurRank, entity.amateurRecord);
     entity.amateurGoals = clone(seed.amateurGoals || []);
@@ -395,13 +395,12 @@ var PersistentFighterRegistry = (function () {
   }
 
   function canonicalSeedAmateurRank(rankId, age, record) {
-    var wins = record && typeof record.wins === "number" ? record.wins : 0;
     var value = String(rankId || "").toLowerCase();
     if (value === "elite") {
-      return wins >= 15 ? "national_team_candidate" : "candidate_national";
+      return "candidate_national";
     }
     if (value === "a") {
-      return wins >= 14 ? "candidate_national" : "adult_class_1";
+      return "adult_class_1";
     }
     if (value === "b") {
       return "adult_class_2";
@@ -415,28 +414,21 @@ var PersistentFighterRegistry = (function () {
     if (value === "ms") {
       return "national_master";
     }
-    if (value === "msmk") {
-      return "international_master";
+    if (value === "msmk" || value === "international_master" || value === "national_team_candidate" || value === "national_team_member" || value === "olympic_level") {
+      return "national_master";
+    }
+    if (value === "junior_novice") {
+      return "junior_class_3";
     }
     if (!rankId) {
-      return age >= 18 ? "adult_class_3" : "junior_class_1";
+      return age >= 18 ? "adult_class_3" : "junior_class_3";
     }
     return rankId;
   }
 
   function canonicalSeedNationalTeamStatus(status, rankId, record) {
-    var wins = record && typeof record.wins === "number" ? record.wins : 0;
     if (status && status !== "none") {
       return status;
-    }
-    if (rankId === "olympic_level" || rankId === "national_team_member") {
-      return "active";
-    }
-    if (rankId === "national_team_candidate" || rankId === "international_master") {
-      return "candidate";
-    }
-    if (rankId === "national_master" || (rankId === "candidate_national" && wins >= 14)) {
-      return "reserve";
     }
     return "none";
   }
@@ -510,27 +502,16 @@ var PersistentFighterRegistry = (function () {
 
   function seedBaseAmateur(entity) {
     var rankOrder = {
-      junior_novice: 12,
-      junior_class_3: 24,
-      junior_class_2: 36,
-      junior_class_1: 48,
-      adult_class_3: 42,
-      adult_class_2: 58,
-      adult_class_1: 72,
-      candidate_national: 84,
-      national_master: 90,
-      international_master: 93,
-      national_team_candidate: 92,
-      national_team_member: 94,
-      olympic_level: 95
+      junior_class_3: 6,
+      junior_class_2: 16,
+      junior_class_1: 26,
+      adult_class_3: 36,
+      adult_class_2: 46,
+      adult_class_1: 56,
+      candidate_national: 70,
+      national_master: 90
     };
-    var base = rankOrder[entity.amateurRank] || 32;
-    if (entity.nationalTeamStatus === "active") {
-      base += 2;
-    } else if (entity.nationalTeamStatus === "reserve") {
-      base += 1;
-    }
-    return seedStatClamp(base, 1, 95);
+    return seedStatClamp(rankOrder[entity.amateurRank] || 36, 1, 100);
   }
 
   function seedBaseStreet(entity) {
@@ -560,7 +541,7 @@ var PersistentFighterRegistry = (function () {
     var offsets = seedStyleOffsets(entity.styleId || entity.style || "");
     var base = trackId === "pro" ? seedBasePro(entity) : (trackId === "street" ? seedBaseStreet(entity) : seedBaseAmateur(entity));
     var minValue = trackId === "pro" ? 100 : 1;
-    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 95);
+    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 100);
     entity.attributes = {
       str: seedStatClamp(base + offsets.str, minValue, maxValue),
       tec: seedStatClamp(base + offsets.tec, minValue, maxValue),
@@ -772,7 +753,8 @@ var PersistentFighterRegistry = (function () {
     entity.trainerId = entity.currentTrainerId;
     entity.streetRating = typeof snapshot.streetRating === "number" ? snapshot.streetRating : ((entity.attributes.str + entity.attributes.tec + entity.attributes.spd + entity.attributes.end + entity.attributes.vit) * 2);
     entity.streetData = snapshot.streetData ? clone(snapshot.streetData) : clone(entity.streetData);
-    entity.amateurRank = snapshot.amateurRank || snapshot.amateurClass || "";
+    entity.amateurRank = canonicalSeedAmateurRank(snapshot.amateurRank || snapshot.amateurClass || "", entity.age, snapshot.amateurRecord || null);
+    entity.amateurClass = entity.amateurRank;
     entity.nationalTeamStatus = snapshot.nationalTeamStatus || "none";
     entity.amateurGoals = snapshot.amateurGoals instanceof Array ? clone(snapshot.amateurGoals) : [];
     entity.goalProfileId = snapshot.goalProfileId || "";
@@ -857,15 +839,17 @@ var PersistentFighterRegistry = (function () {
     return fightersFromIds(gameState, indexes.fightersByTrackCountry[(trackId || "street") + "|" + (countryId || "")] || []);
   }
 
-  function chooseClosestFighter(gameState, trackId, countryId, tier, playerStats, excludedId) {
+  function chooseClosestFighter(gameState, trackId, countryId, tier, playerStats, excludedId, options) {
     var pool = getFightersByTrack(gameState, trackId);
     var byCountry = [];
     var filtered = [];
+    var rankFiltered = [];
     var i;
     var fighter;
     var playerStatBlock = playerStats || {};
     var fighterStatBlock;
     var playerTotal = (playerStatBlock.str || 0) + (playerStatBlock.tec || 0) + (playerStatBlock.spd || 0) + (playerStatBlock.end || 0) + (playerStatBlock.vit || 0);
+    var playerRankId = options && options.playerRankId ? canonicalSeedAmateurRank(options.playerRankId, options && options.playerAge ? options.playerAge : 18, null) : "";
     var best = null;
     var bestDelta = 9999;
     for (i = 0; i < pool.length; i += 1) {
@@ -878,6 +862,17 @@ var PersistentFighterRegistry = (function () {
       }
     }
     filtered = byCountry.length ? byCountry : pool;
+    if (trackId === "amateur" && playerRankId) {
+      for (i = 0; i < filtered.length; i += 1) {
+        fighter = filtered[i];
+        if (canonicalSeedAmateurRank(fighter.amateurRank || fighter.amateurClass || "", fighter.age || 18, fighter.amateurRecord || null) === playerRankId) {
+          rankFiltered.push(fighter);
+        }
+      }
+      if (rankFiltered.length) {
+        filtered = rankFiltered;
+      }
+    }
     for (i = 0; i < filtered.length; i += 1) {
       fighter = filtered[i];
       fighterStatBlock = fighter && fighter.attributes ? fighter.attributes : (fighter && fighter.stats ? fighter.stats : {});

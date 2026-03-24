@@ -1,4 +1,4 @@
-var YOUTH_AMATEUR_DATA = (function () {
+﻿var YOUTH_AMATEUR_DATA = (function () {
   var amateurRankLabels = {
     "default": {
       junior_novice: "Юниор-новичок",
@@ -229,19 +229,14 @@ var YOUTH_AMATEUR_DATA = (function () {
       }
     ],
     amateurRanks: [
-      { id: "junior_novice", order: 0, minAge: 16, minScore: 0, unlockSummary: "Первые юниорские старты." },
-      { id: "junior_class_3", order: 1, minAge: 16, minScore: 20, unlockSummary: "Клубные юниорские бои." },
-      { id: "junior_class_2", order: 2, minAge: 16, minScore: 48, unlockSummary: "Сильные юниорские сетки и хорошие секции." },
-      { id: "junior_class_1", order: 3, minAge: 16, minScore: 82, unlockSummary: "Крупные юниорские турниры." },
-      { id: "adult_class_3", order: 4, minAge: 18, minScore: 120, unlockSummary: "Взрослые любительские бои." },
-      { id: "adult_class_2", order: 5, minAge: 18, minScore: 165, unlockSummary: "Региональные турниры и сильные тренеры." },
-      { id: "adult_class_1", order: 6, minAge: 18, minScore: 220, unlockSummary: "Крупные взрослые старты." },
-      { id: "candidate_national", order: 7, minAge: 18, minScore: 290, unlockSummary: "Отборы на уровень страны." },
-      { id: "national_master", order: 8, minAge: 18, minScore: 380, unlockSummary: "Элитный уровень и путь к сборной." },
-      { id: "international_master", order: 9, minAge: 18, minScore: 470, unlockSummary: "Международные старты." },
-      { id: "national_team_candidate", order: 10, minAge: 18, minScore: 560, unlockSummary: "Предбанник национальной команды." },
-      { id: "national_team_member", order: 11, minAge: 18, minScore: 660, unlockSummary: "Место в национальной команде." },
-      { id: "olympic_level", order: 12, minAge: 18, minScore: 780, unlockSummary: "Олимпийский уровень." }
+      { id: "junior_class_3", order: 0, minAge: 16, minScore: 5, sumMin: 5, sumMax: 50, statMin: 1, statMax: 10, unlockSummary: "Первые юниорские старты." },
+      { id: "junior_class_2", order: 1, minAge: 16, minScore: 51, sumMin: 51, sumMax: 100, statMin: 11, statMax: 20, unlockSummary: "Уже сильная юниорская сетка." },
+      { id: "junior_class_1", order: 2, minAge: 16, minScore: 101, sumMin: 101, sumMax: 150, statMin: 21, statMax: 30, unlockSummary: "Ведущий юниорский уровень." },
+      { id: "adult_class_3", order: 3, minAge: 18, minScore: 151, sumMin: 151, sumMax: 200, statMin: 31, statMax: 40, unlockSummary: "Первый взрослый разряд." },
+      { id: "adult_class_2", order: 4, minAge: 18, minScore: 201, sumMin: 201, sumMax: 250, statMin: 41, statMax: 50, unlockSummary: "Сильный взрослый разряд." },
+      { id: "adult_class_1", order: 5, minAge: 18, minScore: 251, sumMin: 251, sumMax: 300, statMin: 51, statMax: 60, unlockSummary: "Лидеры взрослой сетки." },
+      { id: "candidate_national", order: 6, minAge: 18, minScore: 301, sumMin: 301, sumMax: 400, statMin: 61, statMax: 80, unlockSummary: "КМС и подход к сборной." },
+      { id: "national_master", order: 7, minAge: 18, minScore: 401, sumMin: 401, sumMax: 500, statMin: 81, statMax: 100, unlockSummary: "МС и высший любительский уровень." }
     ],
     rankLabelsByCountry: amateurRankLabels,
     juniorSupportModel: {
@@ -259,7 +254,7 @@ var YOUTH_AMATEUR_DATA = (function () {
         trackId: "amateur",
         minAge: 16,
         maxAge: 17,
-        minRankId: "junior_novice",
+        minRankId: "junior_class_3",
         purseBase: 18,
         winBonus: 6,
         koBonus: 4,
@@ -402,3 +397,4 @@ var YOUTH_AMATEUR_DATA = (function () {
     }
   };
 }());
+

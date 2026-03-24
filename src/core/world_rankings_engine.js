@@ -409,7 +409,6 @@ var WorldRankingsEngine = (function () {
 
   function adultRankPool() {
     return [
-      "junior_novice",
       "junior_class_3",
       "junior_class_2",
       "junior_class_1",
@@ -417,11 +416,7 @@ var WorldRankingsEngine = (function () {
       "adult_class_2",
       "adult_class_1",
       "candidate_national",
-      "national_master",
-      "international_master",
-      "national_team_candidate",
-      "national_team_member",
-      "olympic_level"
+      "national_master"
     ];
   }
 
@@ -561,7 +556,7 @@ var WorldRankingsEngine = (function () {
   function canonicalRankId(rankId) {
     var value = String(rankId || "").toLowerCase();
     if (value === "elite") {
-      return "national_team_candidate";
+      return "candidate_national";
     }
     if (value === "a") {
       return "adult_class_1";
@@ -578,8 +573,11 @@ var WorldRankingsEngine = (function () {
     if (value === "ms") {
       return "national_master";
     }
-    if (value === "msmk") {
-      return "international_master";
+    if (value === "msmk" || value === "international_master" || value === "national_team_candidate" || value === "national_team_member" || value === "olympic_level") {
+      return "national_master";
+    }
+    if (value === "junior_novice") {
+      return "junior_class_3";
     }
     return rankId || "";
   }
@@ -608,17 +606,10 @@ var WorldRankingsEngine = (function () {
   }
 
   function amateurBaseFromDetails(details, slotIndex) {
-    var rankIndex = rankIndexForId(details && details.amateurRank ? details.amateurRank : "");
-    var status = details && details.nationalTeamStatus ? details.nationalTeamStatus : "none";
-    var base = 12 + rankIndex * 8 + deterministicRange("amateur_base:" + slotIndex, 0, 6);
-    if (status === "candidate") {
-      base += 4;
-    } else if (status === "reserve") {
-      base += 8;
-    } else if (status === "active") {
-      base += 12;
-    }
-    return clamp(base, 8, 95);
+    var rank = typeof ContentLoader !== "undefined" && ContentLoader.getAmateurRank ? ContentLoader.getAmateurRank(canonicalRankId(details && details.amateurRank ? details.amateurRank : "")) : null;
+    var minValue = rank && typeof rank.statMin === "number" ? rank.statMin : 1;
+    var maxValue = rank && typeof rank.statMax === "number" ? rank.statMax : 100;
+    return clamp(minValue + deterministicRange("amateur_base:" + slotIndex, 0, Math.max(0, maxValue - minValue)), minValue, maxValue);
   }
 
   function streetBaseFromDetails(details, slotIndex) {
@@ -660,7 +651,7 @@ var WorldRankingsEngine = (function () {
     var styleId = details && (details.styleId || details.style) ? (details.styleId || details.style) : styleIdForSlot(slotIndex);
     var offsets = styleOffsets(styleId);
     var minValue = trackId === "pro" ? 100 : 1;
-    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 95);
+    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 100);
     var base = trackId === "pro" ? proBaseFromDetails(details, slotIndex) : (trackId === "street" ? streetBaseFromDetails(details, slotIndex) : amateurBaseFromDetails(details, slotIndex));
     return {
       str: statValueFromBase(base, minValue, maxValue, offsets.str, trackId + ":" + slotIndex + ":str"),
@@ -675,31 +666,16 @@ var WorldRankingsEngine = (function () {
     var ranks = adultRankPool();
     var index = 0;
     if (age <= 17) {
-      index = clamp(Math.floor(slotIndex / 15), 0, 3);
+      index = clamp(Math.floor(slotIndex / 17), 0, 2);
     } else if (age <= 20) {
-      index = clamp(4 + Math.floor(slotIndex / 14), 4, 8);
+      index = clamp(3 + Math.floor(slotIndex / 15), 3, 6);
     } else {
-      index = clamp(6 + Math.floor(slotIndex / 18), 6, 10);
+      index = clamp(4 + Math.floor(slotIndex / 16), 4, 7);
     }
     return ranks[index] || "adult_class_3";
   }
 
   function nationalTeamStatusForSlot(trackId, slotIndex, age) {
-    if (trackId !== "amateur") {
-      return "none";
-    }
-    if (age < 18) {
-      return slotIndex % 21 === 0 ? "candidate" : "none";
-    }
-    if (slotIndex % 47 === 0) {
-      return "active";
-    }
-    if (slotIndex % 23 === 0) {
-      return "reserve";
-    }
-    if (slotIndex % 13 === 0) {
-      return "candidate";
-    }
     return "none";
   }
 

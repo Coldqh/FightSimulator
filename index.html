@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.25.2";
+var APP_VERSION = "2026.03.25.3";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -3018,7 +3018,10 @@ var APP_VERSION = "2026.03.25.2";
       };
     }
 
-    function baseStats() {
+    function baseStats(startingAge) {
+      if (startingAge >= 18) {
+        return { str: 31, tec: 31, spd: 31, end: 31, vit: 31 };
+      }
       return { str: 1, tec: 1, spd: 1, end: 1, vit: 1 };
     }
 
@@ -3499,8 +3502,8 @@ var APP_VERSION = "2026.03.25.2";
       }
       if (!fighter.amateur || typeof fighter.amateur !== "object") {
         fighter.amateur = JuniorAmateurSystem && JuniorAmateurSystem.createAmateurState ? JuniorAmateurSystem.createAmateurState(fighter.startingAge) : {
-          rankId: fighter.startingAge >= 18 ? "adult_class_3" : "junior_novice",
-          score: fighter.startingAge >= 18 ? 120 : 0,
+          rankId: fighter.startingAge >= 18 ? "adult_class_3" : "junior_class_3",
+          score: fighter.startingAge >= 18 ? 155 : 5,
           tournamentPoints: 0,
           opponentQuality: 0,
           record: { wins: 0, losses: 0, draws: 0 },
@@ -3669,7 +3672,9 @@ var APP_VERSION = "2026.03.25.2";
       var styleSnapshot = currentStyleSnapshot(subject);
       var trainerType = currentTrainerType();
       var gym = currentGym();
+      var stats = subject && subject.stats ? subject.stats : baseStats(subject && typeof subject.startingAge === "number" ? subject.startingAge : 16);
       return {
+        statTotal: (stats.str || 0) + (stats.tec || 0) + (stats.spd || 0) + (stats.end || 0) + (stats.vit || 0),
         styleMaturity: styleSnapshot ? styleSnapshot.progress || 0 : 0,
         gymEligible: !!gym,
         trainerEligible: !!trainerType,
@@ -8579,14 +8584,21 @@ var APP_VERSION = "2026.03.25.2";
     function choosePersistentOpponentEntity(tier, countryKey) {
       var gameState;
       var playerStats;
+      var playerRankId;
+      var playerAge;
       var excludedId;
       if (typeof PersistentFighterRegistry === "undefined" || !PersistentFighterRegistry.chooseClosestFighter) {
         return null;
       }
       gameState = ensurePersistentGameState(false);
       playerStats = gameState && gameState.player ? gameState.player.stats : baseStats();
+      playerRankId = gameState && gameState.player && gameState.player.amateur ? gameState.player.amateur.rankId || "" : "";
+      playerAge = state && state.fighter ? currentAgeView(state.fighter).years : 18;
       excludedId = gameState && gameState.playerState ? gameState.playerState.fighterEntityId || "fighter_player_main" : "fighter_player_main";
-      return PersistentFighterRegistry.chooseClosestFighter(gameState, currentOpponentTrackId(), countryKey, tier, playerStats, excludedId);
+      return PersistentFighterRegistry.chooseClosestFighter(gameState, currentOpponentTrackId(), countryKey, tier, playerStats, excludedId, {
+        playerRankId: playerRankId,
+        playerAge: playerAge
+      });
     }
 
     function getFighterById(fighterId) {
@@ -11584,13 +11596,14 @@ var APP_VERSION = "2026.03.25.2";
     function startCareer() {
       var startingAge;
       var startProfile;
-      var stats = baseStats();
+      var stats;
       var countryInfo;
       var gameState;
       if (!state.create.country || !state.create.identity) {
         return;
       }
       startingAge = state.create.startingAge === 18 ? 18 : 16;
+      stats = baseStats(startingAge);
       startProfile = startingAge >= 18 ? {
         money: 150,
         stress: 14,

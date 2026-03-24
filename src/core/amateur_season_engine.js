@@ -259,6 +259,11 @@ var AmateurSeasonEngine = (function () {
     return entity ? entity.country || "" : "";
   }
 
+  function playerAmateurRankId(gameState) {
+    var fighter = fighterEntity(gameState, playerEntityId(gameState));
+    return fighter ? fighterRank(fighter) : "";
+  }
+
   function uniquePush(list, value) {
     var i;
     if (!value) {
@@ -578,13 +583,23 @@ var AmateurSeasonEngine = (function () {
     var i;
     var j;
     var fighter;
+    var requiredRankId = "";
     if (!roster || !tournament) {
       return result;
+    }
+    if (tournament.scope === "country" && tournament.countryId) {
+      requiredRankId = playerAmateurRankId(gameState);
+      if (fighterCountry(fighterEntity(gameState, playerEntityId(gameState))) !== tournament.countryId) {
+        requiredRankId = "";
+      }
     }
     if (tournament.scope === "country") {
       for (i = 0; i < roster.fighterIds.length; i += 1) {
         fighter = roster.fightersById[roster.fighterIds[i]];
         if (!fighter || fighterCountry(fighter) !== tournament.countryId) {
+          continue;
+        }
+        if (requiredRankId && fighterRank(fighter) !== requiredRankId) {
           continue;
         }
         if (isEligibleForTournament(gameState, seasonState, fighter, tournament)) {
@@ -1084,6 +1099,7 @@ var AmateurSeasonEngine = (function () {
     var team;
     var countryId;
     var ranking;
+    var countryFighters;
     var fighter;
     var previousStatus;
     var newStatus;
@@ -1097,7 +1113,31 @@ var AmateurSeasonEngine = (function () {
         continue;
       }
       countryId = team.countryId;
-      ranking = seasonState.nationalRankingByCountry[countryId] || [];
+      countryFighters = [];
+      for (j = 0; j < gameState.rosterState.fighterIds.length; j += 1) {
+        fighter = fighterEntity(gameState, gameState.rosterState.fighterIds[j]);
+        if (!fighter || fighter.status === "retired" || fighterTrack(fighter) !== "amateur" || fighterCountry(fighter) !== countryId) {
+          continue;
+        }
+        countryFighters.push(fighter);
+      }
+      countryFighters.sort(function (left, right) {
+        var totalLeft = fighterTotal(left);
+        var totalRight = fighterTotal(right);
+        if (totalRight !== totalLeft) {
+          return totalRight - totalLeft;
+        }
+        return compareRanks(fighterRank(right), fighterRank(left));
+      });
+      ranking = [];
+      for (j = 0; j < countryFighters.length; j += 1) {
+        ranking.push({ fighterId: countryFighters[j].id });
+      }
+      team.selectionWindow = team.selectionWindow || {};
+      team.selectionWindow.lengthWeeks = 1;
+      team.selectionWindow.currentWindowIndex = Math.max(0, currentAbsoluteWeek(gameState) - 1);
+      team.selectionWindow.isOpen = true;
+      team.lastSelectionWeek = currentAbsoluteWeek(gameState);
       team.activeRosterIds = [];
       team.reserveRosterIds = [];
       team.candidateRosterIds = [];
@@ -1108,23 +1148,24 @@ var AmateurSeasonEngine = (function () {
         }
         previousStatus = fighter.nationalTeamStatus || "none";
         newStatus = "none";
-        if (j < (team.rosterSlots || 3)) {
+        if (j < (team.rosterSlots || 4)) {
           newStatus = "active";
           team.activeRosterIds.push(fighter.id);
-        } else if (j < (team.rosterSlots || 3) + (team.reserveSlots || 2)) {
+        } else if (j < (team.rosterSlots || 4) + (team.reserveSlots || 4)) {
           newStatus = "reserve";
           team.reserveRosterIds.push(fighter.id);
-        } else if (j < (team.rosterSlots || 3) + (team.reserveSlots || 2) + 4) {
-          newStatus = "candidate";
-          team.candidateRosterIds.push(fighter.id);
         }
         fighter.nationalTeamStatus = newStatus;
         hooks.teamEligibilityByFighterId[fighter.id] = hooks.teamEligibilityByFighterId[fighter.id] || {};
         if (!(hooks.teamEligibilityByFighterId[fighter.id].levels instanceof Array)) {
           hooks.teamEligibilityByFighterId[fighter.id].levels = [];
         }
-        if (newStatus !== "none" && hooks.teamEligibilityByFighterId[fighter.id].levels.indexOf(newStatus) === -1) {
-          hooks.teamEligibilityByFighterId[fighter.id].levels.push(newStatus);
+        hooks.teamEligibilityByFighterId[fighter.id].levels = [];
+        if (newStatus === "active") {
+          hooks.teamEligibilityByFighterId[fighter.id].levels.push("team_active");
+          hooks.teamEligibilityByFighterId[fighter.id].levels.push("team_reserve");
+        } else if (newStatus === "reserve") {
+          hooks.teamEligibilityByFighterId[fighter.id].levels.push("team_reserve");
         }
         if (previousStatus !== newStatus) {
           registerTeamSelectionHistory(seasonState, {

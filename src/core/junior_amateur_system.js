@@ -111,12 +111,61 @@ var JuniorAmateurSystem = (function () {
   }
 
   function defaultRankForAge(ageYears) {
-    return ageYears >= 18 ? "adult_class_3" : "junior_novice";
+    return ageYears >= 18 ? "adult_class_3" : "junior_class_3";
   }
 
   function defaultScoreForAge(ageYears) {
     var rank = getAmateurRank(defaultRankForAge(ageYears));
-    return rank ? rank.minScore : 0;
+    return rank ? (typeof rank.sumMin === "number" ? rank.sumMin : rank.minScore) : 0;
+  }
+
+  function canonicalRankId(rankId, ageYears) {
+    var value = String(rankId || "").toLowerCase();
+    if (!value) {
+      return defaultRankForAge(ageYears);
+    }
+    if (value === "junior_novice") {
+      return "junior_class_3";
+    }
+    if (value === "elite") {
+      return "candidate_national";
+    }
+    if (value === "a") {
+      return "adult_class_1";
+    }
+    if (value === "b") {
+      return "adult_class_2";
+    }
+    if (value === "c") {
+      return "adult_class_3";
+    }
+    if (value === "kms") {
+      return "candidate_national";
+    }
+    if (value === "ms" || value === "msmk" || value === "international_master" || value === "national_team_candidate" || value === "national_team_member" || value === "olympic_level") {
+      return "national_master";
+    }
+    return rankId;
+  }
+
+  function statTotalFromInputs(amateurState, inputs) {
+    if (inputs && typeof inputs.statTotal === "number") {
+      return Math.max(5, Math.round(inputs.statTotal));
+    }
+    if (amateurState && typeof amateurState.score === "number") {
+      return Math.max(5, Math.round(amateurState.score));
+    }
+    return 5;
+  }
+
+  function rankAllowedForAge(rank, ageYears) {
+    if (!rank) {
+      return false;
+    }
+    if (ageYears >= 18) {
+      return rank.minAge >= 18;
+    }
+    return rank.minAge < 18 || String(rank.id || "").indexOf("junior_") === 0;
   }
 
   function createAmateurState(ageYears) {
@@ -148,8 +197,8 @@ var JuniorAmateurSystem = (function () {
     if (!source || typeof source !== "object") {
       return normalized;
     }
-    if (typeof source.rankId === "string" && getAmateurRank(source.rankId)) {
-      normalized.rankId = source.rankId;
+    if (typeof source.rankId === "string" && getAmateurRank(canonicalRankId(source.rankId, ageYears))) {
+      normalized.rankId = canonicalRankId(source.rankId, ageYears);
     }
     if (typeof source.score === "number") {
       normalized.score = Math.max(0, Math.round(source.score));
@@ -202,59 +251,31 @@ var JuniorAmateurSystem = (function () {
   }
 
   function computeRankScore(amateurState, inputs) {
-    var score = 0;
-    var wins = amateurState && amateurState.record ? amateurState.record.wins || 0 : 0;
-    var losses = amateurState && amateurState.record ? amateurState.record.losses || 0 : 0;
-    var draws = amateurState && amateurState.record ? amateurState.record.draws || 0 : 0;
-    var tournamentPoints = amateurState && typeof amateurState.tournamentPoints === "number" ? amateurState.tournamentPoints : 0;
-    var opponentQuality = amateurState && typeof amateurState.opponentQuality === "number" ? amateurState.opponentQuality : 0;
-    var styleMaturity = inputs && typeof inputs.styleMaturity === "number" ? inputs.styleMaturity : 0;
-    var gymEligible = inputs && !!inputs.gymEligible;
-    var trainerEligible = inputs && !!inputs.trainerEligible;
-    var disciplineEligible = inputs && !!inputs.disciplineEligible;
-    var medicalEligible = inputs && !!inputs.medicalEligible;
-    score += tournamentPoints;
-    score += Math.floor(opponentQuality * 0.75);
-    score += wins * 5 + draws * 2 - losses;
-    score += Math.floor(styleMaturity / 12);
-    if (gymEligible) {
-      score += 6;
-    }
-    if (trainerEligible) {
-      score += 6;
-    }
-    if (disciplineEligible) {
-      score += 4;
-    } else {
-      score -= 10;
-    }
-    if (medicalEligible) {
-      score += 4;
-    } else {
-      score -= 18;
-    }
-    return Math.max(0, Math.round(score));
+    return statTotalFromInputs(amateurState, inputs);
   }
 
   function evaluateRank(amateurState, ageYears, inputs) {
     var ranks = dataRoot().amateurRanks || [];
     var score = computeRankScore(amateurState, inputs);
-    var current = getAmateurRank(amateurState.rankId) || getAmateurRank(defaultRankForAge(ageYears));
+    var current = getAmateurRank(canonicalRankId(amateurState.rankId, ageYears)) || getAmateurRank(defaultRankForAge(ageYears));
     var next = null;
     var i;
     var rank;
     for (i = 0; i < ranks.length; i += 1) {
       rank = ranks[i];
-      if (ageYears >= rank.minAge && score >= rank.minScore) {
+      if (!rankAllowedForAge(rank, ageYears)) {
+        continue;
+      }
+      if (score >= (typeof rank.sumMin === "number" ? rank.sumMin : rank.minScore)) {
         current = rank;
       }
-      if (!next && ageYears >= rank.minAge && score < rank.minScore) {
+      if (!next && score < (typeof rank.sumMin === "number" ? rank.sumMin : rank.minScore)) {
         next = rank;
       }
     }
     if (!next && current) {
       for (i = 0; i < ranks.length; i += 1) {
-        if (ranks[i].order === current.order + 1 && ageYears >= ranks[i].minAge) {
+        if (ranks[i].order === current.order + 1 && rankAllowedForAge(ranks[i], ageYears)) {
           next = ranks[i];
           break;
         }
@@ -264,7 +285,7 @@ var JuniorAmateurSystem = (function () {
       score: score,
       current: clone(current),
       next: clone(next),
-      progressPercent: next ? clamp(Math.round(((score - current.minScore) / Math.max(1, next.minScore - current.minScore)) * 100), 0, 100) : 100
+      progressPercent: next ? clamp(Math.round(((score - (typeof current.sumMin === "number" ? current.sumMin : current.minScore)) / Math.max(1, (typeof next.sumMin === "number" ? next.sumMin : next.minScore) - (typeof current.sumMin === "number" ? current.sumMin : current.minScore))) * 100), 0, 100) : 100
     };
   }
 
@@ -319,6 +340,7 @@ var JuniorAmateurSystem = (function () {
     defaultScoreForAge: defaultScoreForAge,
     createAmateurState: createAmateurState,
     normalizeAmateurState: normalizeAmateurState,
+    canonicalRankId: canonicalRankId,
     getLocalizedRankLabel: getLocalizedRankLabel,
     styleMaturityValue: styleMaturityValue,
     computeRankScore: computeRankScore,

@@ -31,7 +31,7 @@ var AMATEUR_SEASON_DATA = {
       eligibilityRules: {
         minAge: 16,
         maxAge: 17,
-        minRankId: "junior_novice",
+        minRankId: "junior_class_3",
         minTournamentPoints: 0,
         minNationalRankingTop: 0,
         requiredTeamStatus: "",
@@ -302,7 +302,7 @@ var AMATEUR_SEASON_DATA = {
       eligibilityRules: {
         minAge: 18,
         maxAge: 34,
-        minRankId: "national_team_member",
+        minRankId: "national_master",
         minTournamentPoints: 250,
         minNationalRankingTop: 1,
         requiredTeamStatus: "active",
