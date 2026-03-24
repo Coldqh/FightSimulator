@@ -1,4 +1,4 @@
-var SAVE_VERSION = 32;
+var SAVE_VERSION = 35;
 
 function clonePlainData(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));

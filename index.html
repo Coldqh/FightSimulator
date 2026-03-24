@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.24.7";
+    var APP_VERSION = "2026.03.24.9";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1220,7 +1220,7 @@
           gameMemo: {},
           saveTimeout: null,
           saveScheduled: false,
-          saveDelayMs: 450,
+          saveDelayMs: 1200,
           panelOpenStartedAt: 0,
           panelOpenKey: "",
           weeklyRefresh: {}
@@ -2723,6 +2723,18 @@
       };
     }
 
+    function buildEmergencySaveSnapshot() {
+      var snapshot = buildSaveSnapshot(true);
+      if (!snapshot || !snapshot.game) {
+        return snapshot;
+      }
+      delete snapshot.game.rosterState;
+      if (snapshot.game.worldState && snapshot.game.worldState.worldCareer) {
+        delete snapshot.game.worldState.worldCareer.encounterPairIndex;
+      }
+      return snapshot;
+    }
+
     function migrateSave(saveData) {
       var migrated;
       var validation;
@@ -2794,6 +2806,12 @@
           debugMode: DEBUG_MODE
         });
       }
+      if (sourceVersion > 0 && sourceVersion < 35) {
+        migrated = normalizeGameState(migrated, {
+          appVersion: migrated.meta && migrated.meta.appVersion ? migrated.meta.appVersion : (saveData.appVersion || APP_VERSION),
+          debugMode: DEBUG_MODE
+        });
+      }
       migrated.meta.appVersion = saveData.appVersion || APP_VERSION;
       migrated.meta.saveVersion = SAVE_VERSION;
       migrated.ui.savedPreview = buildSavePreview({ game: migrated });
@@ -2829,6 +2847,14 @@
       state.debug.metrics.saveBytes = payload.length;
       state.debug.metrics.saveCount += 1;
       state.debug.metrics.lastSaveOk = SaveManager.saveRaw ? SaveManager.saveRaw(SAVE_KEY, payload) : SaveManager.save(SAVE_KEY, snapshot);
+      if (!state.debug.metrics.lastSaveOk) {
+        snapshot = buildEmergencySaveSnapshot();
+        if (snapshot) {
+          payload = JSON.stringify(snapshot);
+          state.debug.metrics.saveBytes = payload.length;
+          state.debug.metrics.lastSaveOk = SaveManager.saveRaw ? SaveManager.saveRaw(SAVE_KEY, payload) : SaveManager.save(SAVE_KEY, snapshot);
+        }
+      }
       if (state.debug.metrics.lastSaveOk) {
         state.savedPreview = buildSavePreview(snapshot);
       }
@@ -14271,7 +14297,7 @@
         html.push("<div class='muted'>Кличка: " + profile.nickname + ".</div>");
       }
       html.push("<div class='card compact-card'><h3>Команда</h3><div class='muted'>Зал: " + profile.gymLabel + (profile.gymTypeLabel ? (" · " + profile.gymTypeLabel) : "") + ".</div><div class='muted'>Тренер: " + profile.trainerLabel + ".</div>" + (profile.trainerId ? ("<div class='muted'>У тренера ещё бойцов: " + profile.trainerRosterCount + ".</div><div class='footer-actions'><button class='button' onclick='openTrainerProfile(\"" + profile.trainerId + "\", \"fighterProfile\")'>Посмотреть всех бойцов тренера</button></div>") : "") + "</div>");
-      html.push("<div class='card compact-card'><h3>База</h3><div class='muted'>Стиль: " + developmentStyleLabel(profile.styleId) + ".</div><div class='muted'>Архетип: " + profile.archetypeId + ".</div><div class='muted'>Рекорд: " + profile.recordLabel + ".</div><div class='record-row'>");
+      html.push("<div class='card compact-card'><h3>База</h3><div class='muted'>Стиль: " + developmentStyleLabel(profile.styleId) + ".</div><div class='muted'>Рекорд: " + profile.recordLabel + ".</div><div class='record-row'>");
       for (statKey in DATA.statLabels) {
         if (DATA.statLabels.hasOwnProperty(statKey)) {
           html.push("<div class='chip'>" + DATA.statLabels[statKey] + " " + (profile.attributes[statKey] || 0) + "</div>");
@@ -16788,7 +16814,7 @@
       html.push("<div class='battle-chip-line'><div class='chip'>Раунд " + fight.round + " / " + fight.roundLimit + "</div><div class='chip'>Ход " + fight.turn + " / " + fight.turnsPerRound + "</div></div>");
       html.push(renderFightRulesetCard(fight.ruleset, { numberOfRounds: fight.roundLimit, roundLengthAbstract: fight.turnsPerRound }));
       html.push("<div class='battle-panel inset-panel'><strong>Ты</strong>" + meter("Прочность", fight.playerState.hp, fight.playerState.maxHp) + meter("Стамина", fight.playerState.stamina, fight.playerState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.playerState.knockdowns + "</div><div class='chip'>Позиция " + (fight.playerState.position.x + 1) + ":" + (fight.playerState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.playerState.defenseMode ? FIGHT_ACTIONS[fight.playerState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Состояние " + fightConditionSummary(state.fighter) + "</div></div></div>");
-        html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Стиль " + (fight.opponent.styleLabel || "Базовый") + "</div><div class='chip'>Архетип " + (fight.opponent.archetypeLabel || "Базовый") + "</div></div></div>");
+      html.push("<div class='battle-panel inset-panel'><strong>Соперник</strong>" + meter("Прочность", fight.opponentState.hp, fight.opponentState.maxHp) + meter("Стамина", fight.opponentState.stamina, fight.opponentState.maxStamina) + "<div class='battle-chip-line'><div class='chip'>Нокдауны " + fight.opponentState.knockdowns + "</div><div class='chip'>Позиция " + (fight.opponentState.position.x + 1) + ":" + (fight.opponentState.position.y + 1) + "</div><div class='chip'>Защита " + (fight.opponentState.defenseMode ? FIGHT_ACTIONS[fight.opponentState.defenseMode].label : "Нет") + "</div></div><div class='battle-chip-line'><div class='chip'>Стиль " + (fight.opponent.styleLabel || "Базовый") + "</div></div></div>");
       if (fight.roundCards.length) {
         html.push("<div class='battle-panel inset-panel'><strong>Карточки</strong>");
         html.push("<div class='log-entry'>" + fight.roundCards[0] + "</div>");

@@ -558,22 +558,116 @@ var WorldRankingsEngine = (function () {
     };
   }
 
-  function buildAttributeSpread(trackId, slotIndex) {
-    var base = 0;
-    if (trackId === "street") {
-      base = 3 + Math.floor(slotIndex / 6);
-    } else if (trackId === "amateur") {
-      base = 4 + Math.floor(slotIndex / 5);
-    } else {
-      base = 5 + Math.floor(slotIndex / 4);
+  function canonicalRankId(rankId) {
+    var value = String(rankId || "").toLowerCase();
+    if (value === "elite") {
+      return "national_team_candidate";
     }
-    base = clamp(base, 3, trackId === "pro" ? 15 : 12);
+    if (value === "a") {
+      return "adult_class_1";
+    }
+    if (value === "b") {
+      return "adult_class_2";
+    }
+    if (value === "c") {
+      return "adult_class_3";
+    }
+    if (value === "kms") {
+      return "candidate_national";
+    }
+    if (value === "ms") {
+      return "national_master";
+    }
+    if (value === "msmk") {
+      return "international_master";
+    }
+    return rankId || "";
+  }
+
+  function rankIndexForId(rankId) {
+    var ranks = adultRankPool();
+    var index = ranks.indexOf(canonicalRankId(rankId));
+    return index >= 0 ? index : 0;
+  }
+
+  function styleOffsets(styleId) {
+    if (styleId === "puncher") {
+      return { str: 5, tec: -1, spd: -1, end: 3, vit: 2 };
+    }
+    if (styleId === "counterpuncher") {
+      return { str: 0, tec: 4, spd: 4, end: 1, vit: 1 };
+    }
+    if (styleId === "tempo") {
+      return { str: 1, tec: 1, spd: 2, end: 4, vit: 3 };
+    }
+    return { str: -1, tec: 4, spd: 4, end: 1, vit: 1 };
+  }
+
+  function statValueFromBase(baseValue, minValue, maxValue, offsetValue, seedKey) {
+    return clamp(baseValue + offsetValue + deterministicRange(seedKey, -3, 3), minValue, maxValue);
+  }
+
+  function amateurBaseFromDetails(details, slotIndex) {
+    var rankIndex = rankIndexForId(details && details.amateurRank ? details.amateurRank : "");
+    var status = details && details.nationalTeamStatus ? details.nationalTeamStatus : "none";
+    var base = 12 + rankIndex * 8 + deterministicRange("amateur_base:" + slotIndex, 0, 6);
+    if (status === "candidate") {
+      base += 4;
+    } else if (status === "reserve") {
+      base += 8;
+    } else if (status === "active") {
+      base += 12;
+    }
+    return clamp(base, 8, 95);
+  }
+
+  function streetBaseFromDetails(details, slotIndex) {
+    var rating = details && typeof details.streetRating === "number" ? details.streetRating : (8 + (slotIndex * 3));
+    return clamp(10 + Math.round(rating * 1.1), 4, 150);
+  }
+
+  function proBaseFromDetails(details, slotIndex) {
+    var rankingSeed = details && typeof details.rankingSeed === "number" ? details.rankingSeed : 0;
+    var wins = details && typeof details.recordWins === "number" ? details.recordWins : 0;
+    var fame = details && typeof details.fame === "number" ? details.fame : 0;
+    var contenderStatus = details && details.contenderStatus ? details.contenderStatus : "";
+    var rankingBand = details && details.rankingBand ? details.rankingBand : "";
+    var strength = Math.max(rankingSeed, wins * 5, Math.round(fame * 1.2));
+    if (/champion/i.test(rankingBand)) {
+      contenderStatus = "champion";
+      strength = Math.max(strength, 150);
+    } else if (/world_top_5/i.test(rankingBand)) {
+      strength = Math.max(strength, 145);
+    } else if (/world_top_10/i.test(rankingBand)) {
+      strength = Math.max(strength, 135);
+    } else if (/world_top_15/i.test(rankingBand)) {
+      strength = Math.max(strength, 125);
+    } else if (/world_top_20/i.test(rankingBand)) {
+      strength = Math.max(strength, 115);
+    } else if (/regional_top_5/i.test(rankingBand)) {
+      strength = Math.max(strength, 95);
+    } else if (/regional_top_10/i.test(rankingBand)) {
+      strength = Math.max(strength, 80);
+    }
+    var base = 100 + Math.round(Math.min(95, strength * 0.65));
+    if (contenderStatus === "champion" || contenderStatus === "titleholder") {
+      base = 192 + deterministicRange("champion_base:" + slotIndex, -2, 3);
+    }
+    return clamp(base, 100, 195);
+  }
+
+  function buildAttributeSpread(trackId, slotIndex, details) {
+    var styleId = details && (details.styleId || details.style) ? (details.styleId || details.style) : styleIdForSlot(slotIndex);
+    var offsets = styleOffsets(styleId);
+    var minValue = trackId === "pro" ? 100 : 1;
+    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 95);
+    var base = trackId === "pro" ? proBaseFromDetails(details, slotIndex) : (trackId === "street" ? streetBaseFromDetails(details, slotIndex) : amateurBaseFromDetails(details, slotIndex));
     return {
-      str: base + (slotIndex % 3 === 0 ? 1 : 0),
-      tec: base + (slotIndex % 3 === 1 ? 1 : 0),
-      spd: base + (slotIndex % 4 === 0 ? 1 : 0),
-      end: base + (slotIndex % 4 >= 2 ? 1 : 0),
-      vit: base + (slotIndex % 5 === 0 ? 1 : 0)
+      str: statValueFromBase(base, minValue, maxValue, offsets.str, trackId + ":" + slotIndex + ":str"),
+      tec: statValueFromBase(base, minValue, maxValue, offsets.tec, trackId + ":" + slotIndex + ":tec"),
+      spd: statValueFromBase(base, minValue, maxValue, offsets.spd, trackId + ":" + slotIndex + ":spd"),
+      end: statValueFromBase(base, minValue, maxValue, offsets.end, trackId + ":" + slotIndex + ":end"),
+      vit: statValueFromBase(base, minValue, maxValue, offsets.vit, trackId + ":" + slotIndex + ":vit")
     };
   }
 
@@ -659,7 +753,7 @@ var WorldRankingsEngine = (function () {
     var identity = identityForSlot(countryId, trackId, slotIndex);
     var styleId = styleIdForSlot(slotIndex);
     var facilities = findFacilityBinding(gameState, countryId, trackId, slotIndex);
-    var attributes = buildAttributeSpread(trackId, slotIndex);
+    var attributes;
     var age = 16;
     var streetRating = 0;
     var amateurRank = "";
@@ -699,9 +793,19 @@ var WorldRankingsEngine = (function () {
       losses = proRecord.losses;
       draws = proRecord.draws;
       kos = proRecord.kos;
-      rankingSeed = 10 + (slotIndex * 2) + deterministicRange("rank:" + countryId + ":" + slotIndex, 0, 18);
+      rankingSeed = 40 + (slotIndex * 8) + deterministicRange("rank:" + countryId + ":" + slotIndex, 0, 24);
       fame = 18 + Math.floor(slotIndex * 1.5);
     }
+    attributes = buildAttributeSpread(trackId, slotIndex, {
+      styleId: styleId,
+      amateurRank: amateurRank,
+      nationalTeamStatus: nationalTeamStatus,
+      streetRating: streetRating,
+      rankingSeed: rankingSeed,
+      contenderStatus: trackId === "pro" && rankingSeed >= 140 ? "champion" : (trackId === "pro" && rankingSeed >= 90 ? "ranked" : ""),
+      recordWins: trackId === "pro" ? proRecord.wins : wins,
+      fame: fame
+    });
     return {
       id: stableId("fighter_generated", [trackId, countryId, slotIndex]),
       firstName: identity.firstName,
@@ -766,7 +870,7 @@ var WorldRankingsEngine = (function () {
       encounterHooks: [],
       proRecord: clone(proRecord),
       proRankingData: rankingSeed ? { rankingSeed: rankingSeed } : {},
-      contenderStatus: trackId === "pro" ? (rankingSeed >= 70 ? "ranked" : "prospect") : "",
+      contenderStatus: trackId === "pro" ? (rankingSeed >= 140 ? "champion" : (rankingSeed >= 90 ? "ranked" : "prospect")) : "",
       titleHistory: [],
       rankingSeed: rankingSeed,
       proReputationTags: [],
@@ -882,9 +986,57 @@ var WorldRankingsEngine = (function () {
     if (roster.fighterIds.length !== beforeCount) {
       clearRankingProjectionCache();
       clearProfileProjectionCache();
+      ensureRosterAttributeBands(gameState);
       return true;
     }
+    ensureRosterAttributeBands(gameState);
     return false;
+  }
+
+  function ensureRosterAttributeBands(gameState) {
+    var roster = rosterRoot(gameState);
+    var changed = false;
+    var i;
+    var fighter;
+    var trackId;
+    var details;
+    var expected;
+    var currentTotal;
+    var expectedTotal;
+    if (!roster || !(roster.fighterIds instanceof Array)) {
+      return false;
+    }
+    for (i = 0; i < roster.fighterIds.length; i += 1) {
+      fighter = roster.fightersById[roster.fighterIds[i]];
+      if (!fighter || fighter.isPlayer || fighter.status === "retired") {
+        continue;
+      }
+      trackId = currentTrackId(fighter);
+      details = {
+        styleId: fighter.styleId || fighter.style || "",
+        amateurRank: fighter.amateurRank || fighter.amateurClass || "",
+        nationalTeamStatus: fighter.nationalTeamStatus || "none",
+        streetRating: typeof fighter.streetRating === "number" ? fighter.streetRating : 0,
+        rankingSeed: typeof fighter.rankingSeed === "number" ? fighter.rankingSeed : 0,
+        rankingBand: fighter.proRankingData && fighter.proRankingData.rankingBand ? fighter.proRankingData.rankingBand : "",
+        contenderStatus: fighter.contenderStatus || "",
+        recordWins: fighter.record && typeof fighter.record.wins === "number" ? fighter.record.wins : ((fighter.proRecord && fighter.proRecord.wins) || (fighter.amateurRecord && fighter.amateurRecord.wins) || 0),
+        fame: typeof fighter.fame === "number" ? fighter.fame : 0
+      };
+      expected = buildAttributeSpread(trackId, i + 1, details);
+      currentTotal = fighterTotal(fighter);
+      expectedTotal = (expected.str || 0) + (expected.tec || 0) + (expected.spd || 0) + (expected.end || 0) + (expected.vit || 0);
+      if ((trackId === "pro" && currentTotal < 500) || currentTotal < expectedTotal) {
+        fighter.attributes = clone(expected);
+        fighter.stats = clone(expected);
+        changed = true;
+      }
+    }
+    if (changed) {
+      clearRankingProjectionCache();
+      clearProfileProjectionCache();
+    }
+    return changed;
   }
 
   function countryLabel(countryId) {
@@ -1428,6 +1580,9 @@ var WorldRankingsEngine = (function () {
     return cachedProfileProjection(gameState, opts, "fighter|" + fighterId, function () {
       var roster = rosterRoot(gameState);
       var fighter = fighterId ? roster.fightersById[fighterId] || null : null;
+      var slotIndex;
+      var expectedAttributes;
+      var currentTotal;
       var trainer = fighter && fighter.currentTrainerId ? roster.trainersById[fighter.currentTrainerId] || null : null;
       var gym = fighter && fighter.currentGymId ? roster.gymsById[fighter.currentGymId] || null : null;
       var encounter = fighter ? getEncounterWithPlayer(gameState, fighter.id) : null;
@@ -1442,6 +1597,23 @@ var WorldRankingsEngine = (function () {
       var orgEntries;
       if (!fighter) {
         return null;
+      }
+      slotIndex = Math.max(1, roster.fighterIds.indexOf(fighter.id) + 1);
+      expectedAttributes = buildAttributeSpread(currentTrackId(fighter), slotIndex, {
+        styleId: fighter.styleId || fighter.style || "",
+        amateurRank: fighter.amateurRank || fighter.amateurClass || "",
+        nationalTeamStatus: fighter.nationalTeamStatus || "none",
+        streetRating: typeof fighter.streetRating === "number" ? fighter.streetRating : 0,
+        rankingSeed: typeof fighter.rankingSeed === "number" ? fighter.rankingSeed : 0,
+        rankingBand: fighter.proRankingData && fighter.proRankingData.rankingBand ? fighter.proRankingData.rankingBand : "",
+        contenderStatus: fighter.contenderStatus || "",
+        recordWins: fighter.record && typeof fighter.record.wins === "number" ? fighter.record.wins : ((fighter.proRecord && fighter.proRecord.wins) || (fighter.amateurRecord && fighter.amateurRecord.wins) || 0),
+        fame: typeof fighter.fame === "number" ? fighter.fame : 0
+      });
+      currentTotal = fighterTotal(fighter);
+      if ((currentTrackId(fighter) === "pro" && currentTotal < 500) || currentTotal < fighterTotal({ attributes: expectedAttributes })) {
+        fighter.attributes = clone(expectedAttributes);
+        fighter.stats = clone(expectedAttributes);
       }
       if (currentTrackId(fighter) === "pro") {
       for (i = 0; i < ring.length; i += 1) {
@@ -1602,6 +1774,7 @@ var WorldRankingsEngine = (function () {
 
   return {
     ensureMinimumRoster: ensureMinimumRoster,
+    ensureRosterAttributeBands: ensureRosterAttributeBands,
     buildStreetRankingView: buildStreetRankingView,
     buildAmateurRankingView: buildAmateurRankingView,
     buildProRankingView: buildProRankingView,

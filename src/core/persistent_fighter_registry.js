@@ -351,18 +351,18 @@ var PersistentFighterRegistry = (function () {
     entity.streetRating = typeof seed.streetRating === "number" ? seed.streetRating : 0;
     entity.streetData = seed.streetData ? clone(seed.streetData) : clone(entity.streetData);
     entity.amateurClass = seed.amateurClass || "";
-    entity.amateurRank = seed.amateurRank || entity.amateurClass || "";
+    entity.amateurRank = canonicalSeedAmateurRank(seed.amateurRank || entity.amateurClass || "", entity.age, seed.amateurRecord || entity.amateurRecord);
     entity.amateurRecord = clone(seed.amateurRecord || entity.amateurRecord);
-    entity.nationalTeamStatus = seed.nationalTeamStatus || "none";
+    entity.nationalTeamStatus = canonicalSeedNationalTeamStatus(seed.nationalTeamStatus || "none", entity.amateurRank, entity.amateurRecord);
     entity.amateurGoals = clone(seed.amateurGoals || []);
     entity.goalProfileId = seed.goalProfileId || "";
     entity.worldHistoryHooks = clone(seed.worldHistoryHooks || []);
     entity.encounterHooks = clone(seed.encounterHooks || []);
     entity.proRecord = clone(seed.proRecord || entity.proRecord);
     entity.proRankingData = clone(seed.proRankingData || {});
-    entity.contenderStatus = seed.contenderStatus || "";
+    entity.contenderStatus = canonicalSeedContenderStatus(seed.contenderStatus || "", seed.proRankingData || {}, seed.proRecord || entity.proRecord);
     entity.titleHistory = clone(seed.titleHistory || []);
-    entity.rankingSeed = typeof seed.rankingSeed === "number" ? seed.rankingSeed : 0;
+    entity.rankingSeed = canonicalSeedRankingSeed(seed.rankingSeed, seed.proRankingData || {}, seed.proRecord || entity.proRecord, seed.fame || 0, entity.contenderStatus);
     entity.proReputationTags = clone(seed.proReputationTags || []);
     entity.formerAmateurStatus = seed.formerAmateurStatus || "";
     entity.formerNationalTeamStatus = seed.formerNationalTeamStatus || "none";
@@ -390,7 +390,185 @@ var PersistentFighterRegistry = (function () {
       entity.record.kos = entity.proRecord.kos || 0;
     }
     entity.tags = clone(seed.reputationTags || []);
+    normalizeSeedAttributeBand(entity, trackId);
     return entity;
+  }
+
+  function canonicalSeedAmateurRank(rankId, age, record) {
+    var wins = record && typeof record.wins === "number" ? record.wins : 0;
+    var value = String(rankId || "").toLowerCase();
+    if (value === "elite") {
+      return wins >= 15 ? "national_team_candidate" : "candidate_national";
+    }
+    if (value === "a") {
+      return wins >= 14 ? "candidate_national" : "adult_class_1";
+    }
+    if (value === "b") {
+      return "adult_class_2";
+    }
+    if (value === "c") {
+      return "adult_class_3";
+    }
+    if (value === "kms") {
+      return "candidate_national";
+    }
+    if (value === "ms") {
+      return "national_master";
+    }
+    if (value === "msmk") {
+      return "international_master";
+    }
+    if (!rankId) {
+      return age >= 18 ? "adult_class_3" : "junior_class_1";
+    }
+    return rankId;
+  }
+
+  function canonicalSeedNationalTeamStatus(status, rankId, record) {
+    var wins = record && typeof record.wins === "number" ? record.wins : 0;
+    if (status && status !== "none") {
+      return status;
+    }
+    if (rankId === "olympic_level" || rankId === "national_team_member") {
+      return "active";
+    }
+    if (rankId === "national_team_candidate" || rankId === "international_master") {
+      return "candidate";
+    }
+    if (rankId === "national_master" || (rankId === "candidate_national" && wins >= 14)) {
+      return "reserve";
+    }
+    return "none";
+  }
+
+  function canonicalSeedContenderStatus(status, rankingData, proRecord) {
+    var band = rankingData && rankingData.rankingBand ? rankingData.rankingBand : "";
+    var wins = proRecord && typeof proRecord.wins === "number" ? proRecord.wins : 0;
+    if (status) {
+      return status;
+    }
+    if (/champion/i.test(band)) {
+      return "champion";
+    }
+    if (/world_top_/i.test(band)) {
+      return "ranked";
+    }
+    if (/regional_top_/i.test(band) || wins >= 20) {
+      return "contender";
+    }
+    if (wins >= 10) {
+      return "prospect";
+    }
+    return "";
+  }
+
+  function canonicalSeedRankingSeed(explicitSeed, rankingData, proRecord, fame, contenderStatus) {
+    var band = rankingData && rankingData.rankingBand ? rankingData.rankingBand : "";
+    var wins = proRecord && typeof proRecord.wins === "number" ? proRecord.wins : 0;
+    var seed = typeof explicitSeed === "number" ? explicitSeed : 0;
+    seed = Math.max(seed, wins * 5, Math.round((fame || 0) * 1.6));
+    if (contenderStatus === "champion" || /champion/i.test(band)) {
+      return Math.max(seed, 150);
+    }
+    if (/world_top_5/i.test(band)) {
+      return Math.max(seed, 142);
+    }
+    if (/world_top_10/i.test(band)) {
+      return Math.max(seed, 134);
+    }
+    if (/world_top_15/i.test(band)) {
+      return Math.max(seed, 126);
+    }
+    if (/world_top_20/i.test(band)) {
+      return Math.max(seed, 118);
+    }
+    if (/regional_top_5/i.test(band)) {
+      return Math.max(seed, 96);
+    }
+    if (/regional_top_10/i.test(band)) {
+      return Math.max(seed, 82);
+    }
+    return seed;
+  }
+
+  function seedStyleOffsets(styleId) {
+    if (styleId === "puncher") {
+      return { str: 5, tec: -1, spd: -1, end: 3, vit: 2 };
+    }
+    if (styleId === "counterpuncher") {
+      return { str: 0, tec: 4, spd: 4, end: 1, vit: 1 };
+    }
+    if (styleId === "tempo") {
+      return { str: 1, tec: 1, spd: 2, end: 4, vit: 3 };
+    }
+    return { str: -1, tec: 4, spd: 4, end: 1, vit: 1 };
+  }
+
+  function seedStatClamp(value, minValue, maxValue) {
+    return Math.max(minValue, Math.min(maxValue, Math.round(value)));
+  }
+
+  function seedBaseAmateur(entity) {
+    var rankOrder = {
+      junior_novice: 12,
+      junior_class_3: 24,
+      junior_class_2: 36,
+      junior_class_1: 48,
+      adult_class_3: 42,
+      adult_class_2: 58,
+      adult_class_1: 72,
+      candidate_national: 84,
+      national_master: 90,
+      international_master: 93,
+      national_team_candidate: 92,
+      national_team_member: 94,
+      olympic_level: 95
+    };
+    var base = rankOrder[entity.amateurRank] || 32;
+    if (entity.nationalTeamStatus === "active") {
+      base += 2;
+    } else if (entity.nationalTeamStatus === "reserve") {
+      base += 1;
+    }
+    return seedStatClamp(base, 1, 95);
+  }
+
+  function seedBaseStreet(entity) {
+    return seedStatClamp(12 + ((entity.streetRating || 0) * 1.05), 1, 150);
+  }
+
+  function seedBasePro(entity) {
+    if (entity.contenderStatus === "champion" || entity.contenderStatus === "titleholder") {
+      return 193;
+    }
+    if ((entity.rankingSeed || 0) >= 140) {
+      return 186;
+    }
+    if ((entity.rankingSeed || 0) >= 120) {
+      return 176;
+    }
+    if ((entity.rankingSeed || 0) >= 100) {
+      return 164;
+    }
+    if ((entity.rankingSeed || 0) >= 80) {
+      return 148;
+    }
+    return seedStatClamp(100 + Math.round((entity.rankingSeed || 0) * 0.55), 100, 195);
+  }
+
+  function normalizeSeedAttributeBand(entity, trackId) {
+    var offsets = seedStyleOffsets(entity.styleId || entity.style || "");
+    var base = trackId === "pro" ? seedBasePro(entity) : (trackId === "street" ? seedBaseStreet(entity) : seedBaseAmateur(entity));
+    var minValue = trackId === "pro" ? 100 : 1;
+    var maxValue = trackId === "pro" ? 195 : (trackId === "street" ? 150 : 95);
+    entity.attributes = {
+      str: seedStatClamp(base + offsets.str, minValue, maxValue),
+      tec: seedStatClamp(base + offsets.tec, minValue, maxValue),
+      spd: seedStatClamp(base + offsets.spd, minValue, maxValue),
+      end: seedStatClamp(base + offsets.end, minValue, maxValue),
+      vit: seedStatClamp(base + offsets.vit, minValue, maxValue)
+    };
+    entity.stats = clone(entity.attributes);
   }
 
   function mergeEntity(target, incoming) {
@@ -847,6 +1025,9 @@ var PersistentFighterRegistry = (function () {
     }
     if (activeCount < 100 && typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureMinimumRoster) {
       WorldRankingsEngine.ensureMinimumRoster(gameState);
+    }
+    if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.ensureRosterAttributeBands) {
+      WorldRankingsEngine.ensureRosterAttributeBands(gameState);
     }
     syncOfferRosterLinks(gameState);
     syncRivalryRosterLinks(gameState);
