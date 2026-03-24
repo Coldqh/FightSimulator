@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.23.1";
+    var APP_VERSION = "2026.03.24.5";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -7286,7 +7286,7 @@
       recordCareerMedia("gym", {
         gymName: gym.name
       });
-      refreshWorldState();
+      scheduleSaveGameState();
       openPanel("careerTrainer");
     }
 
@@ -7349,7 +7349,6 @@
         subtype: "hired",
         trainerName: trainerNpc.name
       });
-      refreshWorldState();
       if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
         render();
       }
@@ -11480,7 +11479,6 @@
       ensureBiographyState();
       rememberCountryVisit(state.create.country);
       generateCareerNpcWorld();
-      refreshWorldState(true);
       state.screen = "game";
       state.panel = "home";
       countryInfo = getCountryInfo(state.fighter.homeCountry);
@@ -11490,6 +11488,15 @@
       });
       addBiographyHistory((startingAge >= 18 ? "Начинает взрослую раннюю карьеру в " : "Начинает юниорский путь в ") + countryInfo.name + ".", "origin");
       render();
+      setTimeout(function () {
+        if (!state.fighter || state.screen !== "game") {
+          return;
+        }
+        refreshWorldState(true);
+        if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+          render();
+        }
+      }, 16);
     }
 
     function setCreateStartingAge(ageValue) {
@@ -12431,7 +12438,6 @@
     function renderCareerLogPage() {
       return "" +
         renderSectionCard("careerlog_log", "Лента карьеры", renderLogPanelInner(), true, "журнал") +
-        renderSectionCard("careerlog_media", "Медиа", renderMediaFeedList(8), false, "медиа") +
         renderSectionCard("careerlog_world", "История мира", renderWorldMediaArchiveList(8), false, "мир") +
         "<div class='panel'><div class='footer-actions'><button class='ghost' onclick='openLegendArchive()'>Архив и история</button></div></div>";
     }
@@ -14813,7 +14819,7 @@
       } else if (defender.defenseMode === "counter") {
         dodge = 20 + defenderStats.spd * 0.5;
         if (defender.counterChain >= 2) {
-          dodge -= (defender.counterChain - 1) * 10;
+          dodge = dodge / 2;
         }
       }
       if (defender.defenseMode !== "counter" && defender.nextDodgePenalty) {
@@ -15242,13 +15248,20 @@
       var approachMove = pickAIMove(fight, false);
       var retreatMove = pickAIMove(fight, true);
       var best = null;
+      var bestAttack = null;
       var attackKeys = ["jab", "cross", "body", "hook", "uppercut"];
+      var mustBreakCounterRhythm = styleId === "counterpuncher" && ai.lastDefenseKey === "counter";
+      var forcedEscape = boundaryPenalty >= 30 || (boundaryPenalty >= 15 && threatPenalty >= 10);
       var i;
       var key;
       var score;
 
       if (ai.stamina < ai.maxStamina * 0.15 && canUseFightAction(fight, "opponent", "block")) {
         return "block";
+      }
+
+      if (forcedEscape && retreatMove) {
+        return retreatMove;
       }
 
       if (approachMove) {
@@ -15280,15 +15293,21 @@
         if (retreat) {
           score += 10;
         }
+        if (boundaryPenalty >= 15) {
+          score -= 6;
+        }
         best = considerAiAction(best, "block", score + rand(0, 4));
       }
-      if (canUseFightAction(fight, "opponent", "counter")) {
+      if (!mustBreakCounterRhythm && canUseFightAction(fight, "opponent", "counter")) {
         score = 16 + styleAttackBias(styleId, "counter") + (context.ai.counterBias || 0);
         if (player.actedAttack) {
           score += 6;
         }
         if (retreat) {
           score += 4;
+        }
+        if (boundaryPenalty >= 15) {
+          score -= 14;
         }
         best = considerAiAction(best, "counter", score + rand(0, 4));
       }
@@ -15322,15 +15341,22 @@
         if (distance === "line" && (key === "jab" || key === "cross" || key === "body")) {
           score += 4;
         }
+        if (mustBreakCounterRhythm) {
+          score += 12;
+        }
         if (retreat) {
           score -= 6;
         }
         if (boundaryPenalty >= 15) {
-          score -= 8;
+          score -= 4;
         }
         best = considerAiAction(best, key, score + rand(0, 5));
+        bestAttack = considerAiAction(bestAttack, key, score);
       }
 
+      if (mustBreakCounterRhythm && bestAttack && !forcedEscape) {
+        return bestAttack.actionKey;
+      }
       return best ? best.actionKey : (retreat ? retreatMove : approachMove);
     }
 
