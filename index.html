@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.25.4";
+var APP_VERSION = "2026.03.25.5";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -8708,6 +8708,167 @@ var APP_VERSION = "2026.03.25.4";
       });
     }
 
+    function rankingProjectionToken() {
+      return String(currentProjectionVersion("ranking")) + "|" + String(currentProjectionVersion("roster"));
+    }
+
+    function rankingEntryEntity(entry) {
+      return entry && entry.fighterId ? getPersistentFighterEntity(entry.fighterId) : null;
+    }
+
+    function addRankingCandidateEntry(target, seen, entry) {
+      if (!entry || !entry.fighterId || entry.isPlayer || seen[entry.fighterId]) {
+        return;
+      }
+      seen[entry.fighterId] = true;
+      target.push(entry);
+    }
+
+    function collectEntriesAroundPlayer(entries, maxCount) {
+      var list = entries instanceof Array ? entries : [];
+      var seen = {};
+      var result = [];
+      var playerId = currentPlayerFighterEntityId();
+      var playerIndex = -1;
+      var offset;
+      var i;
+      for (i = 0; i < list.length; i += 1) {
+        if (list[i] && (list[i].isPlayer || list[i].fighterId === playerId)) {
+          playerIndex = i;
+          break;
+        }
+      }
+      if (playerIndex < 0) {
+        playerIndex = Math.max(0, list.length - 1);
+      }
+      for (offset = 1; result.length < maxCount && ((playerIndex - offset) >= 0 || (playerIndex + offset) < list.length); offset += 1) {
+        if ((playerIndex - offset) >= 0) {
+          addRankingCandidateEntry(result, seen, list[playerIndex - offset]);
+        }
+        if (result.length >= maxCount) {
+          break;
+        }
+        if ((playerIndex + offset) < list.length) {
+          addRankingCandidateEntry(result, seen, list[playerIndex + offset]);
+        }
+      }
+      for (i = 0; result.length < maxCount && i < list.length; i += 1) {
+        addRankingCandidateEntry(result, seen, list[i]);
+      }
+      return result;
+    }
+
+    function streetRankingCandidates(gameState, maxCount) {
+      var view;
+      if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildStreetRankingView) {
+        return [];
+      }
+      view = WorldRankingsEngine.buildStreetRankingView(gameState, {
+        countryId: "",
+        page: 0,
+        pageSize: 9999,
+        versionToken: rankingProjectionToken()
+      });
+      return collectEntriesAroundPlayer(view && view.entries ? view.entries : [], maxCount || 4);
+    }
+
+    function amateurRankingCandidates(gameState, maxCount) {
+      var playerRankId = gameState && gameState.player && gameState.player.amateur ? gameState.player.amateur.rankId || "" : "";
+      var playerTotal = fighterStatTotal(state.fighter ? state.fighter.stats : null);
+      var localView;
+      var worldView;
+      var entries = [];
+      var seen = {};
+      var i;
+      function collect(view) {
+        var list = view && view.entries ? view.entries : [];
+        var entry;
+        for (i = 0; i < list.length; i += 1) {
+          entry = list[i];
+          if (!entry || entry.isPlayer || !entry.fighterId) {
+            continue;
+          }
+          if (playerRankId && entry.amateurRank !== playerRankId) {
+            continue;
+          }
+          if (!seen[entry.fighterId]) {
+            seen[entry.fighterId] = true;
+            entries.push(entry);
+          }
+        }
+      }
+      if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildAmateurRankingView) {
+        return [];
+      }
+      localView = WorldRankingsEngine.buildAmateurRankingView(gameState, {
+        countryId: state.fighter ? state.fighter.currentCountry || "" : "",
+        page: 0,
+        pageSize: 9999,
+        versionToken: rankingProjectionToken()
+      });
+      collect(localView);
+      if (entries.length < (maxCount || 4)) {
+        worldView = WorldRankingsEngine.buildAmateurRankingView(gameState, {
+          countryId: "",
+          page: 0,
+          pageSize: 9999,
+          versionToken: rankingProjectionToken()
+        });
+        collect(worldView);
+      }
+      entries.sort(function (left, right) {
+        var leftEntity = rankingEntryEntity(left);
+        var rightEntity = rankingEntryEntity(right);
+        var leftTotal = fighterStatTotal(leftEntity ? (leftEntity.attributes || leftEntity.stats) : null);
+        var rightTotal = fighterStatTotal(rightEntity ? (rightEntity.attributes || rightEntity.stats) : null);
+        return Math.abs(leftTotal - playerTotal) - Math.abs(rightTotal - playerTotal);
+      });
+      return entries.slice(0, maxCount || 4);
+    }
+
+    function proRankingCandidates(gameState, maxCount) {
+      var view;
+      if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildProRankingView) {
+        return [];
+      }
+      view = WorldRankingsEngine.buildProRankingView(gameState, {
+        tabId: "ring",
+        page: 0,
+        pageSize: 9999,
+        versionToken: rankingProjectionToken()
+      });
+      return collectEntriesAroundPlayer(view && view.entries ? view.entries : [], maxCount || 4);
+    }
+
+    function offerRankingLabel(entry) {
+      if (!entry) {
+        return "";
+      }
+      if (entry.rankBadge === "cup" || entry.rankLabel === "Кубок") {
+        return "Кубок";
+      }
+      return entry.position ? ("#" + entry.position) : "";
+    }
+
+    function buildRankingMatchedOffer(templateId, entry, rivalry, matchNote) {
+      var entity = rankingEntryEntity(entry);
+      var snapshot;
+      if (!entity) {
+        return null;
+      }
+      snapshot = buildPersistentOpponentSnapshot(entity, null);
+      if (!snapshot) {
+        return null;
+      }
+      return buildFightOffer(templateId, snapshot, rivalry, {
+        snapshot: snapshot,
+        fighterId: entity.id,
+        rankingPosition: entry.position || 0,
+        rankingLabel: entry.rankLabel || "",
+        matchmakingNote: matchNote || ""
+      });
+    }
+
     function getFighterById(fighterId) {
       return getPersistentFighterEntity(fighterId);
     }
@@ -9074,7 +9235,7 @@ var APP_VERSION = "2026.03.25.4";
       return opponentClone;
     }
 
-    function buildFightOffer(templateId, rematchSnapshot, rivalry) {
+    function buildFightOffer(templateId, rematchSnapshot, rivalry, matchContext) {
       var template = getFightOfferTemplate(templateId);
       var promoter = promoterInfluence();
       var contract = currentContract();
@@ -9104,6 +9265,7 @@ var APP_VERSION = "2026.03.25.4";
       var proOfferContext = null;
       var proGameState = null;
       var offerRuleset;
+      var forcedSnapshot = matchContext && matchContext.snapshot ? buildOpponentSnapshot(matchContext.snapshot) : null;
       if (!template) {
         return null;
       }
@@ -9131,7 +9293,9 @@ var APP_VERSION = "2026.03.25.4";
       }
       country = getCountryInfo(countryKey);
       arena = ContentLoader.getRandomArena(countryKey);
-      if (proTemplate && proOfferContext && proOfferContext.targetSnapshot) {
+      if (forcedSnapshot) {
+        opponent = buildOpponentSnapshot(forcedSnapshot);
+      } else if (proTemplate && proOfferContext && proOfferContext.targetSnapshot) {
         opponent = buildOpponentSnapshot(proOfferContext.targetSnapshot);
       } else {
         opponent = generateOpponent(template.tier, countryKey, rematchSnapshot || null);
@@ -9204,11 +9368,14 @@ var APP_VERSION = "2026.03.25.4";
         titleShotExplanation: proTemplate && proOfferContext ? (proOfferContext.titleShotExplanation || "") : "",
         explanation: proTemplate && typeof ProCareerEngine !== "undefined" && ProCareerEngine.explainOffer ? ProCareerEngine.explainOffer(proGameState || ensurePersistentGameState(false), template.id, proOfferContext) : "",
         gymName: gym ? gym.name : "Уличная база",
-        fighterId: proTemplate && proOfferContext && proOfferContext.targetFighterId ? proOfferContext.targetFighterId : (opponent && opponent.fighterId ? opponent.fighterId : ""),
+        fighterId: matchContext && matchContext.fighterId ? matchContext.fighterId : (proTemplate && proOfferContext && proOfferContext.targetFighterId ? proOfferContext.targetFighterId : (opponent && opponent.fighterId ? opponent.fighterId : "")),
         proOfferId: "",
         rematchRivalryId: rivalry ? rivalry.id : "",
         seriesLabel: rivalry ? rivalrySeriesLabel(rivalry) : "",
         stakesText: rivalry ? rivalrySummary(rivalry) : "",
+        rankingPosition: matchContext && typeof matchContext.rankingPosition === "number" ? matchContext.rankingPosition : 0,
+        rankingLabel: matchContext && typeof matchContext.rankingLabel === "string" ? matchContext.rankingLabel : "",
+        matchmakingNote: matchContext && typeof matchContext.matchmakingNote === "string" ? matchContext.matchmakingNote : "",
         opponent: opponent
       };
       offerRuleset = offerBattleRuleset(offer);
@@ -9274,6 +9441,9 @@ var APP_VERSION = "2026.03.25.4";
       var ids = ["home_safe", "home_even", "home_danger"];
       var seasonGameState;
       var seasonOffers;
+      var rankedCandidates;
+      var rankedIndex = 0;
+      var template;
       var promoter = promoterInfluence();
       var contract = currentContract();
       var maxExtra = promoter.offerBonus + Math.max(0, activeContractFightFrequency() - 1) + gymBonusValue("awayBias") + trainerBonusValue("awayBias");
@@ -9286,9 +9456,14 @@ var APP_VERSION = "2026.03.25.4";
       var builtOffer;
       clearOutgrownRematches();
       if (isStreetTrack()) {
+        seasonGameState = ensurePersistentGameState(false);
         ids = listStreetFightTemplateIds();
+        rankedCandidates = streetRankingCandidates(seasonGameState, 4);
         for (i = 0; i < ids.length; i += 1) {
-          builtOffer = buildFightOffer(ids[i], null, null);
+          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем уличном рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
+          if (rankedCandidates[rankedIndex]) {
+            rankedIndex += 1;
+          }
           if (builtOffer) {
             offers.push(builtOffer);
           }
@@ -9316,9 +9491,15 @@ var APP_VERSION = "2026.03.25.4";
             return seasonOffers.slice(0, 4);
           }
         }
+        seasonGameState = ensurePersistentGameState(false);
         ids = listEligibleAmateurFightTemplateIds();
+        rankedCandidates = amateurRankingCandidates(seasonGameState, 4);
+        rankedIndex = 0;
         for (i = 0; i < ids.length; i += 1) {
-          builtOffer = buildFightOffer(ids[i], null, null);
+          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, "Соперник твоего разряда: " + localizedAmateurRankLabel(rankedCandidates[rankedIndex].amateurRank || "", rankedCandidates[rankedIndex].countryId || state.fighter.currentCountry) + ".") : null;
+          if (rankedCandidates[rankedIndex]) {
+            rankedIndex += 1;
+          }
           if (builtOffer) {
             offers.push(builtOffer);
           }
@@ -9331,8 +9512,18 @@ var APP_VERSION = "2026.03.25.4";
         if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.ensureState) {
           ProCareerEngine.ensureState(seasonGameState);
           ids = listEligibleProFightTemplateIds();
+          rankedCandidates = proRankingCandidates(seasonGameState, 4);
+          rankedIndex = 0;
           for (i = 0; i < ids.length; i += 1) {
-            builtOffer = buildFightOffer(ids[i], null, null);
+            template = getFightOfferTemplate(ids[i]);
+            if (template && (template.pipelineStage === "title_path" || template.pipelineStage === "eliminator")) {
+              builtOffer = buildFightOffer(ids[i], null, null);
+            } else {
+              builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем Ring-рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
+              if (rankedCandidates[rankedIndex]) {
+                rankedIndex += 1;
+              }
+            }
             if (builtOffer) {
               offers.push(builtOffer);
             }
@@ -13265,6 +13456,12 @@ var APP_VERSION = "2026.03.25.4";
         if (offer.tournamentInfo) {
           html.push("<div class='record-row'><div class='chip gold'>" + offer.tournamentInfo.tournamentLabel + "</div><div class='chip'>" + offer.tournamentInfo.roundLabel + "</div></div>");
         }
+        if (offer.matchmakingNote || offer.rankingPosition || offer.rankingLabel) {
+          html.push("<div class='record-row'>" +
+            (offer.rankingLabel === "Кубок" ? ("<div class='chip gold'>" + renderCupIconHtml(14) + "</div>") : (offer.rankingPosition ? "<div class='chip'>#" + offer.rankingPosition + "</div>" : "")) +
+            (offer.matchmakingNote ? ("<div class='chip'>" + offer.matchmakingNote + "</div>") : "") +
+          "</div>");
+        }
         html.push(renderSectionCard("offer_" + i, "Детали боя", "" +
           renderFightRulesetCard({
             label: offer.rulesetLabel || "Бой",
@@ -13282,7 +13479,7 @@ var APP_VERSION = "2026.03.25.4";
           "<div class='record-row'><div class='chip'>Форма " + opponent.condition + "/100</div><div class='chip'>Раундов " + (offer.numberOfRounds || opponent.rounds || 4) + "</div></div>" +
           "<div class='record-row'><div class='chip'>Зал: " + (opponent.gymName || "без зала") + "</div><div class='chip'>Тренер: " + (opponent.trainerLabel || "без тренера") + "</div></div>" +
           "<div class='split-row'><div class='chip'>Сила " + opponent.stats.str + "</div><div class='chip'>Техника " + opponent.stats.tec + "</div><div class='chip'>Скорость " + opponent.stats.spd + "</div><div class='chip'>Выносливость " + opponent.stats.end + "</div><div class='chip'>Здоровье " + opponent.stats.vit + "</div></div>", i === 0, "оффер"));
-        html.push("<div class='footer-actions'><button class='button' onclick='startFight(" + i + ")'>Принять оффер</button>" + (offer.tournamentId ? "<button class='ghost' onclick='openSeasonBracket(\"" + offer.tournamentId + "\")'>Сетка</button>" : "") + "</div>");
+        html.push("<div class='footer-actions'><button class='button' onclick='startFight(" + i + ")'>Принять оффер</button>" + (offer.fighterId ? "<button class='ghost' onclick='openFighterProfile(\"" + offer.fighterId + "\", \"fightSelect\")'>Профиль</button>" : "") + (offer.tournamentId ? "<button class='ghost' onclick='openSeasonBracket(\"" + offer.tournamentId + "\")'>Сетка</button>" : "") + "</div>");
         html.push("</div>");
       }
       html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"home\")'>Назад</button></div></div>");
@@ -14248,9 +14445,14 @@ var APP_VERSION = "2026.03.25.4";
       return "<div class='footer-actions'><button class='ghost' " + (view.page <= 0 ? "disabled='disabled'" : "") + " onclick='shiftRankingsPage(\"" + sectionId + "\", -1)'>Назад</button><div class='chip'>Страница " + (view.page + 1) + " / " + view.totalPages + "</div><button class='ghost' " + (view.page >= (view.totalPages - 1) ? "disabled='disabled'" : "") + " onclick='shiftRankingsPage(\"" + sectionId + "\", 1)'>Дальше</button></div>";
     }
 
+    function renderCupIconHtml(sizePx) {
+      var size = sizePx || 16;
+      return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 24 24' aria-hidden='true' style='vertical-align:-3px;margin-right:4px'><path fill='#f5c542' d='M7 3h10v2h3c0 3.3-1.4 5.9-4 7.1A6.2 6.2 0 0 1 13 16.5V19h4v2H7v-2h4v-2.5a6.2 6.2 0 0 1-3-4.4C5.4 10.9 4 8.3 4 5h3V3Zm10 4V5H7v2c0 2.8 2.2 5 5 5s5-2.2 5-5Zm-11 0H6c.2 1.4.8 2.6 1.9 3.5A7 7 0 0 1 6 7Zm12 3.5A6.9 6.9 0 0 0 20 7h-2a7 7 0 0 1-1.9 3.5Z'/></svg>";
+    }
+
     function renderCompactFighterCard(entry, subtitle, metaLine, returnPanel) {
       var html = [];
-      var rankPrefix = entry && entry.rankLabel ? (entry.rankLabel + " ") : (entry && entry.position ? ("#" + entry.position + " ") : "");
+      var rankPrefix = entry && (entry.rankBadge === "cup" || entry.rankLabel === "Кубок") ? renderCupIconHtml(16) : (entry && entry.position ? ("#" + entry.position + " ") : "");
       html.push("<div class='card compact-card'>");
       html.push("<h3>" + rankPrefix + entry.label + (entry.isPlayer ? " · Ты" : "") + "</h3>");
       if (subtitle) {
@@ -14334,7 +14536,7 @@ var APP_VERSION = "2026.03.25.4";
       }
       html.push("</div>");
       if (view.playerRingLabel) {
-        html.push("<div class='record-row'><div class='chip gold'>Твоя позиция Ring " + view.playerRingLabel + "</div></div>");
+        html.push("<div class='record-row'><div class='chip gold'>Твоя позиция Ring " + (view.playerRingLabel === "Кубок" ? renderCupIconHtml(14) : view.playerRingLabel) + "</div></div>");
       }
       html.push("<div class='card compact-card'><h3>Текущие чемпионы</h3>");
       if (!view.champions.length) {
@@ -17183,6 +17385,7 @@ var APP_VERSION = "2026.03.25.4";
   <div id="app"></div>
 </body>
 </html>
+
 
 
 
