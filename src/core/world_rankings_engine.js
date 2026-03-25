@@ -1126,6 +1126,38 @@ var WorldRankingsEngine = (function () {
     return org && org.championId ? (roster.fightersById[org.championId] || null) : null;
   }
 
+  function proChampionIdMap(gameState) {
+    var orgState = gameState && gameState.organizationState ? gameState.organizationState : {};
+    var orgIds = orgState.organizationIds instanceof Array ? orgState.organizationIds : [];
+    var map = {};
+    var i;
+    var org;
+    for (i = 0; i < orgIds.length; i += 1) {
+      org = orgState.organizationsById ? orgState.organizationsById[orgIds[i]] : null;
+      if (org && org.championId) {
+        map[org.championId] = true;
+      }
+    }
+    return map;
+  }
+
+  function championRankingEntry(fighter, extra) {
+    var base = extra || {};
+    return {
+      fighterId: fighter.id,
+      position: 0,
+      rankBadge: "cup",
+      rankLabel: "Кубок",
+      label: fighterDisplayName(fighter),
+      countryId: fighter.country,
+      countryLabel: countryLabel(fighter.country),
+      record: formatRecord(fighter.proRecord || fighter.record),
+      score: typeof base.score === "number" ? base.score : 0,
+      isChampion: true,
+      isPlayer: !!fighter.isPlayer
+    };
+  }
+
   function buildStreetRankingView(gameState, options) {
     var opts = options || {};
     var paging;
@@ -1236,11 +1268,16 @@ var WorldRankingsEngine = (function () {
       var table = orgState.rankingTablesById ? orgState.rankingTablesById[rankingTableId(orgId)] : null;
       var roster = rosterRoot(gameState);
       var entries = [];
+      var rankedEntries = [];
       var i;
       var entry;
       var fighter;
       var champion = orgChampion(gameState, orgId);
+      var position = 1;
       if (!table || !(table.entries instanceof Array)) {
+        if (champion) {
+          entries.push(championRankingEntry(champion));
+        }
         return entries;
       }
       for (i = 0; i < table.entries.length; i += 1) {
@@ -1249,16 +1286,29 @@ var WorldRankingsEngine = (function () {
         if (!entry || !fighter) {
           continue;
         }
-        entries.push({
+        if (champion && champion.id === fighter.id) {
+          continue;
+        }
+        rankedEntries.push({
           fighterId: fighter.id,
           position: entry.position || (i + 1),
           label: fighterDisplayName(fighter),
           countryId: fighter.country,
           countryLabel: countryLabel(fighter.country),
           record: formatRecord(fighter.proRecord || fighter.record),
-          isChampion: !!(champion && champion.id === fighter.id),
+          rankBadge: "",
+          rankLabel: "",
+          isChampion: false,
           isPlayer: !!fighter.isPlayer
         });
+      }
+      if (champion) {
+        entries.push(championRankingEntry(champion));
+      }
+      for (i = 0; i < rankedEntries.length; i += 1) {
+        rankedEntries[i].position = position;
+        position += 1;
+        entries.push(rankedEntries[i]);
       }
       return entries;
     });
@@ -1268,8 +1318,12 @@ var WorldRankingsEngine = (function () {
     return cachedRankingProjection(gameState, options || {}, "ring", function () {
       var fighters = rankingFightersForView(gameState, "pro", "", options || {});
       var list = [];
+      var champions = [];
+      var contenders = [];
+      var championMap = proChampionIdMap(gameState);
       var i;
       var fighter;
+      var position = 1;
       for (i = 0; i < fighters.length; i += 1) {
         fighter = fighters[i];
         list.push({
@@ -1279,13 +1333,30 @@ var WorldRankingsEngine = (function () {
           countryLabel: countryLabel(fighter.country),
           score: proRingScore(gameState, fighter),
           record: formatRecord(fighter.proRecord || fighter.record),
+          rankBadge: "",
+          rankLabel: "",
+          isChampion: !!championMap[fighter.id],
           isPlayer: !!fighter.isPlayer
         });
       }
       list.sort(function (left, right) {
         return right.score - left.score;
       });
-      return applyPositions(list);
+      for (i = 0; i < list.length; i += 1) {
+        if (list[i].isChampion) {
+          list[i].position = 0;
+          list[i].rankBadge = "cup";
+          list[i].rankLabel = "Кубок";
+          champions.push(list[i]);
+        } else {
+          contenders.push(list[i]);
+        }
+      }
+      for (i = 0; i < contenders.length; i += 1) {
+        contenders[i].position = position;
+        position += 1;
+      }
+      return champions.concat(contenders);
     });
   }
 
@@ -1330,6 +1401,8 @@ var WorldRankingsEngine = (function () {
       tabs: ["champions", "ring"].concat(orgs.map(function (org) { return org.id; })),
       champions: champions,
       playerRingPosition: playerRingEntry ? playerRingEntry.position : 0,
+      playerRingLabel: playerRingEntry ? (playerRingEntry.rankLabel || (playerRingEntry.position ? ("#" + playerRingEntry.position) : "")) : "",
+      playerRingIsChampion: !!(playerRingEntry && playerRingEntry.rankBadge === "cup"),
       entries: tabId === "champions" ? [] : paging.entries,
       total: entries.length,
       page: tabId === "champions" ? 0 : paging.page,

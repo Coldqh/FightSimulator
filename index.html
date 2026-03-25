@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.25.3";
+var APP_VERSION = "2026.03.25.4";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -8210,15 +8210,31 @@ var APP_VERSION = "2026.03.25.3";
       var orgIds = orgState.organizationIds instanceof Array ? orgState.organizationIds.slice(0) : [];
       var tabId = opts.tabId || "ring";
       var fighters = fallbackDirectRankingFighters(gameState, "pro", "");
+      var ringEntries = [];
       var entries = [];
       var champions = [];
+      var championMap = {};
+      var rankingTable;
+      var championEntry;
+      var tableEntry;
+      var orgEntries;
+      var rankedEntries = [];
       var i;
       var fighter;
       var org;
       var playerRingPosition = 0;
+      var playerRingLabel = "";
+      var pageSize = opts.pageSize || 20;
+      var currentPage = opts.page || 0;
+      var totalPages = 1;
+      var startIndex = 0;
+      var rankCounter = 1;
       for (i = 0; i < orgIds.length; i += 1) {
         org = orgState.organizationsById ? orgState.organizationsById[orgIds[i]] : null;
         fighter = org && org.championId ? roster.fightersById[org.championId] : null;
+        if (fighter) {
+          championMap[fighter.id] = true;
+        }
         champions.push({
           organizationId: org ? org.id : orgIds[i],
           organizationName: org ? (org.name || org.label || org.id) : orgIds[i],
@@ -8229,30 +8245,46 @@ var APP_VERSION = "2026.03.25.3";
       }
       for (i = 0; i < fighters.length; i += 1) {
         fighter = fighters[i];
-        entries.push({
+        ringEntries.push({
           fighterId: fighter.id,
           label: fallbackRankingFighterLabel(fighter),
           countryId: fighter.country,
           countryLabel: fallbackRankingCountryLabel(fighter.country),
           score: ((fighter.rankingSeed || 0) * 4) + (((fighter.proRecord || {}).wins || 0) * 4) + (((fighter.proRecord || {}).kos || 0) * 2) + (fighter.fame || 0),
           record: ((fighter.proRecord || {}).wins || 0) + "-" + ((fighter.proRecord || {}).losses || 0) + "-" + ((fighter.proRecord || {}).draws || 0) + " (KO " + ((fighter.proRecord || {}).kos || 0) + ")",
-          isChampion: false,
+          rankBadge: championMap[fighter.id] ? "cup" : "",
+          rankLabel: championMap[fighter.id] ? "Кубок" : "",
+          isChampion: !!championMap[fighter.id],
           isPlayer: !!fighter.isPlayer
         });
       }
-      entries.sort(function (left, right) {
+      ringEntries.sort(function (left, right) {
         return right.score - left.score;
       });
+      entries = [];
+      for (i = 0; i < ringEntries.length; i += 1) {
+        if (ringEntries[i].isChampion) {
+          ringEntries[i].position = 0;
+          entries.push(ringEntries[i]);
+        }
+      }
+      rankCounter = 1;
+      for (i = 0; i < ringEntries.length; i += 1) {
+        if (!ringEntries[i].isChampion) {
+          ringEntries[i].position = rankCounter;
+          rankCounter += 1;
+          entries.push(ringEntries[i]);
+        }
+      }
       for (i = 0; i < entries.length; i += 1) {
-        entries[i].position = i + 1;
         if (entries[i].isPlayer) {
-          playerRingPosition = i + 1;
+          playerRingPosition = entries[i].position || 0;
+          playerRingLabel = entries[i].rankLabel || (entries[i].position ? ("#" + entries[i].position) : "");
+          break;
         }
       }
       for (i = 0; i < champions.length; i += 1) {
-        if (playerRingPosition) {
-          champions[i].playerRank = playerRingPosition;
-        }
+        champions[i].playerRank = playerRingPosition;
       }
       if (tabId === "champions") {
         return {
@@ -8260,23 +8292,98 @@ var APP_VERSION = "2026.03.25.3";
           tabId: tabId,
           champions: champions,
           playerRingPosition: playerRingPosition,
+          playerRingLabel: playerRingLabel,
           total: 0,
           page: 0,
-          pageSize: 20,
+          pageSize: pageSize,
           totalPages: 1,
           entries: []
         };
       }
+      if (tabId === "ring") {
+        orgEntries = entries;
+      } else {
+        org = orgState.organizationsById ? orgState.organizationsById[tabId] : null;
+        fighter = org && org.championId ? roster.fightersById[org.championId] : null;
+        rankingTable = orgState.rankingTablesById ? orgState.rankingTablesById[stableId("ranking", [tabId])] : null;
+        orgEntries = [];
+        rankedEntries = [];
+        if (fighter) {
+          championEntry = {
+            fighterId: fighter.id,
+            label: fallbackRankingFighterLabel(fighter),
+            countryId: fighter.country,
+            countryLabel: fallbackRankingCountryLabel(fighter.country),
+            score: ((fighter.rankingSeed || 0) * 4) + (((fighter.proRecord || {}).wins || 0) * 4) + (((fighter.proRecord || {}).kos || 0) * 2) + (fighter.fame || 0),
+            record: ((fighter.proRecord || {}).wins || 0) + "-" + ((fighter.proRecord || {}).losses || 0) + "-" + ((fighter.proRecord || {}).draws || 0) + " (KO " + ((fighter.proRecord || {}).kos || 0) + ")",
+            position: 0,
+            rankBadge: "cup",
+            rankLabel: "Кубок",
+            isChampion: true,
+            isPlayer: !!fighter.isPlayer
+          };
+          orgEntries.push(championEntry);
+        }
+        if (rankingTable && rankingTable.entries instanceof Array) {
+          for (i = 0; i < rankingTable.entries.length; i += 1) {
+            tableEntry = rankingTable.entries[i];
+            fighter = tableEntry && tableEntry.fighterId ? roster.fightersById[tableEntry.fighterId] : null;
+            if (!tableEntry || !fighter || (championEntry && fighter.id === championEntry.fighterId)) {
+              continue;
+            }
+            rankedEntries.push({
+              fighterId: fighter.id,
+              label: fallbackRankingFighterLabel(fighter),
+              countryId: fighter.country,
+              countryLabel: fallbackRankingCountryLabel(fighter.country),
+              score: ((fighter.rankingSeed || 0) * 4) + (((fighter.proRecord || {}).wins || 0) * 4) + (((fighter.proRecord || {}).kos || 0) * 2) + (fighter.fame || 0),
+              record: ((fighter.proRecord || {}).wins || 0) + "-" + ((fighter.proRecord || {}).losses || 0) + "-" + ((fighter.proRecord || {}).draws || 0) + " (KO " + ((fighter.proRecord || {}).kos || 0) + ")",
+              position: 0,
+              rankBadge: "",
+              rankLabel: "",
+              isChampion: false,
+              isPlayer: !!fighter.isPlayer
+            });
+          }
+        } else {
+          for (i = 0; i < entries.length; i += 1) {
+            if (!entries[i].isChampion) {
+              rankedEntries.push({
+                fighterId: entries[i].fighterId,
+                label: entries[i].label,
+                countryId: entries[i].countryId,
+                countryLabel: entries[i].countryLabel,
+                score: entries[i].score,
+                record: entries[i].record,
+                position: 0,
+                rankBadge: "",
+                rankLabel: "",
+                isChampion: false,
+                isPlayer: !!entries[i].isPlayer
+              });
+            }
+          }
+        }
+        for (i = 0; i < rankedEntries.length; i += 1) {
+          rankedEntries[i].position = i + 1;
+          orgEntries.push(rankedEntries[i]);
+        }
+        entries = orgEntries;
+      }
+      totalPages = Math.max(1, Math.ceil(entries.length / pageSize));
+      currentPage = Math.min(currentPage, totalPages - 1);
+      startIndex = currentPage * pageSize;
       return {
         tabs: ["champions", "ring"].concat(orgIds),
         tabId: tabId,
         champions: champions,
         playerRingPosition: playerRingPosition,
+        playerRingLabel: playerRingLabel,
         total: entries.length,
-        page: 0,
-        pageSize: 20,
-        totalPages: Math.max(1, Math.ceil(entries.length / 20)),
-        entries: entries.slice(0, 20)
+        page: currentPage,
+        pageSize: pageSize,
+        totalPages: totalPages,
+        entries: entries.slice(startIndex, startIndex + pageSize)
       };
     }
 
@@ -14143,8 +14250,9 @@ var APP_VERSION = "2026.03.25.3";
 
     function renderCompactFighterCard(entry, subtitle, metaLine, returnPanel) {
       var html = [];
+      var rankPrefix = entry && entry.rankLabel ? (entry.rankLabel + " ") : (entry && entry.position ? ("#" + entry.position + " ") : "");
       html.push("<div class='card compact-card'>");
-      html.push("<h3>" + (entry.position ? ("#" + entry.position + " ") : "") + entry.label + (entry.isPlayer ? " · Ты" : "") + "</h3>");
+      html.push("<h3>" + rankPrefix + entry.label + (entry.isPlayer ? " · Ты" : "") + "</h3>");
       if (subtitle) {
         html.push("<div class='muted'>" + subtitle + "</div>");
       }
@@ -14225,8 +14333,8 @@ var APP_VERSION = "2026.03.25.3";
         html.push("<button class='" + (directory.proTabId === view.tabs[i] ? "button" : "ghost") + "' onclick='setProRankingTab(\"" + view.tabs[i] + "\")'>" + proRankingTabLabel(view.tabs[i]) + "</button>");
       }
       html.push("</div>");
-      if (view.playerRingPosition) {
-        html.push("<div class='record-row'><div class='chip gold'>Твоя позиция Ring #" + view.playerRingPosition + "</div></div>");
+      if (view.playerRingLabel) {
+        html.push("<div class='record-row'><div class='chip gold'>Твоя позиция Ring " + view.playerRingLabel + "</div></div>");
       }
       html.push("<div class='card compact-card'><h3>Текущие чемпионы</h3>");
       if (!view.champions.length) {
