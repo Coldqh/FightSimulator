@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.25.6";
+var APP_VERSION = "2026.03.26.1";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -3784,34 +3784,80 @@ var APP_VERSION = "2026.03.25.6";
       return careerTrackLabel(currentCareerTrackId());
     }
 
-    function currentCareerTransitionCards() {
-      if (typeof CareerTransitionEngine === "undefined") {
-        return [];
+    function playerHasTurnedPro(gameState) {
+      var activeGameState = gameState || state.game || null;
+      var player = activeGameState && activeGameState.player ? activeGameState.player : (state.player || {});
+      var biography = player && player.biography ? player.biography : {};
+      var flags = biography.flags instanceof Array ? biography.flags : [];
+      var pro = player && player.pro ? player.pro : {};
+      var history = pro.history instanceof Array ? pro.history : [];
+      var record = pro.proRecord || {};
+      var i;
+      if ((activeGameState && activeGameState.playerState && activeGameState.playerState.currentTrackId === "pro") || currentCareerTrackId() === "pro") {
+        return true;
       }
-      return memoizeGameProjection("careerTransitionCards", String(state.fighter ? state.fighter.week : 1), function (gameState) {
-        var narrative = CareerTransitionEngine.ensureState ? CareerTransitionEngine.ensureState(gameState) : (gameState.narrativeState || {});
-        var ids;
-        var cards = [];
-        var i;
-        var card;
-        if (CareerTransitionEngine.syncPlayerTransitionState) {
-          CareerTransitionEngine.syncPlayerTransitionState(gameState, state.fighter ? state.fighter.week : 1);
-          state.game = gameState;
-          touchGameProjectionState();
-          syncWorldSimSectionsFromGameState(gameState);
-          narrative = gameState.narrativeState || narrative;
+      if (hasTag(flags, "turned_pro")) {
+        return true;
+      }
+      for (i = 0; i < history.length; i += 1) {
+        if (history[i] && history[i].type === "turned_pro") {
+          return true;
         }
-        ids = narrative.availableTransitionIds instanceof Array ? narrative.availableTransitionIds : [];
-        for (i = 0; i < ids.length; i += 1) {
-          card = narrative.availableTransitionsById ? narrative.availableTransitionsById[ids[i]] : null;
-          if (card) {
-            cards.push(card);
-          }
-        }
-        if (CareerTransitionEngine.rankPlayerTransitionCards) {
-          return CareerTransitionEngine.rankPlayerTransitionCards(gameState, cards);
-        }
-        return cards;
+      }
+      return ((record.wins || 0) + (record.losses || 0) + (record.draws || 0) + (record.kos || 0)) > 0 || !!(pro.currentPromoterId || pro.currentManagerId);
+    }
+
+    function canEnterProfessionalTrack(fighter) {
+      return fighterStatTotal((fighter || state.fighter).stats || {}) >= 400;
+    }
+
+    function amateurTrackLocked(gameState) {
+      return currentAgeView(state.fighter).years >= 29 || playerHasTurnedPro(gameState);
+    }
+
+    function buildSimpleCareerTransitionCards(gameState) {
+      var trackId = currentCareerTrackId();
+      var cards = [];
+      if (trackId !== "street") {
+        cards.push({
+          id: trackId === "pro" ? "pro_to_street_comeback" : "amateur_to_street_fallback",
+          trackId: trackId,
+          toTrackId: "street",
+          available: true,
+          buttonLabel: "Уйти на улицу"
+        });
+      }
+      if (trackId !== "pro") {
+        cards.push({
+          id: trackId === "amateur" ? "amateur_to_pro" : "street_to_pro",
+          trackId: trackId,
+          toTrackId: "pro",
+          available: canEnterProfessionalTrack(state.fighter),
+          buttonLabel: "Стать профессионалом",
+          noteText: "Сумма характеристик должна быть выше 400."
+        });
+      }
+      if (trackId !== "amateur" && !amateurTrackLocked(gameState)) {
+        cards.push({
+          id: "street_to_amateur",
+          trackId: trackId,
+          toTrackId: "amateur",
+          available: true,
+          buttonLabel: "Вернуться в любители"
+        });
+      }
+      return cards;
+    }
+
+    function currentCareerTransitionCards() {
+      var token = [
+        currentCareerTrackId(),
+        currentAgeView(state.fighter).years,
+        fighterStatTotal(state.fighter ? state.fighter.stats : null),
+        playerHasTurnedPro() ? 1 : 0
+      ].join("|");
+      return memoizeGameProjection("careerTransitionCards", token, function (gameState) {
+        return buildSimpleCareerTransitionCards(gameState);
       });
     }
 
@@ -3825,23 +3871,7 @@ var APP_VERSION = "2026.03.25.6";
     }
 
     function currentCareerTransitionEvents() {
-      if (typeof CareerTransitionEngine === "undefined") {
-        return [];
-      }
-      return memoizeGameProjection("careerTransitionEvents", String(state.fighter ? state.fighter.week : 1), function (gameState) {
-        var narrative = gameState.narrativeState || {};
-        var ids = narrative.transitionEventIds instanceof Array ? narrative.transitionEventIds : [];
-        var list = [];
-        var i;
-        var item;
-        for (i = 0; i < ids.length; i += 1) {
-          item = narrative.transitionEventsById ? narrative.transitionEventsById[ids[i]] : null;
-          if (item) {
-            list.push(item);
-          }
-        }
-        return list;
-      });
+      return [];
     }
 
     function careerTransitionCard(transitionId) {
@@ -3858,6 +3888,9 @@ var APP_VERSION = "2026.03.25.6";
     function transitionAvailabilityText(card) {
       if (!card) {
         return "Переход пока не найден.";
+      }
+      if (card.toTrackId === "pro" && !card.available) {
+        return "Сумма характеристик должна быть выше 400.";
       }
       if (card.available) {
         return availableTransitionReason(card) || "Переход открыт.";
@@ -3969,7 +4002,7 @@ var APP_VERSION = "2026.03.25.6";
       if (!card) {
         return "";
       }
-      return card.availableTransitionReason || "Переход открыт.";
+      return card.availableTransitionReason || "";
     }
 
     function blockedTransitionReason(card) {
@@ -3982,7 +4015,10 @@ var APP_VERSION = "2026.03.25.6";
       if (card.blockedReasons && card.blockedReasons.length) {
         return card.blockedReasons[0];
       }
-      return "Пока переход закрыт.";
+      if (card.toTrackId === "pro") {
+        return "Сумма характеристик должна быть выше 400.";
+      }
+      return "";
     }
 
     function currentProPromoter() {
@@ -4071,23 +4107,68 @@ var APP_VERSION = "2026.03.25.6";
       return "";
     }
 
-    function switchPlayerCareerTrack(nextTrackId, note, mediaPayload) {
-      var gameState = syncGameStateFromRuntime();
+    function normalizeCareerTransitionTarget(transitionId) {
+      if (transitionId === "street" || transitionId === "amateur" || transitionId === "pro") {
+        return transitionId;
+      }
+      if (transitionId === "street_to_pro" || transitionId === "amateur_to_pro" || transitionId === "national_team_member_to_pro" || transitionId === "dropped_team_to_pro") {
+        return "pro";
+      }
+      if (transitionId === "street_to_amateur") {
+        return "amateur";
+      }
+      if (transitionId === "amateur_to_street_fallback" || transitionId === "pro_to_street_comeback") {
+        return "street";
+      }
+      return "";
+    }
+
+    function transitionPlayerCareerState(gameState, nextTrackId, weekValue, note) {
       var proResult = null;
-      if (typeof StreetCareerEngine === "undefined" || !StreetCareerEngine.switchPlayerTrack) {
-        if (nextTrackId !== "pro") {
-          return false;
-        }
+      var summary;
+      if (!gameState || !nextTrackId) {
+        return { ok: false };
       }
       if (nextTrackId === "pro") {
+        if (playerHasTurnedPro(gameState)) {
+          if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.ensureState) {
+            ProCareerEngine.ensureState(gameState);
+          }
+          if (typeof StreetCareerEngine === "undefined" || !StreetCareerEngine.switchPlayerTrack(gameState, "pro", weekValue || 1, note || "")) {
+            return { ok: false };
+          }
+          if (gameState.player && gameState.player.biography && gameState.player.biography.flags instanceof Array && gameState.player.biography.flags.indexOf("turned_pro") === -1) {
+            gameState.player.biography.flags.push("turned_pro");
+          }
+          summary = typeof ProCareerEngine !== "undefined" && ProCareerEngine.summary ? ProCareerEngine.summary(gameState) : null;
+          proResult = {
+            ok: true,
+            contenderStatus: summary ? summary.status : null,
+            promoter: summary ? summary.promoter : null,
+            manager: summary ? summary.manager : null
+          };
+          return { ok: true, proResult: proResult };
+        }
         if (typeof ProCareerEngine === "undefined" || !ProCareerEngine.enterProTrack) {
-          return false;
+          return { ok: false };
         }
-        proResult = ProCareerEngine.enterProTrack(gameState, currentCareerTrackId(), state.fighter ? state.fighter.week : 1, note || "");
+        proResult = ProCareerEngine.enterProTrack(gameState, currentCareerTrackId(), weekValue || 1, note || "");
         if (!proResult || !proResult.ok) {
-          return false;
+          return { ok: false };
         }
-      } else if (!StreetCareerEngine.switchPlayerTrack(gameState, nextTrackId, state.fighter ? state.fighter.week : 1, note || "")) {
+        return { ok: true, proResult: proResult };
+      }
+      if (typeof StreetCareerEngine === "undefined" || !StreetCareerEngine.switchPlayerTrack(gameState, nextTrackId, weekValue || 1, note || "")) {
+        return { ok: false };
+      }
+      return { ok: true, proResult: null };
+    }
+
+    function switchPlayerCareerTrack(nextTrackId, note, mediaPayload) {
+      var gameState = syncGameStateFromRuntime();
+      var transitionResult = transitionPlayerCareerState(gameState, nextTrackId, state.fighter ? state.fighter.week : 1, note || "");
+      var proResult = transitionResult ? transitionResult.proResult : null;
+      if (!transitionResult || !transitionResult.ok) {
         return false;
       }
       syncRuntimeStateFromGame(gameState);
@@ -4116,47 +4197,23 @@ var APP_VERSION = "2026.03.25.6";
     }
 
     function applyCareerTransition(transitionId) {
-      var gameState = syncGameStateFromRuntime();
-      var result;
-      var nextPanel;
-      if (!transitionId || typeof CareerTransitionEngine === "undefined" || !CareerTransitionEngine.executePlayerTransition) {
-        pushLog("Этот переход пока недоступен.", "bad");
+      var nextTrackId = normalizeCareerTransitionTarget(transitionId);
+      var note;
+      if (!nextTrackId || nextTrackId === currentCareerTrackId()) {
+        return false;
+      }
+      if (nextTrackId === "amateur" && amateurTrackLocked()) {
+        pushLog("Доступ в любители закрыт.", "bad");
         render();
         return false;
       }
-      result = CareerTransitionEngine.executePlayerTransition(gameState, transitionId, state.fighter ? state.fighter.week : 1);
-      if (!result || !result.ok) {
-        pushLog((result && result.reason) ? result.reason : "Не удалось выполнить переход.", "bad");
+      if (nextTrackId === "pro" && !canEnterProfessionalTrack(state.fighter)) {
+        pushLog("Сумма характеристик должна быть выше 400.", "bad");
         render();
         return false;
       }
-      syncRuntimeStateFromGame(gameState);
-      refreshWorldState();
-      if (result.note) {
-        pushLog(result.note, result.toTrackId === "street" ? "warn" : "good");
-        addBiographyHistory(result.note, "trackTransition");
-      }
-      if (result.eventTitle) {
-        recordCareerMedia("event", {
-          eventTitle: result.eventTitle,
-          tags: result.narrativeTags || []
-        });
-      }
-      if (result.proResult) {
-        if (result.proResult.contenderStatus && result.proResult.contenderStatus.label) {
-          pushLog("Проф. статус: " + result.proResult.contenderStatus.label + ".", "good");
-        }
-        if (result.proResult.promoter && result.proResult.promoter.name) {
-          pushLog("Промоутер: " + result.proResult.promoter.name + ".", "warn");
-        }
-        if (result.proResult.manager && result.proResult.manager.name) {
-          pushLog("Менеджер: " + result.proResult.manager.name + ".", "warn");
-        }
-      }
-      nextPanel = result.toTrackId === "street" ? "careerStreet" : (result.toTrackId === "pro" ? "careerPro" : "career");
-      state.panel = nextPanel;
-      render();
-      return true;
+      note = nextTrackId === "street" ? "Ты переходишь на улицу." : (nextTrackId === "pro" ? "Ты становишься профессионалом." : "Ты возвращаешься в любители.");
+      return switchPlayerCareerTrack(nextTrackId, note);
     }
 
     function moveToStreetTrack() {
@@ -4164,39 +4221,57 @@ var APP_VERSION = "2026.03.25.6";
         openPanel("careerStreet");
         return;
       }
-      applyCareerTransition(currentCareerTrackId() === "pro" ? "pro_to_street_comeback" : "amateur_to_street_fallback");
+      applyCareerTransition("street");
     }
 
     function moveStreetTrackToAmateur() {
-      applyCareerTransition("street_to_amateur");
+      applyCareerTransition("amateur");
     }
 
     function moveStreetTrackToPro() {
-      applyCareerTransition("street_to_pro");
+      applyCareerTransition("pro");
     }
 
     function moveAmateurTrackToPro() {
-      applyCareerTransition(preferredAmateurToProTransitionId());
+      applyCareerTransition("pro");
     }
 
     function canMoveStreetTrackToAmateur() {
-      var gameState = ensurePersistentGameState(false);
-      return typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "street_to_amateur");
+      return !amateurTrackLocked() && currentCareerTrackId() !== "amateur";
     }
 
     function canMoveStreetTrackToPro() {
-      var gameState = ensurePersistentGameState(false);
-      return typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "street_to_pro");
+      return canEnterProfessionalTrack(state.fighter) && currentCareerTrackId() !== "pro";
     }
 
     function canMoveAmateurTrackToPro() {
-      var gameState = ensurePersistentGameState(false);
-      return typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "amateur_to_pro");
+      return canEnterProfessionalTrack(state.fighter) && currentCareerTrackId() !== "pro";
     }
 
     function canReturnStreetTrackFromPro() {
-      var gameState = ensurePersistentGameState(false);
-      return typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.canPlayerTransition && CareerTransitionEngine.canPlayerTransition(gameState, "pro_to_street_comeback");
+      return currentCareerTrackId() !== "street";
+    }
+
+    function enforceAutomaticCareerTrackForWeek(gameState) {
+      var ageYears = currentAgeView(state.fighter).years;
+      var nextTrackId;
+      var note;
+      var result;
+      if (!gameState || ageYears < 29 || currentCareerTrackId() !== "amateur") {
+        return false;
+      }
+      nextTrackId = canEnterProfessionalTrack(state.fighter) ? "pro" : "street";
+      note = nextTrackId === "pro" ? "В 29 лет любительский путь закрыт. Ты переходишь в профессиональный бокс." : "В 29 лет любительский путь закрыт. Ты уходишь на улицу.";
+      result = transitionPlayerCareerState(gameState, nextTrackId, state.fighter ? state.fighter.week : 1, note);
+      if (!result || !result.ok) {
+        return false;
+      }
+      state.game = gameState;
+      syncWorldSimSectionsFromGameState(gameState);
+      syncRuntimeStateFromGame(gameState);
+      pushLog(note, nextTrackId === "pro" ? "good" : "warn");
+      addBiographyHistory(note, "trackTransition");
+      return true;
     }
 
     function hasMinimumAmateurRank(rankId, fighter) {
@@ -10028,9 +10103,6 @@ var APP_VERSION = "2026.03.25.6";
         SparringCampEngine.ensureState(refreshedGameState);
         SparringCampEngine.refreshWeeklyOffers(refreshedGameState);
       }
-      if (typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.syncPlayerTransitionState) {
-        CareerTransitionEngine.syncPlayerTransitionState(refreshedGameState, fighter && typeof fighter.week === "number" ? fighter.week : 1);
-      }
       if (typeof WorldStoryEngine !== "undefined" && WorldStoryEngine.syncWorldStory) {
         WorldStoryEngine.ensureState(refreshedGameState);
         WorldStoryEngine.syncWorldStory(refreshedGameState);
@@ -11410,10 +11482,6 @@ var APP_VERSION = "2026.03.25.6";
         SparringCampEngine.refreshWeeklyOffers(activeGameState);
         markWeekRefresh("sparring", refreshPlan.weekStamp);
       }
-      if (refreshPlan.refreshTransitions && typeof CareerTransitionEngine !== "undefined" && CareerTransitionEngine.syncPlayerTransitionState) {
-        CareerTransitionEngine.syncPlayerTransitionState(activeGameState, refreshPlan.weekStamp);
-        markWeekRefresh("transitions", refreshPlan.weekStamp);
-      }
       if (refreshPlan.refreshStory && typeof WorldStoryEngine !== "undefined" && WorldStoryEngine.syncWorldStory) {
         WorldStoryEngine.ensureState(activeGameState);
         WorldStoryEngine.syncWorldStory(activeGameState);
@@ -11555,6 +11623,7 @@ var APP_VERSION = "2026.03.25.6";
       finishPerfTimer(phaseTimer);
       phaseTimer = startPerfTimer("weekPhase_worldSimMs");
       gameState = runPersistentWorldCareerSimulation(action);
+      enforceAutomaticCareerTrackForWeek(gameState);
       finishPerfTimer(phaseTimer);
       phaseTimer = startPerfTimer("weekPhase_cacheMs");
       runWeeklyCacheRefresh(action, gameState);
@@ -13960,23 +14029,7 @@ var APP_VERSION = "2026.03.25.6";
     }
 
     function drainCareerTransitionNotices(gameState, skipRoundTrip) {
-      var activeGameState = gameState || state.game || ensurePersistentGameState(false);
-      var notices;
-      if (typeof CareerTransitionEngine === "undefined" || !CareerTransitionEngine.drainNotices || !activeGameState) {
-        return 0;
-      }
-      notices = CareerTransitionEngine.drainNotices(activeGameState);
-      if (!(notices instanceof Array) || !notices.length) {
-        return 0;
-      }
-      if (!skipRoundTrip) {
-        syncRuntimeStateFromGame(activeGameState);
-      }
-      applyCareerNoticeBatch(notices, "transition");
-      if (!skipRoundTrip) {
-        syncGameStateFromRuntime();
-      }
-      return notices.length;
+      return 0;
     }
 
     function registerForTournament(tournamentId) {
@@ -14193,18 +14246,10 @@ var APP_VERSION = "2026.03.25.6";
         return "";
       }
       html.push("<div class='card compact-card'>");
-      html.push("<h3>" + careerTrackLabel(card.toTrackId) + "</h3>");
-      html.push("<div class='record-row'><div class='chip" + (card.available ? " gold" : "") + "'>" + (card.available ? "Открыт" : "Закрыт") + "</div><div class='chip'>Из " + careerTrackLabel(card.trackId) + "</div></div>");
-      html.push("<div class='muted'>" + (card.explanationText || transitionAvailabilityText(card)) + "</div>");
-      if (card.lateWarning) {
-        html.push("<div class='muted'>" + card.lateWarning + "</div>");
-      }
-      html.push("<div class='muted'>Требования: " + (card.requirementsPreview || "отдельных требований нет") + ".</div>");
-      html.push("<div class='muted'>Потеряешь: " + (card.givesUpPreview || "ничего критичного") + ".</div>");
-      html.push("<div class='muted'>Получишь: " + (card.gainsPreview || "явного бонуса нет") + ".</div>");
-      html.push("<div class='muted'>Возврат: " + (card.returnPathSummary || "путь возврата зависит от следующего этапа") + "</div>");
-      html.push("<div class='muted'>" + (card.available ? availableTransitionReason(card) : blockedTransitionReason(card)) + "</div>");
       html.push("<div class='footer-actions'><button class='button' " + (card.available ? "" : "disabled='disabled'") + " onclick='applyCareerTransition(\"" + card.id + "\")'>" + card.buttonLabel + "</button></div>");
+      if (card.toTrackId === "pro") {
+        html.push("<div class='muted'>Сумма характеристик должна быть выше 400.</div>");
+      }
       html.push("</div>");
       return html.join("");
     }
@@ -14214,12 +14259,8 @@ var APP_VERSION = "2026.03.25.6";
       var i;
       var html = [];
       html.push("<div class='panel fill-panel'><h2 class='panel-title'>Переходы</h2>");
-      if (!cards.length) {
-        html.push("<div class='empty-state'>Сейчас переходов нет.</div>");
-      } else {
-        for (i = 0; i < cards.length; i += 1) {
-          html.push(renderCareerTransitionOpportunityCard(cards[i]));
-        }
+      for (i = 0; i < cards.length; i += 1) {
+        html.push(renderCareerTransitionOpportunityCard(cards[i]));
       }
       html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
       return html.join("");
@@ -14348,15 +14389,7 @@ var APP_VERSION = "2026.03.25.6";
       var orgSummary;
       html.push("<div class='panel fill-panel'><h2 class='panel-title'>Профессиональный путь</h2>");
       if (!isProTrack()) {
-        html.push("<div class='card compact-card'><h3>Выход в профи</h3>");
-        html.push("<div class='muted'>Текущий трек: " + currentCareerTrackLabel() + ".</div>");
-        if (isAmateurTrack()) {
-          html.push("<div class='muted'>" + transitionAvailabilityText(careerTransitionCard(preferredAmateurToProTransitionId())) + "</div>");
-          html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>");
-        } else if (isStreetTrack()) {
-          html.push("<div class='muted'>" + transitionAvailabilityText(careerTransitionCard("street_to_pro")) + "</div>");
-          html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>");
-        }
+        html.push("<div class='card compact-card'><h3>Переходы</h3><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div></div>");
         html.push("</div>");
         html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
         return html.join("");
@@ -14752,13 +14785,7 @@ var APP_VERSION = "2026.03.25.6";
       }
       html.push("</div>");
       html.push("<div class='card compact-card'><h3>Переходы</h3>");
-      if (!isStreetTrack()) {
-        html.push("<div class='muted'>" + transitionAvailabilityText(careerTransitionCard(currentCareerTrackId() === "pro" ? "pro_to_street_comeback" : "amateur_to_street_fallback")) + "</div>");
-        html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>");
-      } else {
-        html.push("<div class='muted'>Сейчас ты идёшь по уличной лестнице.</div>");
-        html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>");
-      }
+      html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Открыть переходы</button></div>");
       html.push("</div>");
       html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
       return html.join("");
@@ -14849,17 +14876,13 @@ var APP_VERSION = "2026.03.25.6";
             "<div class='muted'>" + preparationLine + "</div>" +
             "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Зал</button><button class='button' onclick='openPanel(\"careerTrainer\")'>Тренер</button><button class='ghost' onclick='openPanel(\"careerSparring\")'>Подготовка</button>" + (adultSandboxUnlocked(fighter) ? "<button class='ghost' onclick='openPanel(\"careerContract\")'>Контракты</button>" : "") + "</div>";
         }, false, "база"));
-        html.push(renderLazySectionCard("career_transitions", "Возможные переходы", function () {
-          var cards = currentCareerTopTransitionCards(2);
+        html.push(renderLazySectionCard("career_transitions", "Переходы", function () {
+          var cards = currentCareerTransitionCards();
           var block = [];
           var idx;
-          if (!cards.length) {
-            return "<div class='muted'>Сейчас новых развилок нет.</div><div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>";
-          }
           for (idx = 0; idx < cards.length; idx += 1) {
             block.push(renderCareerTransitionOpportunityCard(cards[idx]));
           }
-          block.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerTransitions\")'>Все переходы</button></div>");
           return block.join("");
         }, false, "развилки"));
         html.push("</div>");
