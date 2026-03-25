@@ -1683,6 +1683,15 @@ var WorldRankingsEngine = (function () {
         orgRanks.push({
           organizationId: orgs[i].id,
           name: orgs[i].name,
+          isChampion: (function () {
+            var j;
+            for (j = 0; j < orgEntries.length; j += 1) {
+              if (orgEntries[j].fighterId === fighter.id) {
+                return !!orgEntries[j].isChampion || orgEntries[j].rankBadge === "cup";
+              }
+            }
+            return false;
+          }()),
           position: (function () {
             var j;
             for (j = 0; j < orgEntries.length; j += 1) {

@@ -51,7 +51,7 @@
       trackType: "amateur",
       label: "Любительский формат",
       numberOfRounds: 3,
-      roundLengthAbstract: 10,
+      roundLengthAbstract: 15,
       scoringBias: {
         pressureWeight: 0.8,
         cleanWeight: 1.35,
