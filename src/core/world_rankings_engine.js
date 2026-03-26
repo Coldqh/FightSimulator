@@ -235,6 +235,7 @@ var WorldRankingsEngine = (function () {
       if (!isActiveFighter(fighter)) {
         continue;
       }
+      normalizeProjectionFighter(gameState, fighter, i + 1);
       if (trackId && currentTrackId(fighter) !== trackId) {
         continue;
       }
@@ -605,6 +606,118 @@ var WorldRankingsEngine = (function () {
     return clamp(baseValue + offsetValue + deterministicRange(seedKey, -3, 3), minValue, maxValue);
   }
 
+  function minAttributeValue(source) {
+    var stats = source && (source.attributes || source.stats) ? (source.attributes || source.stats) : {};
+    return Math.min(
+      typeof stats.str === "number" ? stats.str : 0,
+      typeof stats.tec === "number" ? stats.tec : 0,
+      typeof stats.spd === "number" ? stats.spd : 0,
+      typeof stats.end === "number" ? stats.end : 0,
+      typeof stats.vit === "number" ? stats.vit : 0
+    );
+  }
+
+  function maxAttributeValue(source) {
+    var stats = source && (source.attributes || source.stats) ? (source.attributes || source.stats) : {};
+    return Math.max(
+      typeof stats.str === "number" ? stats.str : 0,
+      typeof stats.tec === "number" ? stats.tec : 0,
+      typeof stats.spd === "number" ? stats.spd : 0,
+      typeof stats.end === "number" ? stats.end : 0,
+      typeof stats.vit === "number" ? stats.vit : 0
+    );
+  }
+
+  function amateurRankIdFromTotal(ageYears, totalValue) {
+    var total = Math.max(5, Math.round(totalValue || 0));
+    if (ageYears >= 18) {
+      if (total >= 401) { return "national_master"; }
+      if (total >= 301) { return "candidate_national"; }
+      if (total >= 251) { return "adult_class_1"; }
+      if (total >= 201) { return "adult_class_2"; }
+      return "adult_class_3";
+    }
+    if (total >= 101) { return "junior_class_1"; }
+    if (total >= 51) { return "junior_class_2"; }
+    return "junior_class_3";
+  }
+
+  function streetRatingFromTotal(totalValue) {
+    return clamp(Math.round((Math.max(5, totalValue || 5) - 5) / 5), 1, 150);
+  }
+
+  function buildStreetRecordForTotal(totalValue, fighterId) {
+    var rating = streetRatingFromTotal(totalValue);
+    var fights = clamp(rating + deterministicRange(String(fighterId || "street") + ":street_fights", -5, 6), 1, 150);
+    var losses;
+    var draws = 0;
+    var wins;
+    if (fights <= 2 && deterministicRange(String(fighterId || "street") + ":cold_start", 0, 1) === 0) {
+      wins = 0;
+      losses = fights;
+    } else {
+      losses = clamp(Math.round(fights * (18 + deterministicRange(String(fighterId || "street") + ":street_losses", 0, 16)) / 100), 0, Math.max(1, fights - 1));
+      draws = fights >= 20 && deterministicRange(String(fighterId || "street") + ":street_draws", 0, 5) === 0 ? 1 : 0;
+      wins = Math.max(1, fights - losses - draws);
+    }
+    return {
+      wins: wins,
+      losses: losses,
+      draws: draws,
+      kos: 0
+    };
+  }
+
+  function buildAmateurRecordForRank(rankId, fighterId) {
+    var fights;
+    var losses;
+    var draws = 0;
+    var wins;
+    var key = String(fighterId || "amateur") + ":" + String(rankId || "");
+    switch (rankId) {
+    case "junior_class_3":
+      fights = deterministicRange(key + ":fights", 1, 6);
+      break;
+    case "junior_class_2":
+      fights = deterministicRange(key + ":fights", 6, 12);
+      break;
+    case "junior_class_1":
+      fights = deterministicRange(key + ":fights", 12, 20);
+      break;
+    case "adult_class_3":
+      fights = deterministicRange(key + ":fights", 18, 32);
+      break;
+    case "adult_class_2":
+      fights = deterministicRange(key + ":fights", 28, 45);
+      break;
+    case "adult_class_1":
+      fights = deterministicRange(key + ":fights", 40, 60);
+      break;
+    case "candidate_national":
+      fights = deterministicRange(key + ":fights", 55, 80);
+      break;
+    case "national_master":
+      fights = deterministicRange(key + ":fights", 80, 100);
+      break;
+    default:
+      fights = deterministicRange(key + ":fights", 1, 10);
+      break;
+    }
+    if (fights <= 2 && deterministicRange(key + ":cold_start", 0, 1) === 0) {
+      wins = 0;
+      losses = fights;
+    } else {
+      losses = clamp(Math.round(fights * (8 + deterministicRange(key + ":losses", 0, 12)) / 100), 0, Math.max(1, fights - 1));
+      draws = fights >= 16 && deterministicRange(key + ":draws", 0, 4) === 0 ? 1 : 0;
+      wins = Math.max(1, fights - losses - draws);
+    }
+    return {
+      wins: wins,
+      losses: losses,
+      draws: draws
+    };
+  }
+
   function amateurBaseFromDetails(details, slotIndex) {
     var rank = typeof ContentLoader !== "undefined" && ContentLoader.getAmateurRank ? ContentLoader.getAmateurRank(canonicalRankId(details && details.amateurRank ? details.amateurRank : "")) : null;
     var minValue = rank && typeof rank.statMin === "number" ? rank.statMin : 1;
@@ -613,8 +726,9 @@ var WorldRankingsEngine = (function () {
   }
 
   function streetBaseFromDetails(details, slotIndex) {
-    var rating = details && typeof details.streetRating === "number" ? details.streetRating : (8 + (slotIndex * 3));
-    return clamp(10 + Math.round(rating * 1.1), 4, 150);
+    var rating = details && typeof details.streetRating === "number" ? details.streetRating : 1;
+    var scaled = 1 + Math.round(Math.pow(clamp(rating, 1, 150) / 150, 1.45) * 146);
+    return clamp(scaled, 1, 147);
   }
 
   function proBaseFromDetails(details, slotIndex) {
@@ -660,6 +774,90 @@ var WorldRankingsEngine = (function () {
       end: statValueFromBase(base, minValue, maxValue, offsets.end, trackId + ":" + slotIndex + ":end"),
       vit: statValueFromBase(base, minValue, maxValue, offsets.vit, trackId + ":" + slotIndex + ":vit")
     };
+  }
+
+  function normalizeProjectionFighter(gameState, fighter, slotIndex) {
+    var trackId;
+    var total;
+    var expected;
+    var expectedTotal;
+    var rankId;
+    var amateurRecord;
+    var streetRecord;
+    if (!fighter) {
+      return fighter;
+    }
+    trackId = currentTrackId(fighter);
+    total = statTotal(fighter);
+    if (trackId === "amateur") {
+      rankId = amateurRankIdFromTotal(fighter.age || 18, total);
+      fighter.amateurRank = rankId;
+      fighter.amateurClass = rankId;
+      expected = buildAttributeSpread("amateur", slotIndex, {
+        styleId: fighter.styleId || fighter.style || "",
+        amateurRank: rankId,
+        nationalTeamStatus: fighter.nationalTeamStatus || "none"
+      });
+      expectedTotal = statTotal({ attributes: expected });
+      if (!fighter.isPlayer && Math.abs(total - expectedTotal) > 20) {
+        fighter.attributes = clone(expected);
+        fighter.stats = clone(expected);
+        total = statTotal(fighter);
+        fighter.amateurRank = amateurRankIdFromTotal(fighter.age || 18, total);
+        fighter.amateurClass = fighter.amateurRank;
+      }
+      if (!fighter.isPlayer && (!fighter.lastUpdatedWeek || fighter.lastUpdatedWeek <= 0)) {
+        amateurRecord = buildAmateurRecordForRank(fighter.amateurRank, fighter.id);
+        fighter.amateurRecord = clone(amateurRecord);
+        fighter.record.wins = amateurRecord.wins;
+        fighter.record.losses = amateurRecord.losses;
+        fighter.record.draws = amateurRecord.draws;
+        fighter.record.kos = 0;
+      }
+      return fighter;
+    }
+    if (trackId === "street") {
+      if (typeof fighter.streetRating !== "number" || fighter.streetRating <= 0) {
+        fighter.streetRating = streetRatingFromTotal(total);
+      }
+      expected = buildAttributeSpread("street", slotIndex, {
+        styleId: fighter.styleId || fighter.style || "",
+        streetRating: fighter.streetRating
+      });
+      expectedTotal = statTotal({ attributes: expected });
+      if (!fighter.isPlayer && (Math.abs(total - expectedTotal) > 35 || (maxAttributeValue(fighter) >= 150 && minAttributeValue(fighter) >= 148))) {
+        fighter.attributes = clone(expected);
+        fighter.stats = clone(expected);
+        total = statTotal(fighter);
+      }
+      fighter.streetRating = streetRatingFromTotal(total);
+      if (fighter.streetData && typeof fighter.streetData === "object") {
+        fighter.streetData.currentStatusId = streetStatusForRating(fighter.streetRating);
+      }
+      if (!fighter.isPlayer && (!fighter.lastUpdatedWeek || fighter.lastUpdatedWeek <= 0)) {
+        streetRecord = buildStreetRecordForTotal(total, fighter.id);
+        fighter.record.wins = streetRecord.wins;
+        fighter.record.losses = streetRecord.losses;
+        fighter.record.draws = streetRecord.draws;
+        fighter.record.kos = 0;
+      }
+      return fighter;
+    }
+    if (trackId === "pro" && !fighter.isPlayer) {
+      expected = buildAttributeSpread("pro", slotIndex, {
+        styleId: fighter.styleId || fighter.style || "",
+        rankingSeed: typeof fighter.rankingSeed === "number" ? fighter.rankingSeed : 0,
+        rankingBand: fighter.proRankingData && fighter.proRankingData.rankingBand ? fighter.proRankingData.rankingBand : "",
+        contenderStatus: fighter.contenderStatus || "",
+        recordWins: fighter.record && typeof fighter.record.wins === "number" ? fighter.record.wins : ((fighter.proRecord && fighter.proRecord.wins) || 0),
+        fame: typeof fighter.fame === "number" ? fighter.fame : 0
+      });
+      if (total < 500 || ((fighter.contenderStatus === "champion" || fighter.contenderStatus === "titleholder") && minAttributeValue(fighter) < 188)) {
+        fighter.attributes = clone(expected);
+        fighter.stats = clone(expected);
+      }
+    }
+    return fighter;
   }
 
   function amateurRankForSlot(slotIndex, age) {
@@ -742,21 +940,15 @@ var WorldRankingsEngine = (function () {
     var losses = 0;
     var draws = 0;
     var kos = 0;
+    var totalValue;
+    var streetRecord;
     if (trackId === "street") {
       age = deterministicRange(countryId + ":street:" + slotIndex, 16, 33);
-      streetRating = 8 + (slotIndex * 3) + deterministicRange("sr:" + countryId + ":" + slotIndex, 0, 18);
-      wins = Math.max(0, Math.round(streetRating / 6));
-      losses = Math.max(0, Math.round(wins / 3));
+      streetRating = clamp(1 + Math.round(((slotIndex - 1) / 49) * 149) + deterministicRange("sr:" + countryId + ":" + slotIndex, -4, 4), 1, 150);
       fame = Math.max(0, Math.round(streetRating / 4));
     } else if (trackId === "amateur") {
       age = deterministicRange(countryId + ":amateur:" + slotIndex, 16, 28);
       amateurRank = amateurRankForSlot(slotIndex, age);
-      amateurRecord.wins = 4 + Math.floor(slotIndex * 1.8);
-      amateurRecord.losses = Math.max(0, Math.floor(slotIndex / 9));
-      amateurRecord.draws = slotIndex % 4 === 0 ? 1 : 0;
-      wins = amateurRecord.wins;
-      losses = amateurRecord.losses;
-      draws = amateurRecord.draws;
       nationalTeamStatus = nationalTeamStatusForSlot(trackId, slotIndex, age);
       fame = 6 + Math.floor(slotIndex / 2);
     } else {
@@ -782,6 +974,32 @@ var WorldRankingsEngine = (function () {
       recordWins: trackId === "pro" ? proRecord.wins : wins,
       fame: fame
     });
+    if (trackId === "street") {
+      totalValue = statTotal({ attributes: attributes });
+      streetRating = streetRatingFromTotal(totalValue);
+      streetRecord = buildStreetRecordForTotal(totalValue, stableId("fighter_generated", [trackId, countryId, slotIndex]));
+      wins = streetRecord.wins;
+      losses = streetRecord.losses;
+      draws = streetRecord.draws;
+    } else if (trackId === "amateur") {
+      totalValue = statTotal({ attributes: attributes });
+      amateurRank = amateurRankIdFromTotal(age, totalValue);
+      attributes = buildAttributeSpread(trackId, slotIndex, {
+        styleId: styleId,
+        amateurRank: amateurRank,
+        nationalTeamStatus: nationalTeamStatus,
+        streetRating: streetRating,
+        rankingSeed: rankingSeed,
+        rankingBand: "",
+        contenderStatus: "",
+        recordWins: 0,
+        fame: fame
+      });
+      amateurRecord = buildAmateurRecordForRank(amateurRank, stableId("fighter_generated", [trackId, countryId, slotIndex]));
+      wins = amateurRecord.wins;
+      losses = amateurRecord.losses;
+      draws = amateurRecord.draws;
+    }
     return {
       id: stableId("fighter_generated", [trackId, countryId, slotIndex]),
       firstName: identity.firstName,
@@ -1227,6 +1445,7 @@ var WorldRankingsEngine = (function () {
       var stats;
       for (i = 0; i < fighters.length; i += 1) {
         fighter = fighters[i];
+        normalizeProjectionFighter(gameState, fighter, i + 1);
         stats = seasonState && seasonState.fighterSeasonStatsById ? seasonState.fighterSeasonStatsById[fighter.id] || null : null;
         result.push({
           fighterId: fighter.id,
@@ -1437,6 +1656,7 @@ var WorldRankingsEngine = (function () {
       var currentTrack;
       for (i = 0; i < fighters.length; i += 1) {
         fighter = fighters[i];
+        normalizeProjectionFighter(gameState, fighter, i + 1);
         currentTrack = currentTrackId(fighter);
         result.push({
           fighterId: fighter.id,
@@ -1653,6 +1873,7 @@ var WorldRankingsEngine = (function () {
         return null;
       }
       slotIndex = Math.max(1, roster.fighterIds.indexOf(fighter.id) + 1);
+      normalizeProjectionFighter(gameState, fighter, slotIndex);
       expectedAttributes = buildAttributeSpread(currentTrackId(fighter), slotIndex, {
         styleId: fighter.styleId || fighter.style || "",
         amateurRank: fighter.amateurRank || fighter.amateurClass || "",

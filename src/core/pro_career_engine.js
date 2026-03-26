@@ -938,7 +938,25 @@ var ProCareerEngine = (function () {
     var fighter;
     var record;
     var position;
+    var baseOrder = {};
+    var leftTarget;
+    var rightTarget;
+    var leftShift;
+    var rightShift;
     fighters.sort(function (left, right) {
+      return computeProValue(right) - computeProValue(left);
+    });
+    for (i = 0; i < fighters.length; i += 1) {
+      baseOrder[fighters[i].id] = i + 1;
+    }
+    fighters.sort(function (left, right) {
+      leftShift = deterministicShift((orgTemplate.id || "") + ":" + left.id, -3, 3);
+      rightShift = deterministicShift((orgTemplate.id || "") + ":" + right.id, -3, 3);
+      leftTarget = (baseOrder[left.id] || 999) + leftShift;
+      rightTarget = (baseOrder[right.id] || 999) + rightShift;
+      if (leftTarget !== rightTarget) {
+        return leftTarget - rightTarget;
+      }
       return buildOrganizationScore(right, orgTemplate, weekValue) - buildOrganizationScore(left, orgTemplate, weekValue);
     });
     for (i = 0; i < fighters.length && entries.length < (orgTemplate.rankingSize || rankingRules().rankingSize || 15); i += 1) {

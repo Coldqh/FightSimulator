@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.26.1";
+var APP_VERSION = "2026.03.26.2";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -3651,12 +3651,22 @@ var APP_VERSION = "2026.03.26.1";
 
     function currentAmateurState(fighter) {
       var subject = fighter || state.fighter;
+      var snapshot;
       if (!subject) {
         return null;
       }
       ensureLifeState();
       if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.normalizeAmateurState) {
         subject.amateur = JuniorAmateurSystem.normalizeAmateurState(subject.amateur, currentAgeView(subject).years);
+      }
+      if (subject.amateur && typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.evaluateRank) {
+        snapshot = JuniorAmateurSystem.evaluateRank(subject.amateur, currentAgeView(subject).years, amateurRankInputs(subject));
+        if (snapshot && snapshot.current) {
+          subject.amateur.score = snapshot.score;
+          subject.amateur.rankId = snapshot.current.id;
+          subject.amateurRank = snapshot.current.id;
+          subject.amateurClass = snapshot.current.id;
+        }
       }
       return subject.amateur;
     }
@@ -3728,6 +3738,8 @@ var APP_VERSION = "2026.03.26.1";
       }
       amateur.score = snapshot.score;
       amateur.rankId = snapshot.current.id;
+      subject.amateurRank = amateur.rankId;
+      subject.amateurClass = amateur.rankId;
       if (amateur.rankId !== previousRankId) {
         amateur.lastRankWeek = subject.week || 1;
         amateur.history.unshift({
@@ -3812,7 +3824,7 @@ var APP_VERSION = "2026.03.26.1";
     }
 
     function amateurTrackLocked(gameState) {
-      return currentAgeView(state.fighter).years >= 29 || playerHasTurnedPro(gameState);
+      return playerHasTurnedPro(gameState);
     }
 
     function buildSimpleCareerTransitionCards(gameState) {
@@ -4253,25 +4265,7 @@ var APP_VERSION = "2026.03.26.1";
     }
 
     function enforceAutomaticCareerTrackForWeek(gameState) {
-      var ageYears = currentAgeView(state.fighter).years;
-      var nextTrackId;
-      var note;
-      var result;
-      if (!gameState || ageYears < 29 || currentCareerTrackId() !== "amateur") {
-        return false;
-      }
-      nextTrackId = canEnterProfessionalTrack(state.fighter) ? "pro" : "street";
-      note = nextTrackId === "pro" ? "В 29 лет любительский путь закрыт. Ты переходишь в профессиональный бокс." : "В 29 лет любительский путь закрыт. Ты уходишь на улицу.";
-      result = transitionPlayerCareerState(gameState, nextTrackId, state.fighter ? state.fighter.week : 1, note);
-      if (!result || !result.ok) {
-        return false;
-      }
-      state.game = gameState;
-      syncWorldSimSectionsFromGameState(gameState);
-      syncRuntimeStateFromGame(gameState);
-      pushLog(note, nextTrackId === "pro" ? "good" : "warn");
-      addBiographyHistory(note, "trackTransition");
-      return true;
+      return false;
     }
 
     function hasMinimumAmateurRank(rankId, fighter) {
@@ -8831,6 +8825,40 @@ var APP_VERSION = "2026.03.26.1";
       return result;
     }
 
+    function rotateCandidateEntriesByWeek(entries, salt) {
+      var list = entries instanceof Array ? entries.slice(0) : [];
+      var offset;
+      if (list.length < 2) {
+        return list;
+      }
+      offset = ((state.fighter ? state.fighter.week : 1) + (salt || 0)) % list.length;
+      if (!offset) {
+        return list;
+      }
+      return list.slice(offset).concat(list.slice(0, offset));
+    }
+
+    function offerOpponentId(offer) {
+      return offer && (offer.fighterId || (offer.opponent && offer.opponent.fighterId) || "");
+    }
+
+    function insertPriorityOffer(offers, offer) {
+      var fighterId = offerOpponentId(offer);
+      var result = [];
+      var i;
+      if (!offer) {
+        return offers instanceof Array ? offers : [];
+      }
+      result.push(offer);
+      for (i = 0; i < (offers instanceof Array ? offers.length : 0); i += 1) {
+        if (!offers[i] || (fighterId && offerOpponentId(offers[i]) === fighterId)) {
+          continue;
+        }
+        result.push(offers[i]);
+      }
+      return result;
+    }
+
     function streetRankingCandidates(gameState, maxCount) {
       var view;
       if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildStreetRankingView) {
@@ -8842,11 +8870,11 @@ var APP_VERSION = "2026.03.26.1";
         pageSize: 9999,
         versionToken: rankingProjectionToken()
       });
-      return collectEntriesAroundPlayer(view && view.entries ? view.entries : [], maxCount || 4);
+      return rotateCandidateEntriesByWeek(collectEntriesAroundPlayer(view && view.entries ? view.entries : [], Math.max(maxCount || 4, 8)), 1).slice(0, maxCount || 4);
     }
 
     function amateurRankingCandidates(gameState, maxCount) {
-      var playerRankId = gameState && gameState.player && gameState.player.amateur ? gameState.player.amateur.rankId || "" : "";
+      var playerRankId = (currentAmateurState(state.fighter) || {}).rankId || (gameState && gameState.player && gameState.player.amateur ? gameState.player.amateur.rankId || "" : "");
       var playerRankOrder = playerRankId ? fallbackAmateurRankOrder(playerRankId) : -1;
       var lowerRankOrder = playerRankOrder > 0 ? playerRankOrder - 1 : -1;
       var playerTotal = fighterStatTotal(state.fighter ? state.fighter.stats : null);
@@ -8909,6 +8937,8 @@ var APP_VERSION = "2026.03.26.1";
       }
       sortByCloseness(lowerEntries);
       sortByCloseness(sameEntries);
+      lowerEntries = rotateCandidateEntriesByWeek(lowerEntries, 5);
+      sameEntries = rotateCandidateEntriesByWeek(sameEntries, 7);
       return lowerEntries.slice(0, 2)
         .concat(sameEntries.slice(0, 2))
         .concat(lowerEntries.slice(2))
@@ -8927,7 +8957,7 @@ var APP_VERSION = "2026.03.26.1";
         pageSize: 9999,
         versionToken: rankingProjectionToken()
       });
-      return collectEntriesAroundPlayer(view && view.entries ? view.entries : [], maxCount || 4);
+      return rotateCandidateEntriesByWeek(collectEntriesAroundPlayer(view && view.entries ? view.entries : [], Math.max(maxCount || 4, 8)), 3).slice(0, maxCount || 4);
     }
 
     function offerRankingLabel(entry) {
@@ -9530,7 +9560,6 @@ var APP_VERSION = "2026.03.26.1";
     function buildFightOffers() {
       var ids = ["home_safe", "home_even", "home_danger"];
       var seasonGameState;
-      var seasonOffers;
       var rankedCandidates;
       var rankedIndex = 0;
       var template;
@@ -9562,25 +9591,12 @@ var APP_VERSION = "2026.03.26.1";
         if (rematchRivalry && rematchRivalry.lastOpponentSnapshot && rematchAllowed(rematchRivalry.lastOpponentSnapshot)) {
           builtOffer = buildFightOffer("street_grudge_rematch", rematchRivalry.lastOpponentSnapshot, rematchRivalry);
           if (builtOffer) {
-            offers.unshift(builtOffer);
+            offers = insertPriorityOffer(offers, builtOffer);
           }
         }
         return offers.slice(0, 4);
       }
       if (isAmateurTrack()) {
-        if (typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.buildPlayerFightOffers) {
-          seasonGameState = ensurePersistentGameState(false);
-          seasonOffers = AmateurSeasonEngine.buildPlayerFightOffers(seasonGameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
-          state.game = seasonGameState;
-          syncWorldSimSectionsFromGameState(seasonGameState);
-          if (seasonOffers instanceof Array && seasonOffers.length) {
-            for (i = 0; i < seasonOffers.length; i += 1) {
-              annotateOfferEncounterMemory(seasonOffers[i], seasonGameState);
-            }
-            sortOffersByEncounterWeight(seasonOffers);
-            return seasonOffers.slice(0, 4);
-          }
-        }
         seasonGameState = ensurePersistentGameState(false);
         ids = listEligibleAmateurFightTemplateIds();
         rankedCandidates = amateurRankingCandidates(seasonGameState, 4);
@@ -9602,7 +9618,7 @@ var APP_VERSION = "2026.03.26.1";
             matchmakingNote: "Реванш"
           });
           if (builtOffer) {
-            offers.unshift(builtOffer);
+            offers = insertPriorityOffer(offers, builtOffer);
           }
         }
         return offers.slice(0, rematchRivalry && rematchRivalry.lastOpponentSnapshot ? 5 : 4);
@@ -9632,12 +9648,12 @@ var APP_VERSION = "2026.03.26.1";
           if (rematchRivalry && rematchRivalry.lastOpponentSnapshot && rematchAllowed(rematchRivalry.lastOpponentSnapshot)) {
             builtOffer = buildFightOffer(bestEligibleProFightTemplateId(), rematchRivalry.lastOpponentSnapshot, rematchRivalry);
             if (builtOffer) {
-              offers.unshift(builtOffer);
+              offers = insertPriorityOffer(offers, builtOffer);
             }
           } else if (lastFight && lastFight.opponentSnapshot && lastFight.result !== "draw" && rematchAllowed(lastFight.opponentSnapshot)) {
             builtOffer = buildFightOffer(bestEligibleProFightTemplateId(), lastFight.opponentSnapshot, null);
             if (builtOffer) {
-              offers.unshift(builtOffer);
+              offers = insertPriorityOffer(offers, builtOffer);
             }
           }
           ProCareerEngine.rememberOffers(seasonGameState, offers, state.fighter ? state.fighter.week : 1);
@@ -9669,12 +9685,12 @@ var APP_VERSION = "2026.03.26.1";
       if (rematchRivalry && rematchRivalry.lastOpponentSnapshot && rematchAllowed(rematchRivalry.lastOpponentSnapshot)) {
         builtOffer = buildFightOffer("rematch_offer", rematchRivalry.lastOpponentSnapshot, rematchRivalry);
         if (builtOffer) {
-          offers.unshift(builtOffer);
+          offers = insertPriorityOffer(offers, builtOffer);
         }
       } else if (lastFight && lastFight.opponentSnapshot && lastFight.result !== "draw" && rematchAllowed(lastFight.opponentSnapshot)) {
         builtOffer = buildFightOffer("rematch_offer", lastFight.opponentSnapshot, null);
         if (builtOffer) {
-          offers.unshift(builtOffer);
+          offers = insertPriorityOffer(offers, builtOffer);
         }
       }
       return offers;

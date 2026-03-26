@@ -376,21 +376,17 @@ var PersistentFighterRegistry = (function () {
     entity.lastGymChangeWeek = typeof seed.lastGymChangeWeek === "number" ? seed.lastGymChangeWeek : 0;
     entity.lastCoachChangeWeek = typeof seed.lastCoachChangeWeek === "number" ? seed.lastCoachChangeWeek : 0;
     entity.lastUpdatedWeek = 0;
-    if (trackId === "street") {
-      entity.record.wins = entity.streetRating > 0 ? Math.max(0, Math.round(entity.streetRating / 6)) : 0;
-      entity.record.losses = Math.max(0, Math.round(entity.record.wins / 3));
-    } else if (trackId === "amateur") {
-      entity.record.wins = entity.amateurRecord.wins || 0;
-      entity.record.losses = entity.amateurRecord.losses || 0;
-      entity.record.draws = entity.amateurRecord.draws || 0;
-    } else {
-      entity.record.wins = entity.proRecord.wins || 0;
-      entity.record.losses = entity.proRecord.losses || 0;
-      entity.record.draws = entity.proRecord.draws || 0;
-      entity.record.kos = entity.proRecord.kos || 0;
-    }
     entity.tags = clone(seed.reputationTags || []);
     normalizeSeedAttributeBand(entity, trackId);
+    if (trackId === "amateur") {
+      entity.amateurRank = derivedAmateurRankForEntity(entity);
+      entity.amateurClass = entity.amateurRank;
+      normalizeSeedAttributeBand(entity, trackId);
+    }
+    if (trackId === "street") {
+      entity.streetRating = seedStatClamp(Math.round((seedStatTotal(entity) - 5) / 5), 1, 150);
+    }
+    setRecordBand(entity, trackId);
     return entity;
   }
 
@@ -500,6 +496,135 @@ var PersistentFighterRegistry = (function () {
     return Math.max(minValue, Math.min(maxValue, Math.round(value)));
   }
 
+  function seedHashValue(seed) {
+    var text = String(seed || "");
+    var value = 0;
+    var i;
+    for (i = 0; i < text.length; i += 1) {
+      value = (value * 33 + text.charCodeAt(i)) % 2147483647;
+    }
+    return Math.abs(value);
+  }
+
+  function seedHashRange(seed, minValue, maxValue) {
+    var min = typeof minValue === "number" ? minValue : 0;
+    var max = typeof maxValue === "number" ? maxValue : min;
+    var span = (max - min) + 1;
+    if (span <= 1) {
+      return min;
+    }
+    return min + (seedHashValue(seed) % span);
+  }
+
+  function seedStatTotal(entity) {
+    var stats = entity && (entity.attributes || entity.stats) ? (entity.attributes || entity.stats) : {};
+    return (stats.str || 0) + (stats.tec || 0) + (stats.spd || 0) + (stats.end || 0) + (stats.vit || 0);
+  }
+
+  function derivedAmateurRankForEntity(entity) {
+    var total = seedStatTotal(entity);
+    var age = entity && typeof entity.age === "number" ? entity.age : 18;
+    if (age >= 18) {
+      if (total >= 401) { return "national_master"; }
+      if (total >= 301) { return "candidate_national"; }
+      if (total >= 251) { return "adult_class_1"; }
+      if (total >= 201) { return "adult_class_2"; }
+      return "adult_class_3";
+    }
+    if (total >= 101) { return "junior_class_1"; }
+    if (total >= 51) { return "junior_class_2"; }
+    return "junior_class_3";
+  }
+
+  function setRecordBand(entity, trackId) {
+    var total = seedStatTotal(entity);
+    var key = (entity ? entity.id : "fighter") + ":" + trackId;
+    var fights = 0;
+    var losses = 0;
+    var draws = 0;
+    var wins = 0;
+    if (!entity) {
+      return;
+    }
+    if (trackId === "street") {
+      fights = seedStatClamp(Math.round((total - 5) / 5) + seedHashRange(key + ":fights", -4, 6), 1, 150);
+      if (fights <= 2 && seedHashRange(key + ":cold", 0, 1) === 0) {
+        wins = 0;
+        losses = fights;
+      } else {
+        losses = seedStatClamp(Math.round(fights * (18 + seedHashRange(key + ":loss", 0, 18)) / 100), 0, Math.max(1, fights - 1));
+        draws = fights >= 18 && seedHashRange(key + ":draw", 0, 5) === 0 ? 1 : 0;
+        wins = Math.max(1, fights - losses - draws);
+      }
+      entity.record.wins = wins;
+      entity.record.losses = losses;
+      entity.record.draws = draws;
+      entity.record.kos = 0;
+      return;
+    }
+    if (trackId === "amateur") {
+      switch (entity.amateurRank) {
+      case "junior_class_3":
+        fights = seedHashRange(key + ":amateur", 1, 6);
+        break;
+      case "junior_class_2":
+        fights = seedHashRange(key + ":amateur", 6, 12);
+        break;
+      case "junior_class_1":
+        fights = seedHashRange(key + ":amateur", 12, 20);
+        break;
+      case "adult_class_3":
+        fights = seedHashRange(key + ":amateur", 18, 32);
+        break;
+      case "adult_class_2":
+        fights = seedHashRange(key + ":amateur", 28, 45);
+        break;
+      case "adult_class_1":
+        fights = seedHashRange(key + ":amateur", 40, 60);
+        break;
+      case "candidate_national":
+        fights = seedHashRange(key + ":amateur", 55, 80);
+        break;
+      case "national_master":
+        fights = seedHashRange(key + ":amateur", 80, 100);
+        break;
+      default:
+        fights = seedHashRange(key + ":amateur", 1, 10);
+        break;
+      }
+      if (fights <= 2 && seedHashRange(key + ":cold", 0, 1) === 0) {
+        wins = 0;
+        losses = fights;
+      } else {
+        losses = seedStatClamp(Math.round(fights * (8 + seedHashRange(key + ":loss", 0, 12)) / 100), 0, Math.max(1, fights - 1));
+        draws = fights >= 16 && seedHashRange(key + ":draw", 0, 4) === 0 ? 1 : 0;
+        wins = Math.max(1, fights - losses - draws);
+      }
+      entity.amateurRecord.wins = wins;
+      entity.amateurRecord.losses = losses;
+      entity.amateurRecord.draws = draws;
+      entity.record.wins = wins;
+      entity.record.losses = losses;
+      entity.record.draws = draws;
+      entity.record.kos = 0;
+      return;
+    }
+    if (!entity.proRecord || ((entity.proRecord.wins || 0) + (entity.proRecord.losses || 0) + (entity.proRecord.draws || 0)) <= 0) {
+      fights = seedStatClamp(Math.round((entity.rankingSeed || 0) / 4), 4, 36);
+      losses = seedStatClamp(Math.round(fights * (10 + seedHashRange(key + ":loss", 0, 16)) / 100), 0, Math.max(1, fights - 1));
+      draws = fights >= 10 && seedHashRange(key + ":draw", 0, 6) === 0 ? 1 : 0;
+      wins = Math.max(1, fights - losses - draws);
+      entity.proRecord.wins = wins;
+      entity.proRecord.losses = losses;
+      entity.proRecord.draws = draws;
+      entity.proRecord.kos = seedStatClamp(Math.round(wins * (35 + seedHashRange(key + ":ko", 0, 20)) / 100), 0, wins);
+    }
+    entity.record.wins = entity.proRecord.wins || 0;
+    entity.record.losses = entity.proRecord.losses || 0;
+    entity.record.draws = entity.proRecord.draws || 0;
+    entity.record.kos = entity.proRecord.kos || 0;
+  }
+
   function seedBaseAmateur(entity) {
     var rankOrder = {
       junior_class_3: 6,
@@ -515,7 +640,7 @@ var PersistentFighterRegistry = (function () {
   }
 
   function seedBaseStreet(entity) {
-    return seedStatClamp(12 + ((entity.streetRating || 0) * 1.05), 1, 150);
+    return seedStatClamp(Math.min(147, Math.max(1, (entity.streetRating || 0))), 1, 147);
   }
 
   function seedBasePro(entity) {
