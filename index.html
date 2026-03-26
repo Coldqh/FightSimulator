@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-var APP_VERSION = "2026.03.26.2";
+    var APP_VERSION = "2026.03.26.3";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1220,7 +1220,7 @@ var APP_VERSION = "2026.03.26.2";
           gameMemo: {},
           saveTimeout: null,
           saveScheduled: false,
-          saveDelayMs: 1200,
+          saveDelayMs: 3000,
           panelOpenStartedAt: 0,
           panelOpenKey: "",
           weeklyRefresh: {}
@@ -1267,7 +1267,6 @@ var APP_VERSION = "2026.03.26.2";
       var runtimeCache = ensureRuntimePerfState();
       runtimeCache.renderId += 1;
       runtimeCache.renderMemo = {};
-      runtimeCache.renderGameVersion = -1;
       return runtimeCache;
     }
 
@@ -1370,7 +1369,7 @@ var APP_VERSION = "2026.03.26.2";
       if (!gameState) {
         return null;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       return bindCanonicalGameState(gameState);
     }
 
@@ -4183,7 +4182,7 @@ var APP_VERSION = "2026.03.26.2";
       if (!transitionResult || !transitionResult.ok) {
         return false;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       refreshWorldState(true);
       if (note) {
         pushLog(note, nextTrackId === "street" ? "warn" : "good");
@@ -7187,7 +7186,7 @@ var APP_VERSION = "2026.03.26.2";
       SparringCampEngine.ensureState(gameState);
       gameState.player.preparation.currentTargetFighterId = fighterId || "";
       SparringCampEngine.refreshWeeklyOffers(gameState);
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       render();
     }
 
@@ -7241,7 +7240,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       fighter = state.fighter;
       fighter.money -= result.cost;
       fighter.fatigue += 8;
@@ -7293,7 +7292,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       if (started.preview && started.preview.notes && started.preview.notes.length) {
         pushLog(started.preview.notes[0], "warn");
       }
@@ -7507,7 +7506,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       syncLegacyFacilityStateFromPlayerEntity(gameState);
       if (currentAmateurState(state.fighter)) {
         state.fighter.amateur.currentOrganizationId = org ? org.id : (state.fighter.amateur.currentOrganizationId || "");
@@ -7568,7 +7567,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       syncLegacyFacilityStateFromPlayerEntity(gameState);
       state.world.trainerAssignment.npcId = trainerNpc.id;
       if (state.game && state.game.world && state.game.world.trainerAssignment) {
@@ -7606,7 +7605,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       syncLegacyFacilityStateFromPlayerEntity(gameState);
       pushLog("Ты покидаешь зал " + gym.name + ".", "warn");
       addBiographyHistory("Покидает зал " + gym.name + ".", "gym");
@@ -7632,7 +7631,7 @@ var APP_VERSION = "2026.03.26.2";
         render();
         return;
       }
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       syncLegacyFacilityStateFromPlayerEntity(gameState);
       org = typeof AmateurEcosystem !== "undefined" && AmateurEcosystem.getOrganizationById ? AmateurEcosystem.getOrganizationById(gameState, orgId) : null;
       pushLog("Ты переходишь в " + (org ? org.label : "новый центр") + ".", "good");
@@ -7921,8 +7920,7 @@ var APP_VERSION = "2026.03.26.2";
           !(state.game.rosterState.fighterIds instanceof Array) ||
           !state.game.rosterState.fighterIds.length ||
           (state.fighter && state.game.career && state.game.career.week !== state.fighter.week) ||
-          (state.fighter && state.game.player && state.game.player.profile && state.game.player.profile.name !== state.fighter.name) ||
-          (runtimeCache.renderId > 0 && runtimeCache.renderGameVersion !== runtimeCache.gameVersion)) {
+          (state.fighter && state.game.player && state.game.player.profile && state.game.player.profile.name !== state.fighter.name)) {
         syncGameStateFromRuntime();
       }
       if (runtimeCache.worldSectionSyncVersion !== runtimeCache.gameVersion) {
@@ -9726,6 +9724,7 @@ var APP_VERSION = "2026.03.26.2";
       }
       return {
         weekStamp: state.fighter.week,
+        refreshStamp: currentOfferRefreshStamp(),
         available: summaries,
         headline: headline,
         fightOffers: fightOffers,
@@ -9733,12 +9732,59 @@ var APP_VERSION = "2026.03.26.2";
       };
     }
 
+    function currentOfferRefreshStamp() {
+      return [
+        currentCareerTrackId(),
+        state.fighter ? state.fighter.week : 0,
+        currentProjectionVersion("roster"),
+        currentProjectionVersion("facility"),
+        currentProjectionVersion("ranking")
+      ].join("|");
+    }
+
+    function syncOpponentsFromFightOffers() {
+      var offers = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers : [];
+      var i;
+      state.opponents = [];
+      for (i = 0; i < offers.length; i += 1) {
+        if (offers[i] && offers[i].opponent) {
+          state.opponents.push(offers[i].opponent);
+        }
+      }
+      state.world.opponents = state.opponents;
+    }
+
+    function refreshFightOfferViewsOnly() {
+      var fighter = state.fighter;
+      if (!fighter) {
+        return;
+      }
+      if (!state.world.offers || typeof state.world.offers !== "object") {
+        state.world.offers = {
+          weekStamp: 0,
+          available: [],
+          headline: "",
+          fightOffers: [],
+          contractOffers: []
+        };
+      }
+      state.world.offers.weekStamp = fighter.week;
+      state.world.offers.fightOffers = buildFightOffers();
+      state.world.offers.refreshStamp = currentOfferRefreshStamp();
+      syncOpponentsFromFightOffers();
+      state.world.scene.updatedWeek = fighter.week;
+      state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
+      state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
+      rememberCountryVisit(fighter.currentCountry);
+    }
+
     function normalizeFightOffer(offer) {
       var entity;
+      var refreshStamp = currentOfferRefreshStamp();
       if (!offer) {
         return offer;
       }
-      if (offer.normalizedWeekStamp === (state.fighter ? state.fighter.week : 0) && offer.opponent && !offersNeedRosterRefresh([offer])) {
+      if (offer.normalizedWeekStamp === (state.fighter ? state.fighter.week : 0) && offer.normalizedRefreshStamp === refreshStamp && offer.opponent) {
         return offer;
       }
       if (!offer.trackId) {
@@ -9841,15 +9887,27 @@ var APP_VERSION = "2026.03.26.2";
         offer.venue = offer.opponent.venue;
       }
       offer.normalizedWeekStamp = state.fighter ? state.fighter.week : 0;
+      offer.normalizedRefreshStamp = refreshStamp;
       return annotateOfferEncounterMemory(offer);
     }
 
     function normalizeWorldOffers() {
+      var offersState = state.world && state.world.offers ? state.world.offers : null;
+      var refreshStamp = currentOfferRefreshStamp();
       var offers = state.world && state.world.offers && state.world.offers.fightOffers ? state.world.offers.fightOffers : [];
       var i;
+      if (offersState && offersState.normalizedWeekStamp === (state.fighter ? state.fighter.week : 0) && offersState.normalizedRefreshStamp === refreshStamp) {
+        syncOpponentsFromFightOffers();
+        return;
+      }
       for (i = 0; i < offers.length; i += 1) {
         normalizeFightOffer(offers[i]);
       }
+      if (offersState) {
+        offersState.normalizedWeekStamp = state.fighter ? state.fighter.week : 0;
+        offersState.normalizedRefreshStamp = refreshStamp;
+      }
+      syncOpponentsFromFightOffers();
     }
 
     function offersNeedRosterRefresh(offers) {
@@ -11443,25 +11501,15 @@ var APP_VERSION = "2026.03.26.2";
 
     function rebuildWeeklyRuntimeViews() {
       var fighter = state.fighter;
-      var offers;
-      var i;
       if (!fighter) {
         return;
       }
       state.world.offers = buildWeeklyOffers();
-      offers = state.world.offers && state.world.offers.fightOffers instanceof Array ? state.world.offers.fightOffers : [];
-      state.opponents = [];
-      for (i = 0; i < offers.length; i += 1) {
-        if (offers[i] && offers[i].opponent) {
-          state.opponents.push(offers[i].opponent);
-        }
-      }
-      state.world.opponents = state.opponents;
+      syncOpponentsFromFightOffers();
       state.world.scene.updatedWeek = fighter.week;
       state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
       state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
       rememberCountryVisit(fighter.currentCountry);
-      syncAllNpcRelationSnapshots();
     }
 
     function bootstrapWorldStateForCurrentWeek() {
@@ -11703,7 +11751,7 @@ var APP_VERSION = "2026.03.26.2";
     }
 
     var RING_SIZE = 5;
-    var ACTION_DELAY_MS = 500;
+    var ACTION_DELAY_MS = 180;
     var COUNT_STEP_MS = 500;
     var KO_TEXT_MS = 1000;
     var ACTION_ANIMATION_MS = 320;
@@ -12617,27 +12665,40 @@ var APP_VERSION = "2026.03.26.2";
     }
 
     function openFightSelect() {
+      var shouldRefresh;
       ensureLifeState();
-      if (!state.world.offers || state.world.offers.weekStamp !== state.fighter.week || !(state.world.offers.fightOffers instanceof Array) || !state.world.offers.fightOffers.length || offersNeedRosterRefresh(state.world.offers.fightOffers)) {
-        rebuildWeeklyRuntimeViews();
-        normalizeWorldOffers();
-      } else {
-        normalizeWorldOffers();
-      }
-      state.opponents = [];
-      if (state.world.offers && state.world.offers.fightOffers) {
-        var i;
-        for (i = 0; i < state.world.offers.fightOffers.length; i += 1) {
-          if (state.world.offers.fightOffers[i] && state.world.offers.fightOffers[i].opponent) {
-            state.opponents.push(state.world.offers.fightOffers[i].opponent);
-          }
-        }
-      }
-      state.world.opponents = state.opponents;
       state.panel = "fightSelect";
-      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+      shouldRefresh = !state.world.offers ||
+        state.world.offers.weekStamp !== state.fighter.week ||
+        !(state.world.offers.fightOffers instanceof Array) ||
+        !state.world.offers.fightOffers.length ||
+        state.world.offers.refreshStamp !== currentOfferRefreshStamp();
+      if (!shouldRefresh) {
+        normalizeWorldOffers();
+        if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
+          render();
+        }
+        return;
+      }
+      state.world.offersLoading = true;
+      state.opponents = [];
+      state.world.opponents = [];
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
         render();
       }
+      window.setTimeout(function () {
+        if (!state.fighter) {
+          return;
+        }
+        refreshFightOfferViewsOnly();
+        normalizeWorldOffers();
+        state.world.offersLoading = false;
+        if (state.panel === "fightSelect") {
+          if (!updatePanelSubtree({ refreshNavigation: false, suppressSave: true })) {
+            render();
+          }
+        }
+      }, 16);
     }
 
     function fightStateBySide(fight, side) {
@@ -12895,7 +12956,7 @@ var APP_VERSION = "2026.03.26.2";
       }
       fight.pendingWeekAdvance = true;
       state.panel = "fightResult";
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       endBattleRenderCounting();
@@ -13540,7 +13601,9 @@ var APP_VERSION = "2026.03.26.2";
       var offer;
       var opponent;
       html.push("<div class='panel'><h2 class='panel-title'>" + title + "</h2><div class='card-grid' style='margin-top:16px'>");
-      if (!offers.length) {
+      if (state.world && state.world.offersLoading) {
+        html.push("<div class='empty-state'>Подбираем соперников...</div>");
+      } else if (!offers.length) {
         html.push("<div class='empty-state'>На этой неделе новых стартов нет. Попробуй прожить ещё неделю.</div>");
       }
       for (i = 0; i < offers.length; i += 1) {
@@ -14057,7 +14120,7 @@ var APP_VERSION = "2026.03.26.2";
         return;
       }
       result = AmateurSeasonEngine.registerPlayer(gameState, tournamentId);
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       if (!result || !result.ok) {
         pushLog(result && result.message ? result.message : "Не удалось записаться.", "bad");
         state.panel = "careerSeason";
@@ -14076,7 +14139,7 @@ var APP_VERSION = "2026.03.26.2";
         return;
       }
       AmateurSeasonEngine.selectTournament(gameState, tournamentId || "");
-      syncRuntimeStateFromGame(gameState);
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       state.panel = "careerBracket";
       render();
     }
@@ -14908,7 +14971,7 @@ var APP_VERSION = "2026.03.26.2";
 
     function renderCareerGymPanel() {
       return measurePerf("gymPanelBuildMs", function () {
-        var gameState = ensurePersistentGameState(false);
+        var gameState = state.game || ensurePersistentGameState(false);
         var gyms = listCareerGymChoices();
         var current = currentGym();
         var currentTrainer = currentTrainerType();
@@ -14945,7 +15008,7 @@ var APP_VERSION = "2026.03.26.2";
 
     function renderCareerTrainerPanel() {
       return measurePerf("trainerPanelBuildMs", function () {
-        var gameState = ensurePersistentGameState(false);
+        var gameState = state.game || ensurePersistentGameState(false);
         var trainerType = currentTrainerType();
         var gym = currentGym();
         var trainerOptions = gym ? listCareerTrainerChoices(gym.id) : [];
@@ -16928,7 +16991,7 @@ var APP_VERSION = "2026.03.26.2";
       };
       fight.actionLock = false;
       state.panel = "fightBreak";
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       endBattleRenderCounting();
@@ -16972,7 +17035,7 @@ var APP_VERSION = "2026.03.26.2";
       fight.turn += 1;
       fight.aiActionsLeft = 1;
       fight.actionLock = false;
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       endBattleRenderCounting();
@@ -17011,7 +17074,7 @@ var APP_VERSION = "2026.03.26.2";
       resetRingPositions(fight);
       pushFightLine(fight, "Начинается раунд " + fight.round + ". После перерыва бойцы снова сходятся в центре.");
       state.panel = "fightLive";
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
     }
@@ -17087,7 +17150,7 @@ var APP_VERSION = "2026.03.26.2";
       if (FIGHT_ACTIONS[aiActionKey].type === "move") {
         moveActor(fight, "opponent", aiActionKey);
         fight.aiActionsLeft = 0;
-        if (!updateBattleSubtree({ suppressSave: false })) {
+        if (!updateBattleSubtree({ suppressSave: true })) {
           render();
         }
         scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
@@ -17096,7 +17159,7 @@ var APP_VERSION = "2026.03.26.2";
       if (FIGHT_ACTIONS[aiActionKey].type === "defense") {
         applyDefenseAction(fight, "opponent", aiActionKey);
         fight.aiActionsLeft = 0;
-        if (!updateBattleSubtree({ suppressSave: false })) {
+        if (!updateBattleSubtree({ suppressSave: true })) {
           render();
         }
         scheduleFightStep("completeFightTurn", ACTION_DELAY_MS);
@@ -17104,7 +17167,7 @@ var APP_VERSION = "2026.03.26.2";
       }
       strikeOutcome = strikeActor(fight, "opponent", aiActionKey);
       fight.aiActionsLeft = 0;
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       if (strikeOutcome) {
@@ -17129,7 +17192,7 @@ var APP_VERSION = "2026.03.26.2";
       }
       if (!canUseFightAction(fight, "player", actionKey)) {
         pushFightLine(fight, "Это действие сейчас недоступно из-за позиции на ринге или нехватки стамины.");
-        if (!updateBattleSubtree({ suppressSave: false })) {
+        if (!updateBattleSubtree({ suppressSave: true })) {
           render();
         }
         ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
@@ -17139,7 +17202,7 @@ var APP_VERSION = "2026.03.26.2";
       fight.actionLock = true;
       if (action.type === "move") {
         moveActor(fight, "player", actionKey);
-        if (!updateBattleSubtree({ suppressSave: false })) {
+        if (!updateBattleSubtree({ suppressSave: true })) {
           render();
         }
         ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
@@ -17148,7 +17211,7 @@ var APP_VERSION = "2026.03.26.2";
       }
       if (action.type === "defense") {
         applyDefenseAction(fight, "player", actionKey);
-        if (!updateBattleSubtree({ suppressSave: false })) {
+        if (!updateBattleSubtree({ suppressSave: true })) {
           render();
         }
         ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
@@ -17156,7 +17219,7 @@ var APP_VERSION = "2026.03.26.2";
         return;
       }
       strikeOutcome = strikeActor(fight, "player", actionKey);
-      if (!updateBattleSubtree({ suppressSave: false })) {
+      if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       ensureDebugRuntimeState().performance.battleActionMs = nowMs() - actionStarted;
