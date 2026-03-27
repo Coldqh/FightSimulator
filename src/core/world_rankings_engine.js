@@ -18,7 +18,7 @@ var WorldRankingsEngine = (function () {
     return typeof RANKING_PROFILE_DATA !== "undefined" && RANKING_PROFILE_DATA ? RANKING_PROFILE_DATA : {
       rosterTargets: {
         streetPerCountry: 50,
-        amateurPerCountry: 50,
+        amateurPerCountry: 1000,
         proGlobal: 100
       },
       pageSize: 20,
@@ -536,8 +536,17 @@ var WorldRankingsEngine = (function () {
 
   function identityForSlot(countryId, trackId, slotIndex) {
     var pool = getCountryPool(countryId) || { firstNames: ["Alex"], lastNames: ["Stone"], nicknames: ["Rook"] };
-    var firstNames = pool.firstNames && pool.firstNames.length ? pool.firstNames : ["Alex"];
-    var lastNames = pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"];
+    var seed = typeof ContentLoader !== "undefined" && ContentLoader.getCountrySeedConfig ? ContentLoader.getCountrySeedConfig(countryId) : null;
+    var firstNames = seed ?
+      ((seed.firstJoin === "join") ?
+        (pool.firstNames && pool.firstNames.length ? pool.firstNames : ["Alex"]) :
+        (seed.firstLeft && seed.firstLeft.length ? seed.firstLeft.slice(0) : (pool.firstNames && pool.firstNames.length ? pool.firstNames : ["Alex"]))) :
+      (pool.firstNames && pool.firstNames.length ? pool.firstNames : ["Alex"]);
+    var lastNames = seed ?
+      ((seed.lastJoin === "join") ?
+        (pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"]) :
+        (seed.lastLeft && seed.lastLeft.length ? seed.lastLeft.slice(0) : (pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"]))) :
+      (pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"]);
     var nicknames = pool.nicknames && pool.nicknames.length ? pool.nicknames : ["Rook"];
     var firstName = firstNames[(slotIndex * 5 + (trackId === "pro" ? 3 : 1)) % firstNames.length];
     var lastName = lastNames[(slotIndex * 7 + (trackId === "street" ? 4 : 2)) % lastNames.length];

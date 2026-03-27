@@ -1113,13 +1113,18 @@ var AmateurSeasonEngine = (function () {
         continue;
       }
       countryId = team.countryId;
-      countryFighters = [];
-      for (j = 0; j < gameState.rosterState.fighterIds.length; j += 1) {
-        fighter = fighterEntity(gameState, gameState.rosterState.fighterIds[j]);
-        if (!fighter || fighter.status === "retired" || fighterTrack(fighter) !== "amateur" || fighterCountry(fighter) !== countryId) {
-          continue;
+      countryFighters = typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrackCountry ?
+        PersistentFighterRegistry.getFightersByTrackCountry(gameState, "amateur", countryId) :
+        [];
+      if (!(countryFighters instanceof Array) || !countryFighters.length) {
+        countryFighters = [];
+        for (j = 0; j < gameState.rosterState.fighterIds.length; j += 1) {
+          fighter = fighterEntity(gameState, gameState.rosterState.fighterIds[j]);
+          if (!fighter || fighter.status === "retired" || fighterTrack(fighter) !== "amateur" || fighterCountry(fighter) !== countryId) {
+            continue;
+          }
+          countryFighters.push(fighter);
         }
-        countryFighters.push(fighter);
       }
       countryFighters.sort(function (left, right) {
         var totalLeft = fighterTotal(left);

@@ -586,17 +586,28 @@ var AmateurEcosystem = (function () {
     var candidatePool = [];
     var i;
     var fighter;
+    var countryFighters;
     var selectionScore;
     var team;
     var coachIds = coachIdsForCountry(countryId, ["national_team_coach"]);
     if (!country || !roster) {
       return;
     }
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!fighter || fighter.country !== countryId || (fighter.currentTrack !== "amateur" && fighter.trackId !== "amateur")) {
-        continue;
+    countryFighters = typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrackCountry ?
+      PersistentFighterRegistry.getFightersByTrackCountry(gameState, "amateur", countryId) :
+      [];
+    if (!(countryFighters instanceof Array) || !countryFighters.length) {
+      countryFighters = [];
+      for (i = 0; i < roster.fighterIds.length; i += 1) {
+        fighter = roster.fightersById[roster.fighterIds[i]];
+        if (!fighter || fighter.country !== countryId || (fighter.currentTrack !== "amateur" && fighter.trackId !== "amateur")) {
+          continue;
+        }
+        countryFighters.push(fighter);
       }
+    }
+    for (i = 0; i < countryFighters.length; i += 1) {
+      fighter = countryFighters[i];
       normalizeRosterFighter(fighter, i);
       selectionScore = fighterStatTotal(fighter);
       competitionState.amateurHooks.federationPointsByFighterId[fighter.id] = selectionScore;
@@ -649,11 +660,8 @@ var AmateurEcosystem = (function () {
       label: (country ? country.name : countryId) + " — сборная",
       federationOrgId: stableId("org", [countryId, "national_federation_main"])
     };
-    for (i = 0; i < roster.fighterIds.length; i += 1) {
-      fighter = roster.fightersById[roster.fighterIds[i]];
-      if (!fighter || fighter.country !== countryId || (fighter.currentTrack !== "amateur" && fighter.trackId !== "amateur")) {
-        continue;
-      }
+    for (i = 0; i < countryFighters.length; i += 1) {
+      fighter = countryFighters[i];
       if (active.indexOf(fighter.id) !== -1) {
         fighter.nationalTeamStatus = "active";
       } else if (reserve.indexOf(fighter.id) !== -1) {

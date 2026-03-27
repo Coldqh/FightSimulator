@@ -1,7 +1,7 @@
 var RANKING_PROFILE_DATA = {
   rosterTargets: {
     streetPerCountry: 50,
-    amateurPerCountry: 50,
+    amateurPerCountry: 1000,
     proGlobal: 100
   },
   pageSize: 20,

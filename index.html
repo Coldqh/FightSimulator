@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.26.3";
+    var APP_VERSION = "2026.03.27.1";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -8876,27 +8876,62 @@
       var playerRankOrder = playerRankId ? fallbackAmateurRankOrder(playerRankId) : -1;
       var lowerRankOrder = playerRankOrder > 0 ? playerRankOrder - 1 : -1;
       var playerTotal = fighterStatTotal(state.fighter ? state.fighter.stats : null);
-      var localView;
-      var worldView;
+      var countryId = state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry || "") : "";
+      var fighters = [];
       var lowerEntries = [];
       var sameEntries = [];
       var seen = {};
       var i;
-      function collect(view) {
-        var list = view && view.entries ? view.entries : [];
+      var position = 0;
+      function fighterRankId(entity) {
+        var snapshot;
+        if (entity && (entity.amateurRank || entity.amateurClass)) {
+          return entity.amateurRank || entity.amateurClass;
+        }
+        if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.evaluateRank) {
+          snapshot = JuniorAmateurSystem.evaluateRank({ rankId: "" }, entity && typeof entity.age === "number" ? entity.age : 18, {
+            statTotal: fighterStatTotal(entity ? (entity.attributes || entity.stats) : null)
+          });
+          if (snapshot && snapshot.current) {
+            return snapshot.current.id || "";
+          }
+        }
+        return "";
+      }
+      function collect(entityList) {
+        var list = entityList instanceof Array ? entityList.slice(0) : [];
         var entry;
         var entryOrder;
+        var rankId;
+        var entity;
+        list.sort(function (left, right) {
+          var leftTotal = fighterStatTotal(left ? (left.attributes || left.stats) : null);
+          var rightTotal = fighterStatTotal(right ? (right.attributes || right.stats) : null);
+          if (rightTotal !== leftTotal) {
+            return rightTotal - leftTotal;
+          }
+          return fallbackAmateurRankOrder(fighterRankId(right)) - fallbackAmateurRankOrder(fighterRankId(left));
+        });
         for (i = 0; i < list.length; i += 1) {
-          entry = list[i];
-          if (!entry || entry.isPlayer || !entry.fighterId) {
+          entity = list[i];
+          if (!entity || entity.isPlayer || entity.status === "retired" || !entity.id) {
             continue;
           }
-          entryOrder = fallbackAmateurRankOrder(entry.amateurRank || "");
+          rankId = fighterRankId(entity);
+          entryOrder = fallbackAmateurRankOrder(rankId);
+          position += 1;
           if (playerRankId && entryOrder !== playerRankOrder && entryOrder !== lowerRankOrder) {
             continue;
           }
-          if (!seen[entry.fighterId]) {
-            seen[entry.fighterId] = true;
+          if (!seen[entity.id]) {
+            entry = {
+              fighterId: entity.id,
+              position: position,
+              amateurRank: rankId,
+              countryId: entity.country || countryId,
+              isPlayer: false
+            };
+            seen[entity.id] = true;
             if (entryOrder === lowerRankOrder) {
               lowerEntries.push(entry);
             } else {
@@ -8917,22 +8952,19 @@
       if (typeof WorldRankingsEngine === "undefined" || !WorldRankingsEngine.buildAmateurRankingView) {
         return [];
       }
-      localView = WorldRankingsEngine.buildAmateurRankingView(gameState, {
-        countryId: state.fighter ? state.fighter.currentCountry || "" : "",
-        page: 0,
-        pageSize: 9999,
-        versionToken: rankingProjectionToken()
-      });
-      collect(localView);
-      if ((lowerEntries.length + sameEntries.length) < (maxCount || 4)) {
-        worldView = WorldRankingsEngine.buildAmateurRankingView(gameState, {
-          countryId: "",
-          page: 0,
-          pageSize: 9999,
-          versionToken: rankingProjectionToken()
+      if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrackCountry) {
+        fighters = PersistentFighterRegistry.getFightersByTrackCountry(gameState, "amateur", countryId, {
+          versionToken: currentProjectionVersion("roster")
         });
-        collect(worldView);
+      } else {
+        fighters = getFightersByTrack("amateur");
+        for (i = fighters.length - 1; i >= 0; i -= 1) {
+          if (!fighters[i] || fighters[i].country !== countryId) {
+            fighters.splice(i, 1);
+          }
+        }
       }
+      collect(fighters);
       sortByCloseness(lowerEntries);
       sortByCloseness(sameEntries);
       lowerEntries = rotateCandidateEntriesByWeek(lowerEntries, 5);
@@ -12275,6 +12307,9 @@
 
     function openPanel(panel) {
       var started = nowMs();
+      if (panel === "careerSeason" && currentSimpleTournamentRun()) {
+        panel = "careerBracket";
+      }
       if (state.activeEvent && panel !== "worldEvent") {
         state.panel = "worldEvent";
         if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
@@ -12617,28 +12652,18 @@
       return window.makeIdentityBase ? window.makeIdentityBase(countryKey) : (function () {
         var pool = getCountryPool(countryKey);
         var seed = ContentLoader.getCountrySeedConfig(countryKey);
-        var surnameParts;
+        var firstNames;
+        var surnames;
         var firstName;
         var lastName;
         var nickname;
         if (!pool) {
           return null;
         }
-        if (seed && seed.firstJoin === "join") {
-          firstName = choice(pool.firstNames);
-        } else {
-          firstName = choice(seed.firstLeft.concat(seed.firstRight));
-        }
-        surnameParts = seed && seed.lastJoin === "join" ? pool.lastNames.slice(0) : seed.lastLeft.concat(seed.lastRight);
-        lastName = choice(surnameParts);
-        if (chance(5) && surnameParts.length > 1) {
-          var secondSurname = choice(surnameParts);
-          var separator = (countryKey === "mexico" || countryKey === "cuba" || countryKey === "philippines") ? " " : "-";
-          while (secondSurname === lastName) {
-            secondSurname = choice(surnameParts);
-          }
-          lastName = lastName + separator + secondSurname;
-        }
+        firstNames = seed && seed.firstJoin === "join" ? pool.firstNames.slice(0) : (seed && seed.firstLeft && seed.firstLeft.length ? seed.firstLeft.slice(0) : pool.firstNames.slice(0));
+        surnames = seed && seed.lastJoin === "join" ? pool.lastNames.slice(0) : (seed && seed.lastLeft && seed.lastLeft.length ? seed.lastLeft.slice(0) : pool.lastNames.slice(0));
+        firstName = choice(firstNames.length ? firstNames : pool.firstNames);
+        lastName = choice(surnames.length ? surnames : pool.lastNames);
         if (trackUsesNickname(activeTrack) && shouldGenerateNicknameForTrack(activeTrack)) {
           nickname = sanitizeNicknameWord(choice(pool.nicknames));
         }
@@ -12954,18 +12979,20 @@
       if (evaluateEndState()) {
         return;
       }
-      fight.pendingWeekAdvance = true;
+      fight.pendingWeekAdvance = fight.offer && fight.offer.simpleTournamentId ? false : true;
       state.panel = "fightResult";
       if (!updateBattleSubtree({ suppressSave: true })) {
         render();
       }
       endBattleRenderCounting();
+      if (!(fight.offer && fight.offer.simpleTournamentId)) {
       window.setTimeout(function () {
         if (!state.fight || !state.fight.pendingWeekAdvance || state.panel !== "fightResult") {
           return;
         }
         processPendingFightWeekAdvance();
       }, 16);
+      }
     }
 
     function processPendingFightWeekAdvance() {
@@ -12983,6 +13010,14 @@
     function closeFightResult() {
       clearFightTimers();
       processPendingFightWeekAdvance();
+      if (currentSimpleTournamentRun()) {
+        state.fight = null;
+        state.panel = "careerBracket";
+        if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+          render();
+        }
+        return;
+      }
       state.fight = null;
       state.panel = state.activeEvent ? "worldEvent" : "home";
       render();
@@ -13406,6 +13441,9 @@
     function renderNavigationTabs() {
       var html = [];
       var i;
+      if (state.panel === "careerBracket" && currentSimpleTournamentRun()) {
+        return "<div class='panel'><div class='nav-row'><div class='chip gold'>Турнир идёт</div></div></div>";
+      }
       html.push("<div class='panel'><div class='nav-row'>");
       for (i = 0; i < NAV_TABS.length; i += 1) {
         html.push("<button class='" + (state.panel === NAV_TABS[i].key ? "button" : "ghost") + "' onclick='openPanel(\"" + NAV_TABS[i].key + "\")'>" + NAV_TABS[i].label + "</button>");
@@ -14004,45 +14042,339 @@
       return html.join("");
     }
 
-    function currentAmateurSeasonSummary() {
-      if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.buildPlayerSummary) {
-        return null;
+    function simpleTournamentRoot(gameState) {
+      if (!gameState.competitionState || typeof gameState.competitionState !== "object") {
+        gameState.competitionState = {};
       }
-      return memoizeGameProjection("amateurSeasonSummary", state.playerState ? state.playerState.fighterEntityId : "fighter_player_main", function (gameState) {
-        return AmateurSeasonEngine.buildPlayerSummary(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      if (!gameState.competitionState.simpleTournament || typeof gameState.competitionState.simpleTournament !== "object") {
+        gameState.competitionState.simpleTournament = {
+          activeRun: null,
+          lastViewedWeek: 0
+        };
+      }
+      return gameState.competitionState.simpleTournament;
+    }
+
+    function currentSimpleTournamentRun() {
+      return simpleTournamentRoot(ensurePersistentGameState(false)).activeRun || null;
+    }
+
+    function simpleTournamentCountryId() {
+      return state.fighter ? (state.fighter.currentCountry || state.fighter.homeCountry || "") : "";
+    }
+
+    function simpleTournamentPlayerRankId() {
+      return (currentAmateurState(state.fighter) || {}).rankId || "";
+    }
+
+    function simpleTournamentPlayerRankOrder() {
+      return fallbackAmateurRankOrder(simpleTournamentPlayerRankId());
+    }
+
+    function simpleTournamentRankIdForEntity(entity) {
+      var snapshot;
+      if (!entity) {
+        return "";
+      }
+      if (entity.amateurRank || entity.amateurClass) {
+        return entity.amateurRank || entity.amateurClass;
+      }
+      if (typeof JuniorAmateurSystem !== "undefined" && JuniorAmateurSystem.evaluateRank) {
+        snapshot = JuniorAmateurSystem.evaluateRank({ rankId: "" }, entity.age || 18, {
+          statTotal: fighterStatTotal(entity.attributes || entity.stats || entity)
+        });
+        if (snapshot && snapshot.current) {
+          return snapshot.current.id || "";
+        }
+      }
+      return "";
+    }
+
+    function simpleTournamentRankOrderForEntity(entity) {
+      return fallbackAmateurRankOrder(simpleTournamentRankIdForEntity(entity));
+    }
+
+    function rotateSimpleTournamentPool(list, salt) {
+      var result = list instanceof Array ? list.slice(0) : [];
+      var offset;
+      if (result.length < 2) {
+        return result;
+      }
+      offset = ((state.fighter ? state.fighter.week : 1) + (salt || 0)) % result.length;
+      if (!offset) {
+        return result;
+      }
+      return result.slice(offset).concat(result.slice(0, offset));
+    }
+
+    function simpleTournamentFieldSize(maxFieldSize, opponentCount) {
+      var sizes = [256, 128, 64, 32, 16, 8, 4];
+      var i;
+      var total = Math.max(0, Math.round(finiteNumber(opponentCount, 0))) + 1;
+      for (i = 0; i < sizes.length; i += 1) {
+        if (sizes[i] <= maxFieldSize && sizes[i] <= total) {
+          return sizes[i];
+        }
+      }
+      return 0;
+    }
+
+    function simpleTournamentStageLabels(fieldSize) {
+      var labels = [];
+      var size = Math.max(2, Math.round(finiteNumber(fieldSize, 2)));
+      while (size > 8) {
+        labels.push("1/" + size);
+        size = Math.max(2, Math.round(size / 2));
+      }
+      if (size >= 8) {
+        labels.push("Четвертьфинал");
+      }
+      if (size >= 4) {
+        labels.push("Полуфинал");
+      }
+      labels.push("Финал");
+      return labels;
+    }
+
+    function simpleTournamentCountryFighters(gameState, countryId) {
+      var fighters;
+      var i;
+      if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrackCountry) {
+        fighters = PersistentFighterRegistry.getFightersByTrackCountry(gameState, "amateur", countryId, {
+          versionToken: currentProjectionVersion("roster")
+        });
+        if (fighters.length) {
+          return fighters;
+        }
+      }
+      fighters = getFightersByTrack("amateur");
+      for (i = fighters.length - 1; i >= 0; i -= 1) {
+        if (!fighters[i] || fighters[i].country !== countryId) {
+          fighters.splice(i, 1);
+        }
+      }
+      return fighters;
+    }
+
+    function simpleTournamentWorldFighters(gameState) {
+      if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrack) {
+        return PersistentFighterRegistry.getFightersByTrack(gameState, "amateur", {
+          versionToken: currentProjectionVersion("roster")
+        });
+      }
+      return getFightersByTrack("amateur");
+    }
+
+    function simpleTournamentEligibleFighters(gameState, template) {
+      var countryId = simpleTournamentCountryId();
+      var playerId = currentPlayerEntityId();
+      var playerTotal = fighterStatTotal(state.fighter ? state.fighter.stats : null);
+      var pool = template.scope === "world" ? simpleTournamentWorldFighters(gameState) : simpleTournamentCountryFighters(gameState, countryId);
+      var fighters = [];
+      var i;
+      var fighter;
+      var total;
+      var rankOrder;
+      for (i = 0; i < pool.length; i += 1) {
+        fighter = pool[i];
+        if (!fighter || fighter.id === playerId || fighter.status === "retired") {
+          continue;
+        }
+        rankOrder = simpleTournamentRankOrderForEntity(fighter);
+        total = fighterStatTotal(fighter.attributes || fighter.stats || fighter);
+        if (template.rankOrders && template.rankOrders.indexOf(rankOrder) === -1) {
+          continue;
+        }
+        if (typeof template.minRankOrder === "number" && rankOrder < template.minRankOrder) {
+          continue;
+        }
+        if (typeof template.maxRankOrder === "number" && rankOrder > template.maxRankOrder) {
+          continue;
+        }
+        if (typeof template.skillWindow === "number" && Math.abs(total - playerTotal) > template.skillWindow) {
+          continue;
+        }
+        fighters.push(fighter);
+      }
+      fighters.sort(function (left, right) {
+        var leftTotal = fighterStatTotal(left ? (left.attributes || left.stats) : null);
+        var rightTotal = fighterStatTotal(right ? (right.attributes || right.stats) : null);
+        if (template.sortMode === "close" && Math.abs(leftTotal - playerTotal) !== Math.abs(rightTotal - playerTotal)) {
+          return Math.abs(leftTotal - playerTotal) - Math.abs(rightTotal - playerTotal);
+        }
+        if (rightTotal !== leftTotal) {
+          return rightTotal - leftTotal;
+        }
+        return simpleTournamentRankOrderForEntity(right) - simpleTournamentRankOrderForEntity(left);
+      });
+      return rotateSimpleTournamentPool(fighters, template.scope === "world" ? 13 : 9);
+    }
+
+    function buildSimpleTournamentTemplates(gameState) {
+      var year = currentCalendarView(state.fighter).year;
+      var countryId = simpleTournamentCountryId();
+      var playerRankId = simpleTournamentPlayerRankId();
+      var playerRankOrder = simpleTournamentPlayerRankOrder();
+      var templates = [];
+      var template;
+      function pushTemplate(definition) {
+        var pool;
+        var fieldSize;
+        template = clonePlainData(definition);
+        template.year = year;
+        template.countryId = countryId;
+        pool = simpleTournamentEligibleFighters(gameState, template);
+        fieldSize = simpleTournamentFieldSize(template.maxFieldSize, pool.length);
+        if (fieldSize >= 4) {
+          template.fieldSize = fieldSize;
+          template.stageLabels = simpleTournamentStageLabels(fieldSize);
+          template.poolCount = pool.length;
+          templates.push(template);
+        }
+      }
+      pushTemplate({
+        id: "local_rank_" + year + "_" + playerRankId + "_" + countryId,
+        label: "Локальный турнир разряда",
+        scope: "country",
+        sortMode: "close",
+        maxFieldSize: 16,
+        rankOrders: playerRankOrder > 0 ? [playerRankOrder - 1, playerRankOrder] : [playerRankOrder]
+      });
+      pushTemplate({
+        id: "local_skill_" + year + "_" + playerRankId + "_" + countryId,
+        label: "Локальный турнир по уровню",
+        scope: "country",
+        sortMode: "close",
+        maxFieldSize: 8,
+        minRankOrder: Math.max(0, playerRankOrder - 1),
+        maxRankOrder: playerRankOrder,
+        skillWindow: 45
+      });
+      if (playerRankOrder <= 2) {
+        pushTemplate({
+          id: "regional_junior_" + year + "_" + countryId,
+          label: "Областной турнир",
+          scope: "country",
+          sortMode: "rank",
+          maxFieldSize: 64,
+          minRankOrder: 0,
+          maxRankOrder: 2
+        });
+      }
+      if (playerRankOrder >= 3) {
+        pushTemplate({
+          id: "national_championship_" + year + "_" + countryId,
+          label: "Соревнования по стране",
+          scope: "country",
+          sortMode: "rank",
+          maxFieldSize: 128,
+          minRankOrder: 3,
+          maxRankOrder: 6
+        });
+      }
+      if (playerRankOrder >= 6) {
+        pushTemplate({
+          id: "world_championship_" + year,
+          label: "Чемпионат мира",
+          scope: "world",
+          sortMode: "rank",
+          maxFieldSize: 256,
+          minRankOrder: 6,
+          maxRankOrder: 7
+        });
+        pushTemplate({
+          id: "olympics_" + year,
+          label: "Олимпиада",
+          scope: "world",
+          sortMode: "rank",
+          maxFieldSize: 128,
+          minRankOrder: 6,
+          maxRankOrder: 7
+        });
+      }
+      return templates;
+    }
+
+    function currentAmateurSeasonSummary() {
+      var week = state.fighter ? state.fighter.week || 1 : 1;
+      var countryId = simpleTournamentCountryId();
+      var rankId = simpleTournamentPlayerRankId();
+      var playerId = currentPlayerEntityId();
+      return memoizeGameProjection("amateurSeasonSummary", week + "|" + countryId + "|" + rankId, function (gameState) {
+        var calendar = currentCalendarView(state.fighter);
+        var root = simpleTournamentRoot(gameState);
+        var activeRun = root.activeRun || null;
+        var rankingPosition = 0;
+        var view;
+        var entries;
+        var i;
+        if (typeof WorldRankingsEngine !== "undefined" && WorldRankingsEngine.buildAmateurRankingView) {
+          view = WorldRankingsEngine.buildAmateurRankingView(gameState, {
+            countryId: countryId,
+            page: 0,
+            pageSize: 9999,
+            versionToken: rankingProjectionToken()
+          });
+          entries = view && view.entries ? view.entries : [];
+          for (i = 0; i < entries.length; i += 1) {
+            if (entries[i] && (entries[i].isPlayer || entries[i].fighterId === playerId)) {
+              rankingPosition = entries[i].position || (i + 1);
+              break;
+            }
+          }
+        }
+        return {
+          seasonState: {
+            currentSeasonYear: calendar.year,
+            currentSeasonWeek: calendar.seasonWeek
+          },
+          rankingPosition: rankingPosition,
+          currentTournament: activeRun ? {
+            id: activeRun.id,
+            label: activeRun.label,
+            currentRoundLabel: activeRun.stageLabels[activeRun.currentStageIndex] || "Раунд"
+          } : null,
+          activeTournamentId: activeRun ? activeRun.id : "",
+          activeTournamentLabel: activeRun ? activeRun.label : ""
+        };
       });
     }
 
     function currentAmateurSeasonOptions() {
-      if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.listPlayerTournamentOptions) {
-        return {
-          season: null,
-          active: null,
-          registerable: [],
-          invitations: []
-        };
-      }
-      return memoizeGameProjection("amateurSeasonOptions", state.playerState ? state.playerState.fighterEntityId : "fighter_player_main", function (gameState) {
-        return AmateurSeasonEngine.listPlayerTournamentOptions(gameState, state.playerState ? state.playerState.fighterEntityId : "fighter_player_main");
+      var week = state.fighter ? state.fighter.week || 1 : 1;
+      var countryId = simpleTournamentCountryId();
+      var rankId = simpleTournamentPlayerRankId();
+      return memoizeGameProjection("amateurSeasonOptions", week + "|" + countryId + "|" + rankId, function (gameState) {
+        return buildSimpleTournamentTemplates(gameState);
       });
     }
 
     function currentSeasonTournamentById(tournamentId) {
-      if (!tournamentId || typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.getTournamentById) {
+      var run;
+      var options;
+      var i;
+      if (!tournamentId) {
         return null;
       }
-      return memoizeGameProjection("seasonTournamentById", tournamentId, function (gameState) {
-        return AmateurSeasonEngine.getTournamentById(gameState, tournamentId);
-      });
+      run = currentSimpleTournamentRun();
+      if (run && run.id === tournamentId) {
+        return clonePlainData(run);
+      }
+      options = currentAmateurSeasonOptions();
+      for (i = 0; i < options.length; i += 1) {
+        if (options[i] && options[i].id === tournamentId) {
+          return clonePlainData(options[i]);
+        }
+      }
+      return null;
     }
 
     function currentSeasonBracketForTournament(tournamentId) {
-      if (!tournamentId || typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.getBracketByTournamentId) {
+      var run = currentSimpleTournamentRun();
+      if (!tournamentId || !run || run.id !== tournamentId) {
         return null;
       }
-      return memoizeGameProjection("seasonBracketByTournament", tournamentId, function (gameState) {
-        return AmateurSeasonEngine.getBracketByTournamentId(gameState, tournamentId);
-      });
+      return clonePlainData(run);
     }
 
     function applyCareerNoticeBatch(notices, biographyKind) {
@@ -14113,171 +14445,261 @@
 
     function registerForTournament(tournamentId) {
       var gameState = ensurePersistentGameState(false);
-      var result;
-      if (!tournamentId || typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.registerPlayer) {
-        pushLog("Этот турнир пока недоступен.", "bad");
+      var options = currentAmateurSeasonOptions();
+      var template = null;
+      var run;
+      var i;
+      if (!tournamentId) {
+        return;
+      }
+      for (i = 0; i < options.length; i += 1) {
+        if (options[i] && options[i].id === tournamentId) {
+          template = options[i];
+          break;
+        }
+      }
+      if (!template) {
+        return;
+      }
+      run = buildSimpleTournamentRun(gameState, template);
+      if (!run) {
+        pushLog("Для этого турнира пока не хватает соперников.", "warn");
         render();
         return;
       }
-      result = AmateurSeasonEngine.registerPlayer(gameState, tournamentId);
+      simpleTournamentRoot(gameState).activeRun = run;
       syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
-      if (!result || !result.ok) {
-        pushLog(result && result.message ? result.message : "Не удалось записаться.", "bad");
-        state.panel = "careerSeason";
+      state.panel = "careerBracket";
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
         render();
-        return;
       }
-      drainAmateurSeasonNotices();
-      refreshWorldState();
-      state.panel = "careerSeason";
-      render();
     }
 
     function openSeasonBracket(tournamentId) {
-      var gameState = ensurePersistentGameState(false);
-      if (typeof AmateurSeasonEngine === "undefined" || !AmateurSeasonEngine.selectTournament) {
+      if (!currentSimpleTournamentRun() && tournamentId) {
+        registerForTournament(tournamentId);
         return;
       }
-      AmateurSeasonEngine.selectTournament(gameState, tournamentId || "");
-      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       state.panel = "careerBracket";
-      render();
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: true })) {
+        render();
+      }
     }
 
-    function renderTournamentRequirementText(tournament) {
-      var rules = tournament && tournament.eligibilityRules ? tournament.eligibilityRules : {};
-      var parts = [];
-      if (!tournament) {
-        return "";
+    function leaveSimpleTournament() {
+      var gameState = ensurePersistentGameState(false);
+      simpleTournamentRoot(gameState).activeRun = null;
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
+      state.panel = "careerSeason";
+      if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
       }
-      if (rules.minAge || rules.maxAge) {
-        parts.push("Возраст " + (rules.minAge || 0) + "-" + (rules.maxAge || 99));
-      }
-      if (rules.minRankId) {
-        parts.push("Разряд от " + localizedAmateurRankLabel(rules.minRankId, state.fighter.currentCountry));
-      }
-      if (rules.minTournamentPoints) {
-        parts.push("Очки сезона от " + rules.minTournamentPoints);
-      }
-      if (rules.minNationalRankingTop) {
-        parts.push("Место в рейтинге: топ-" + rules.minNationalRankingTop);
-      }
-      if (rules.requiredTeamStatus) {
-        parts.push("Статус в сборной: " + eligibleLevelLabel(rules.requiredTeamStatus));
-      }
-      return parts.join(" · ");
     }
 
-    function renderTournamentCardBlock(tournament, invited) {
-      var typeInfo = tournament && ContentLoader.getTournamentType ? ContentLoader.getTournamentType(tournament.tournamentTypeId) : null;
-      var actions = [];
-      if (!tournament) {
-        return "";
+    function buildSimpleTournamentRun(gameState, template) {
+      var pool = simpleTournamentEligibleFighters(gameState, template);
+      var roundCount = template && template.stageLabels ? template.stageLabels.length : 0;
+      var used = {};
+      var opponentIds = [];
+      var roundIndex;
+      var targetIndex;
+      var scan;
+      var direction;
+      var probeIndex;
+      var candidate = null;
+      if (!roundCount) {
+        return null;
       }
-      actions.push("<button class='button' onclick='registerForTournament(\"" + tournament.id + "\")'>" + (invited ? "Принять вызов" : "Записаться") + "</button>");
-      actions.push("<button class='ghost' onclick='openSeasonBracket(\"" + tournament.id + "\")'>Сетка</button>");
+      for (roundIndex = 0; roundIndex < roundCount; roundIndex += 1) {
+        targetIndex = roundCount <= 1 ? 0 : Math.round(((pool.length - 1) * roundIndex) / Math.max(1, roundCount - 1));
+        candidate = null;
+        for (scan = 0; scan < pool.length; scan += 1) {
+          direction = scan % 2 === 0 ? 1 : -1;
+          probeIndex = clamp(targetIndex + Math.ceil(scan / 2) * direction, 0, Math.max(0, pool.length - 1));
+          if (pool[probeIndex] && !used[pool[probeIndex].id]) {
+            candidate = pool[probeIndex];
+            break;
+          }
+        }
+        if (!candidate) {
+          for (scan = 0; scan < pool.length; scan += 1) {
+            if (pool[scan] && !used[pool[scan].id]) {
+              candidate = pool[scan];
+              break;
+            }
+          }
+        }
+        if (!candidate) {
+          break;
+        }
+        used[candidate.id] = true;
+        opponentIds.push(candidate.id);
+      }
+      if (opponentIds.length !== roundCount) {
+        return null;
+      }
+      return {
+        id: template.id,
+        label: template.label,
+        countryId: template.countryId || "",
+        scope: template.scope || "country",
+        year: template.year || currentCalendarView(state.fighter).year,
+        fieldSize: template.fieldSize || 4,
+        stageLabels: clonePlainData(template.stageLabels || []),
+        currentStageIndex: 0,
+        opponentIds: opponentIds,
+        rankOrders: clonePlainData(template.rankOrders || []),
+        minRankOrder: template.minRankOrder,
+        maxRankOrder: template.maxRankOrder
+      };
+    }
+
+    function currentSimpleTournamentOpponent(run) {
+      return run && run.opponentIds && run.opponentIds[run.currentStageIndex] ? getPersistentFighterEntity(run.opponentIds[run.currentStageIndex]) : null;
+    }
+
+    function startSimpleTournamentFight() {
+      var run = currentSimpleTournamentRun();
+      var opponent = currentSimpleTournamentOpponent(run);
+      var templateIds = listEligibleAmateurFightTemplateIds();
+      var templateId = templateIds.length ? templateIds[0] : "junior_amateur_class";
+      var snapshot;
+      var offer;
+      if (!run || !opponent) {
+        return;
+      }
+      snapshot = buildPersistentOpponentSnapshot(opponent, null);
+      offer = buildFightOffer(templateId, snapshot, null, {
+        snapshot: snapshot,
+        fighterId: opponent.id,
+        matchmakingNote: run.label,
+        rankingPosition: 0,
+        rankingLabel: ""
+      });
+      if (!offer) {
+        return;
+      }
+      offer.simpleTournamentId = run.id;
+      offer.tournamentId = run.id;
+      offer.matchId = run.id + "_" + (run.currentStageIndex + 1);
+      offer.tournamentInfo = {
+        tournamentLabel: run.label,
+        roundLabel: run.stageLabels[run.currentStageIndex] || "Раунд"
+      };
+      startFightFromOfferPayload(offer, offer.opponent, null);
+    }
+
+    function applySimpleTournamentFightResult(offer, fight) {
+      var gameState;
+      var tournamentState;
+      var run;
+      var restorePlayer = false;
+      if (!offer || !offer.simpleTournamentId) {
+        return;
+      }
+      gameState = ensurePersistentGameState(false);
+      tournamentState = simpleTournamentRoot(gameState);
+      run = tournamentState.activeRun && tournamentState.activeRun.id === offer.simpleTournamentId ? tournamentState.activeRun : null;
+      if (!run) {
+        return;
+      }
+      if (fight.result === "win") {
+        restorePlayer = true;
+        if (run.currentStageIndex >= run.stageLabels.length - 1) {
+          pushLog("Ты выигрываешь турнир " + run.label + ".", "good");
+          tournamentState.activeRun = null;
+        } else {
+          run.currentStageIndex += 1;
+          pushLog("Победа в турнире. Следующий этап: " + run.stageLabels[run.currentStageIndex] + ".", "good");
+        }
+      } else {
+        tournamentState.activeRun = null;
+        pushLog("Ты вылетаешь из турнира " + run.label + ".", "bad");
+      }
+      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
+      if (restorePlayer) {
+        state.fighter.health = 100;
+        state.fighter.stamina = 100;
+        state.fighter.fatigue = 0;
+      }
+      applyBounds(state.fighter);
+    }
+
+    function renderTournamentOptionCard(tournament, activeTournamentId) {
+      var stageText = tournament && tournament.stageLabels ? tournament.stageLabels.join(" · ") : "";
+      var scopeLabel = tournament && tournament.scope === "world" ? "Мировой турнир" : "Турнир страны";
+      var buttonLabel = activeTournamentId === tournament.id ? "Продолжить" : "Войти";
+      var action = activeTournamentId === tournament.id ? "openSeasonBracket(\"" + tournament.id + "\")" : "registerForTournament(\"" + tournament.id + "\")";
       return "<div class='card compact-card'>" +
-        "<div class='meta'>" + (typeInfo ? typeInfo.label : "Турнир") + "</div>" +
+        "<div class='meta'>" + scopeLabel + "</div>" +
         "<h3>" + tournament.label + "</h3>" +
-        "<div class='muted'>Регистрация: " + tournament.registrationStartWeek + "-" + tournament.registrationEndWeek + " неделя сезона.</div>" +
-        "<div class='muted'>Старт: неделя " + tournament.startWeek + ".</div>" +
-        "<div class='muted'>" + renderTournamentRequirementText(tournament) + "</div>" +
-        "<div class='muted'>Что даёт: " + (tournament.selectionImpactText || "Двигает дальше по любительской лестнице.") + "</div>" +
-        "<div class='footer-actions'>" + actions.join("") + "</div>" +
+        "<div class='muted'>Сетка: " + tournament.fieldSize + " бойцов.</div>" +
+        "<div class='muted'>Этапы: " + stageText + ".</div>" +
+        "<div class='muted'>Соперников в пуле: " + tournament.poolCount + ".</div>" +
+        "<div class='footer-actions'><button class='button' onclick='" + action + "'>" + buttonLabel + "</button></div>" +
       "</div>";
     }
 
     function renderCareerSeasonPanel() {
       return measurePerf("seasonPanelBuildMs", function () {
-        var summary = currentAmateurSeasonSummary();
-        var options = currentAmateurSeasonOptions();
-        var season = summary ? summary.seasonState : null;
-        var teamStatus = currentNationalTeamStatusInfo();
-        var ranking = summary ? summary.ranking || [] : [];
-        var activeTournament = options && options.active ? options.active : (summary ? summary.currentTournament : null);
+        var run = currentSimpleTournamentRun();
+        var summary;
+        var tournaments;
         var html = [];
         var i;
-        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Сезон и турниры</h2>");
-        html.push(renderLazySectionCard("season_overview", "Текущий сезон", function () {
-          return "<div class='muted'>Год: " + (season ? season.currentSeasonYear : currentCalendarView(state.fighter).year) + ".</div>" +
-            "<div class='muted'>Неделя сезона: " + (season ? season.currentSeasonWeek : 1) + ".</div>" +
-            "<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>" +
-            "<div class='muted'>Позиция в рейтинге: " + (summary && summary.rankingPosition ? summary.rankingPosition : "пока вне списка") + ".</div>" +
-            "<div class='muted'>Статус в сборной: " + (teamStatus ? teamStatus.label : "Вне списка") + ".</div>";
-        }, true, "сезон"));
-        html.push(renderLazySectionCard("season_hint", "Следующий допуск", function () {
-          return "<div class='muted'>" + (summary && summary.nextEligibilityText ? summary.nextEligibilityText : "Сезон ещё только начинает складываться.") + "</div>";
-        }, false, "допуск"));
-        if (activeTournament) {
-          html.push(renderLazySectionCard("season_active", "Текущий турнир", function () {
-            return "<div class='muted'>" + activeTournament.label + ".</div>" +
-              "<div class='muted'>Текущий раунд: " + (activeTournament.currentRoundLabel || activeTournament.currentRoundName || "в работе") + ".</div>" +
-              "<div class='muted'>Что на кону: " + (activeTournament.selectionImpactText || "Место в следующем круге сезона.") + "</div>" +
-              "<div class='footer-actions'><button class='button' onclick='openFightSelect()'>Открыть бой</button><button class='ghost' onclick='openSeasonBracket(\"" + activeTournament.id + "\")'>Посмотреть сетку</button></div>";
-          }, false, "турнир"));
+        if (run) {
+          state.panel = "careerBracket";
+          return renderCareerBracketPanel();
         }
-        if (options && options.registerable && options.registerable.length) {
-          html.push("<h3 style='margin-top:18px'>Открыта регистрация</h3><div class='card-grid'>");
-          for (i = 0; i < options.registerable.length; i += 1) {
-            html.push(renderTournamentCardBlock(options.registerable[i], false));
+        summary = currentAmateurSeasonSummary();
+        tournaments = currentAmateurSeasonOptions();
+        html.push("<div class='panel fill-panel'><h2 class='panel-title'>Турниры</h2>");
+        html.push("<div class='card compact-card'><h3>Твой уровень</h3>");
+        html.push("<div class='muted'>Разряд: " + amateurRankLabel(state.fighter) + ".</div>");
+        html.push("<div class='muted'>Год: " + (summary && summary.seasonState ? summary.seasonState.currentSeasonYear : currentCalendarView(state.fighter).year) + ".</div>");
+        html.push("<div class='muted'>Неделя: " + (summary && summary.seasonState ? summary.seasonState.currentSeasonWeek : currentCalendarView(state.fighter).seasonWeek) + ".</div>");
+        html.push("<div class='muted'>Позиция в рейтинге: " + (summary && summary.rankingPosition ? ("#" + summary.rankingPosition) : "вне списка") + ".</div>");
+        html.push("</div>");
+        if (!tournaments.length) {
+          html.push("<div class='card compact-card'><div class='empty-state'>Подходящих турниров пока нет.</div></div>");
+        } else {
+          html.push("<div class='card-grid'>");
+          for (i = 0; i < tournaments.length; i += 1) {
+            html.push(renderTournamentOptionCard(tournaments[i], ""));
           }
           html.push("</div>");
         }
-        if (options && options.invitations && options.invitations.length) {
-          html.push("<h3 style='margin-top:18px'>Есть вызовы</h3><div class='card-grid'>");
-          for (i = 0; i < options.invitations.length; i += 1) {
-            html.push(renderTournamentCardBlock(options.invitations[i], true));
-          }
-          html.push("</div>");
-        }
-        if (ranking.length) {
-          html.push(renderLazySectionCard("season_ranking", "Национальный рейтинг", function () {
-            var ids = [];
-            var j;
-            for (j = 0; j < ranking.length && j < 8; j += 1) {
-              ids.push(ranking[j].fighterId);
-            }
-            return renderTeamRosterPreview({}, ids, "Топ страны");
-          }, false, "рейтинг"));
-        }
-        html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerTeam\")'>Назад</button></div></div>");
+        html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
         return html.join("");
       });
     }
 
     function renderCareerBracketPanel() {
-      var summary = currentAmateurSeasonSummary();
-      var season = summary ? summary.seasonState : null;
-      var tournamentId = season && season.selectedTournamentId ? season.selectedTournamentId : (season && season.activeTournamentId ? season.activeTournamentId : "");
-      var tournament = currentSeasonTournamentById(tournamentId);
-      var bracket = currentSeasonBracketForTournament(tournamentId);
+      var run = currentSimpleTournamentRun();
+      var opponent = currentSimpleTournamentOpponent(run);
       var html = [];
       var i;
-      var j;
-      var round;
-      var match;
-      var fighterA;
-      var fighterB;
-      if (!tournament || !bracket) {
-        return "<div class='panel fill-panel'><h2 class='panel-title'>Сетка турнира</h2><div class='empty-state'>Сейчас нет выбранного турнира.</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerSeason\")'>Назад</button></div></div>";
+      if (!run) {
+        return renderCareerSeasonPanel();
       }
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Сетка турнира</h2>");
-      html.push("<div class='card compact-card'><h3>" + tournament.label + "</h3><div class='muted'>" + renderTournamentRequirementText(tournament) + "</div><div class='muted'>Что на кону: " + (tournament.selectionImpactText || "Место выше по лестнице.") + "</div></div>");
-      for (i = 0; i < bracket.rounds.length; i += 1) {
-        round = bracket.rounds[i];
-        html.push("<div class='card compact-card'><h3>" + round.label + "</h3>");
-        for (j = 0; j < round.matches.length; j += 1) {
-          match = round.matches[j];
-          fighterA = getPersistentFighterEntity(match.fighterAId);
-          fighterB = getPersistentFighterEntity(match.fighterBId);
-          html.push("<div class='muted'>" +
-            ((fighterA ? (fighterA.fullName || fighterA.name) : "Ожидает") + " vs " + (fighterB ? (fighterB.fullName || fighterB.name) : "Ожидает")) +
-            (match.winnerId ? (" — победа: " + ((getPersistentFighterEntity(match.winnerId) || {}).fullName || (getPersistentFighterEntity(match.winnerId) || {}).name || "неизвестно")) : "") +
-          "</div>");
-        }
-        html.push("</div>");
+      html.push("<div class='panel fill-panel'><h2 class='panel-title'>" + run.label + "</h2>");
+      html.push("<div class='card compact-card'><h3>Этап</h3><div class='muted'>" + (run.stageLabels[run.currentStageIndex] || "Раунд") + "</div></div>");
+      html.push("<div class='card compact-card'><h3>Сетка турнира</h3>");
+      for (i = 0; i < run.stageLabels.length; i += 1) {
+        html.push("<div class='muted'>" + (i < run.currentStageIndex ? "✓ " : (i === run.currentStageIndex ? "→ " : "• ")) + run.stageLabels[i] + "</div>");
       }
-      html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"careerSeason\")'>Назад</button></div></div>");
+      html.push("</div>");
+      html.push("<div class='card compact-card'><h3>Следующий соперник</h3>");
+      if (!opponent) {
+        html.push("<div class='empty-state'>Соперник пока не определён.</div>");
+      } else {
+        html.push("<div class='muted'>" + fullOpponentName(opponent) + "</div>");
+        html.push("<div class='muted'>Страна: " + countryLabel(opponent.country || state.fighter.currentCountry) + ".</div>");
+        html.push("<div class='muted'>Разряд: " + localizedAmateurRankLabel(simpleTournamentRankIdForEntity(opponent), opponent.country || state.fighter.currentCountry) + ".</div>");
+        html.push("<div class='muted'>Рекорд: " + formatRecordLine(opponent.record || {}) + ".</div>");
+      }
+      html.push("</div>");
+      html.push("<div class='footer-actions'><button class='button' " + (opponent ? "" : "disabled='disabled'") + " onclick='startSimpleTournamentFight()'>Начать бой</button><button class='ghost' onclick='leaveSimpleTournament()'>Покинуть турнир</button></div></div>");
       return html.join("");
     }
 
@@ -14312,7 +14734,7 @@
         if (seasonSummary && seasonSummary.rankingPosition) {
           html.push("<div class='muted'>Позиция в рейтинге: " + seasonSummary.rankingPosition + ".</div>");
         }
-        html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerSeason\")'>Сезон и турниры</button><button class='ghost' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>");
+        html.push("<div class='footer-actions'><button class='button' onclick='openPanel(\"careerSeason\")'>Турниры</button><button class='ghost' onclick='openPanel(\"careerTransitions\")'>Переходы</button></div>");
         html.push("</div>");
         html.push("<div class='footer-actions'><button class='ghost' onclick='openPanel(\"career\")'>Назад</button></div></div>");
         return html.join("");
@@ -14953,7 +15375,7 @@
           return "<div class='muted'>Зал: " + (gym ? (gym.name + " · " + gymTypeLabel(gym)) : "пока без зала") + ".</div>" +
             "<div class='muted'>Тренер: " + ((trainerNpc && trainerType) ? (trainerNpc.name + " · " + trainerTypeLabel(trainerType)) : "пока без тренера") + ".</div>" +
             "<div class='muted'>" + preparationLine + "</div>" +
-            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Зал</button><button class='button' onclick='openPanel(\"careerTrainer\")'>Тренер</button><button class='ghost' onclick='openPanel(\"careerSparring\")'>Подготовка</button>" + (adultSandboxUnlocked(fighter) ? "<button class='ghost' onclick='openPanel(\"careerContract\")'>Контракты</button>" : "") + "</div>";
+            "<div class='footer-actions'><button class='button' onclick='openPanel(\"careerGym\")'>Зал</button><button class='button' onclick='openPanel(\"careerTrainer\")'>Тренер</button><button class='ghost' onclick='openPanel(\"careerSparring\")'>Подготовка</button>" + (trackId === "amateur" ? "<button class='ghost' onclick='openPanel(\"careerSeason\")'>Турниры</button>" : "") + (adultSandboxUnlocked(fighter) ? "<button class='ghost' onclick='openPanel(\"careerContract\")'>Контракты</button>" : "") + "</div>";
         }, false, "база"));
         html.push(renderLazySectionCard("career_transitions", "Переходы", function () {
           var cards = currentCareerTransitionCards();
@@ -16486,7 +16908,9 @@
       if (amateurBout && amateur) {
         syncAmateurRankState(fighter, false);
       }
-      if (offer && offer.tournamentId && typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.recordPlayerFightResult) {
+      if (offer && offer.simpleTournamentId) {
+        applySimpleTournamentFightResult(offer, fight);
+      } else if (offer && offer.tournamentId && typeof AmateurSeasonEngine !== "undefined" && AmateurSeasonEngine.recordPlayerFightResult) {
         seasonGameState = syncGameStateFromRuntime();
         AmateurSeasonEngine.recordPlayerFightResult(seasonGameState, {
           tournamentId: offer.tournamentId,
