@@ -828,8 +828,8 @@ var WorldCareerSimEngine = (function () {
     }
   }
 
-  function syncTeamStatusChanges(gameState, root, weekValue) {
-    var fighters = listRosterFighters(gameState);
+  function syncTeamStatusChanges(gameState, root, weekValue, fighters) {
+    var fighterList = fighters instanceof Array ? fighters : listRosterFighters(gameState);
     var player = playerEntity(gameState);
     var playerPrevious = player ? (root.teamStatusByFighterId[player.id] || "none") : "none";
     var promoted = [];
@@ -837,8 +837,8 @@ var WorldCareerSimEngine = (function () {
     var fighter;
     var previous;
     var current;
-    for (i = 0; i < fighters.length; i += 1) {
-      fighter = fighters[i];
+    for (i = 0; i < fighterList.length; i += 1) {
+      fighter = fighterList[i];
       previous = root.teamStatusByFighterId[fighter.id] || "none";
       current = fighter.nationalTeamStatus || "none";
       if (previous !== current) {
@@ -870,15 +870,15 @@ var WorldCareerSimEngine = (function () {
     }
   }
 
-  function syncTrackChanges(gameState, root, weekValue) {
-    var fighters = listRosterFighters(gameState);
+  function syncTrackChanges(gameState, root, weekValue, fighters) {
+    var fighterList = fighters instanceof Array ? fighters : listRosterFighters(gameState);
     var i;
     var fighter;
     var previous;
     var current;
     var memory;
-    for (i = 0; i < fighters.length; i += 1) {
-      fighter = fighters[i];
+    for (i = 0; i < fighterList.length; i += 1) {
+      fighter = fighterList[i];
       previous = root.trackStatusByFighterId[fighter.id] || fighterTrack(fighter);
       current = fighterTrack(fighter);
       if (previous !== current) {
@@ -894,16 +894,16 @@ var WorldCareerSimEngine = (function () {
     }
   }
 
-  function syncPlayerEncounterMemory(gameState, root, weekValue) {
+  function syncPlayerEncounterMemory(gameState, root, weekValue, fighters) {
     var player = playerEntity(gameState);
-    var fighters = listRosterFighters(gameState);
+    var fighterList = fighters instanceof Array ? fighters : listRosterFighters(gameState);
     var i;
     var fighter;
     if (!player) {
       return;
     }
-    for (i = 0; i < fighters.length; i += 1) {
-      fighter = fighters[i];
+    for (i = 0; i < fighterList.length; i += 1) {
+      fighter = fighterList[i];
       if (!fighter || fighter.id === player.id) {
         continue;
       }
@@ -918,9 +918,9 @@ var WorldCareerSimEngine = (function () {
     }
   }
 
-  function emitRelevantWorldNotices(gameState, root, weekValue) {
+  function emitRelevantWorldNotices(gameState, root, weekValue, fighters) {
     var player = playerEntity(gameState);
-    var fighters = listRosterFighters(gameState);
+    var fighterList = fighters instanceof Array ? fighters : listRosterFighters(gameState);
     var i;
     var fighter;
     var memory;
@@ -928,8 +928,8 @@ var WorldCareerSimEngine = (function () {
     if (!player) {
       return;
     }
-    for (i = 0; i < fighters.length; i += 1) {
-      fighter = fighters[i];
+    for (i = 0; i < fighterList.length; i += 1) {
+      fighter = fighterList[i];
       if (!fighter || fighter.id === player.id) {
         continue;
       }
@@ -960,17 +960,17 @@ var WorldCareerSimEngine = (function () {
     }
   }
 
-  function ensureState(gameState) {
+  function ensureState(gameState, fighters) {
     var root = worldCareerRoot(gameState);
-    var fighters = listRosterFighters(gameState);
+    var fighterList = fighters instanceof Array ? fighters : listRosterFighters(gameState);
     var weekValue = currentWeek(gameState);
     var yearValue = currentYear(gameState);
     var i;
-    for (i = 0; i < fighters.length; i += 1) {
-      ensureFighterLifecycle(fighters[i], gameState, weekValue, yearValue);
-      root.teamStatusByFighterId[fighters[i].id] = fighters[i].nationalTeamStatus || "none";
-      root.trackStatusByFighterId[fighters[i].id] = fighterTrack(fighters[i]);
-      ensureEncounterMemory(root, fighters[i].id);
+    for (i = 0; i < fighterList.length; i += 1) {
+      ensureFighterLifecycle(fighterList[i], gameState, weekValue, yearValue);
+      root.teamStatusByFighterId[fighterList[i].id] = fighterList[i].nationalTeamStatus || "none";
+      root.trackStatusByFighterId[fighterList[i].id] = fighterTrack(fighterList[i]);
+      ensureEncounterMemory(root, fighterList[i].id);
     }
     if (typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.ensureState) {
       EncounterHistoryEngine.ensureState(gameState);
@@ -990,12 +990,12 @@ var WorldCareerSimEngine = (function () {
     if (!gameState) {
       return null;
     }
-    ensureState(gameState);
+    fighters = listRosterFighters(gameState);
+    ensureState(gameState, fighters);
     root = worldCareerRoot(gameState);
     if (root.lastProcessedWeek >= weekValue) {
       return root;
     }
-    fighters = listRosterFighters(gameState);
     for (i = 0; i < fighters.length; i += 1) {
       fighter = fighters[i];
       normalizeNpcFighter(gameState, fighter, weekValue, yearValue, root);
@@ -1023,13 +1023,13 @@ var WorldCareerSimEngine = (function () {
       maybeFlagOlympicHopeful(fighter);
     }
     processSeasonHistory(gameState, root);
-    syncTeamStatusChanges(gameState, root, weekValue);
-    syncTrackChanges(gameState, root, weekValue);
-    syncPlayerEncounterMemory(gameState, root, weekValue);
+    syncTeamStatusChanges(gameState, root, weekValue, fighters);
+    syncTrackChanges(gameState, root, weekValue, fighters);
+    syncPlayerEncounterMemory(gameState, root, weekValue, fighters);
     if (typeof EncounterHistoryEngine !== "undefined" && EncounterHistoryEngine.syncWorldLinks) {
       EncounterHistoryEngine.syncWorldLinks(gameState, { week: weekValue });
     }
-    emitRelevantWorldNotices(gameState, root, weekValue);
+    emitRelevantWorldNotices(gameState, root, weekValue, fighters);
     root.lastProcessedWeek = weekValue;
     root.lastProcessedYear = yearValue;
     return root;

@@ -1284,6 +1284,21 @@ function sectionHasMeaningfulData(sectionName, section) {
 function chooseRuntimeSection(runtimeState, sectionName) {
   var runtimeSection = runtimeState && runtimeState[sectionName] ? runtimeState[sectionName] : null;
   var canonicalSection = runtimeState && runtimeState.game && runtimeState.game[sectionName] ? runtimeState.game[sectionName] : null;
+  var shareByReference = sectionName === "playerState" ||
+    sectionName === "worldState" ||
+    sectionName === "rosterState" ||
+    sectionName === "organizationState" ||
+    sectionName === "competitionState" ||
+    sectionName === "narrativeState";
+  if (shareByReference) {
+    if (sectionHasMeaningfulData(sectionName, runtimeSection)) {
+      return runtimeSection;
+    }
+    if (sectionHasMeaningfulData(sectionName, canonicalSection)) {
+      return canonicalSection;
+    }
+    return runtimeSection || canonicalSection || null;
+  }
   if (sectionHasMeaningfulData(sectionName, runtimeSection)) {
     return clonePlainData(runtimeSection);
   }
@@ -1359,12 +1374,12 @@ function applyGameStateToRuntime(runtimeState, gameState, options) {
   target.remoteVersion = normalized.meta.remoteVersion || "";
   target.rng = RNG.cloneState(normalized.meta.rng);
   target.debug = clonePlainData(normalized.ui.debug);
-  target.playerState = clonePlainData(normalized.playerState);
-  target.worldState = clonePlainData(normalized.worldState);
-  target.rosterState = clonePlainData(normalized.rosterState);
-  target.organizationState = clonePlainData(normalized.organizationState);
-  target.competitionState = clonePlainData(normalized.competitionState);
-  target.narrativeState = clonePlainData(normalized.narrativeState);
+  target.playerState = normalized.playerState;
+  target.worldState = normalized.worldState;
+  target.rosterState = normalized.rosterState;
+  target.organizationState = normalized.organizationState;
+  target.competitionState = normalized.competitionState;
+  target.narrativeState = normalized.narrativeState;
 
   target.fighter = hasFighter ? {
     name: normalized.player.profile.name,

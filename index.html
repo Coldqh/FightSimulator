@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.27.1";
+    var APP_VERSION = "2026.03.27.2";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1353,12 +1353,73 @@
       perf.weekPhase_saveMs = 0;
     }
 
+    function syncRuntimePlayerFromGameState(gameState) {
+      var player = gameState && gameState.player ? gameState.player : null;
+      var career = gameState && gameState.career ? gameState.career : {};
+      var resources;
+      var conditions;
+      var life;
+      var record;
+      var biography;
+      var profile;
+      if (!player || !player.profile || !player.profile.name) {
+        state.fighter = null;
+        return null;
+      }
+      resources = player.resources || {};
+      conditions = player.conditions || {};
+      life = player.life || {};
+      record = player.record || {};
+      biography = player.biography || {};
+      profile = player.profile || {};
+      if (!state.fighter || typeof state.fighter !== "object") {
+        state.fighter = {};
+      }
+      state.fighter.name = profile.name || "";
+      state.fighter.stats = clonePlainData(player.stats || {});
+      state.fighter.skillPoints = resources.skillPoints || 0;
+      state.fighter.money = resources.money || 0;
+      state.fighter.week = career.week || 1;
+      state.fighter.health = resources.health || 0;
+      state.fighter.stress = resources.stress || 0;
+      state.fighter.fame = resources.fame || 0;
+      state.fighter.fatigue = conditions.fatigue || 0;
+      state.fighter.wear = conditions.wear || 0;
+      state.fighter.morale = typeof conditions.morale === "number" ? conditions.morale : 55;
+      state.fighter.injuries = clonePlainData(conditions.injuries || []);
+      state.fighter.housingId = life.housingId || "rough";
+      state.fighter.livingMode = life.livingMode || "family";
+      state.fighter.support = typeof life.support === "number" ? life.support : 50;
+      state.fighter.debtWeeks = life.debtWeeks || 0;
+      state.fighter.street = clonePlainData(player.street || {});
+      state.fighter.amateur = clonePlainData(player.amateur || {});
+      state.fighter.pro = clonePlainData(player.pro || {});
+      state.fighter.preparation = clonePlainData(player.preparation || {});
+      state.fighter.development = clonePlainData(player.development || {});
+      state.fighter.startingAge = typeof conditions.startingAge === "number" ? conditions.startingAge : 16;
+      state.fighter.bioFlags = clonePlainData(biography.flags || []);
+      state.fighter.bioHistory = clonePlainData(biography.history || []);
+      state.fighter.reputationTags = clonePlainData(biography.reputationTags || []);
+      state.fighter.mediaFeed = clonePlainData(biography.mediaFeed || []);
+      state.fighter.chronicle = biography.chronicle ? clonePlainData(biography.chronicle) : null;
+      state.fighter.bioFacts = clonePlainData(biography.facts || {});
+      state.fighter.calendar = clonePlainData(career.calendar || {});
+      state.fighter.wins = record.wins || 0;
+      state.fighter.losses = record.losses || 0;
+      state.fighter.kos = record.kos || 0;
+      state.fighter.deathsCaused = record.deathsCaused || 0;
+      state.fighter.homeCountry = profile.homeCountry || "";
+      state.fighter.currentCountry = profile.currentCountry || "";
+      return state.fighter;
+    }
+
     function bindCanonicalGameState(gameState) {
       var runtimeCache = ensureRuntimePerfState();
       if (!gameState) {
         return null;
       }
       state.game = gameState;
+      syncRuntimePlayerFromGameState(gameState);
       syncWorldSimSectionsFromGameState(gameState);
       runtimeCache.worldSectionSyncVersion = runtimeCache.gameVersion;
       runtimeCache.renderGameVersion = runtimeCache.gameVersion;
@@ -1369,7 +1430,6 @@
       if (!gameState) {
         return null;
       }
-      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
       return bindCanonicalGameState(gameState);
     }
 
@@ -2699,6 +2759,17 @@
     }
 
     function buildSaveSnapshot(compactMode) {
+      function canReuseCanonicalGameState(gameState) {
+        return !!(gameState &&
+          state.fighter &&
+          gameState.career &&
+          typeof gameState.career.week === "number" &&
+          gameState.career.week === state.fighter.week &&
+          gameState.player &&
+          gameState.player.profile &&
+          gameState.player.profile.name === state.fighter.name);
+      }
+      var sourceGameState;
       var gameState;
       var sanitizedFight;
       if (!state.fighter) {
@@ -2708,13 +2779,13 @@
       if (state.fight && !sanitizedFight) {
         return null;
       }
-      gameState = syncGameStateFromRuntime({ lightweightWorld: true });
+      sourceGameState = canReuseCanonicalGameState(state.game) ? state.game : syncGameStateFromRuntime({ lightweightWorld: true });
+      gameState = compactMode ? compactGameStateForSave(sourceGameState) : clonePlainData(sourceGameState);
       gameState.battle.current = sanitizedFight;
       gameState.meta.appVersion = APP_VERSION;
       gameState.meta.saveVersion = SAVE_VERSION;
       gameState.meta.rng = RNG.cloneState(state.rng);
       gameState.ui.savedPreview = buildSavePreview({ game: gameState });
-      gameState = compactMode ? compactGameStateForSave(gameState) : clonePlainData(gameState);
       return {
         version: SAVE_VERSION,
         saveVersion: SAVE_VERSION,
@@ -7524,7 +7595,10 @@
         gymName: gym.name
       });
       scheduleSaveGameState();
-      openPanel("careerTrainer");
+      state.panel = "careerTrainer";
+      if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
+        render();
+      }
     }
 
     function hireTrainer(trainerTypeId) {
@@ -7904,12 +7978,12 @@
       if (!gameState) {
         return;
       }
-      state.playerState = clonePlainData(gameState.playerState || {});
-      state.worldState = clonePlainData(gameState.worldState || {});
-      state.rosterState = clonePlainData(gameState.rosterState || {});
-      state.organizationState = clonePlainData(gameState.organizationState || {});
-      state.competitionState = clonePlainData(gameState.competitionState || {});
-      state.narrativeState = clonePlainData(gameState.narrativeState || {});
+      state.playerState = gameState.playerState || {};
+      state.worldState = gameState.worldState || {};
+      state.rosterState = gameState.rosterState || {};
+      state.organizationState = gameState.organizationState || {};
+      state.competitionState = gameState.competitionState || {};
+      state.narrativeState = gameState.narrativeState || {};
     }
 
     function ensurePersistentGameState(forceSync) {
@@ -11508,7 +11582,7 @@
     }
 
     function runPersistentWorldCareerSimulation(action, gameState) {
-      var activeGameState = gameState || syncGameStateFromRuntime();
+      var activeGameState = gameState || syncGameStateFromRuntime({ lightweightWorld: true });
       var absoluteWeek;
       if (typeof WorldCareerSimEngine === "undefined" || !WorldCareerSimEngine.runWeeklyPass) {
         return activeGameState;
@@ -11570,7 +11644,7 @@
       var fighter = state.fighter;
       var refreshPlan = buildWeeklyRefreshPlan(action, fighter && typeof fighter.week === "number" ? fighter.week : 1);
       var noticeCount = 0;
-      var activeGameState = gameState || syncGameStateFromRuntime();
+      var activeGameState = gameState || syncGameStateFromRuntime({ lightweightWorld: true });
       ensureBiographyState();
       ensureEncounterHistoryState(activeGameState);
       if (refreshPlan.refreshSparring && typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
@@ -11591,7 +11665,6 @@
       noticeCount += drainAmateurSeasonNotices(activeGameState, true);
       noticeCount += drainWorldCareerNotices(activeGameState, true);
       noticeCount += drainCareerTransitionNotices(activeGameState, true);
-      bindCanonicalGameState(activeGameState);
       rebuildWeeklyRuntimeViews();
       state.world.lastWeekAction = {
         type: "idle",

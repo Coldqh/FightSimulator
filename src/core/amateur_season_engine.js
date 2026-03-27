@@ -1336,10 +1336,21 @@ var AmateurSeasonEngine = (function () {
     var seasonState = seasonRoot(gameState);
     var absoluteWeek = currentAbsoluteWeek(gameState);
     var weekValue;
+    var hasRankingData = false;
+    var countryId;
     seasonState = rebuildSeasonIfNeeded(gameState, seasonState);
-    updateNationalRankings(gameState, seasonState);
     for (weekValue = Math.max(1, seasonState.lastProcessedWeek + 1); weekValue <= absoluteWeek; weekValue += 1) {
       processSingleWeek(gameState, seasonState, weekValue);
+    }
+    for (countryId in seasonState.nationalRankingByCountry) {
+      if (seasonState.nationalRankingByCountry.hasOwnProperty(countryId)) {
+        hasRankingData = true;
+        break;
+      }
+    }
+    if (!hasRankingData) {
+      updateNationalRankings(gameState, seasonState);
+      updateTeamSelections(gameState, seasonState);
     }
     syncInvitationState(gameState, seasonState);
     copyCompetitionAdapters(gameState);
