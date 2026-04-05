@@ -294,7 +294,7 @@ var JuniorAmateurSystem = (function () {
     if (!evaluation.next) {
       return "Дальше только вершина любительского бокса.";
     }
-    return getLocalizedRankLabel(countryId, evaluation.next.id) + ": " + evaluation.next.unlockSummary;
+    return getLocalizedRankLabel(countryId, evaluation.next.id);
   }
 
   function getJuniorSupportModel() {

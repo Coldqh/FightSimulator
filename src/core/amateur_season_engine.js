@@ -536,26 +536,49 @@ var AmateurSeasonEngine = (function () {
     return left.fighterId < right.fighterId ? -1 : 1;
   }
 
+  function listCountryAmateurs(gameState, countryId) {
+    var roster = rosterRoot(gameState);
+    var result;
+    var i;
+    var fighter;
+    if (typeof PersistentFighterRegistry !== "undefined" && PersistentFighterRegistry.getFightersByTrackCountry) {
+      result = PersistentFighterRegistry.getFightersByTrackCountry(gameState, "amateur", countryId) || [];
+      if (result.length) {
+        return result;
+      }
+    }
+    result = [];
+    if (!roster || !(roster.fighterIds instanceof Array)) {
+      return result;
+    }
+    for (i = 0; i < roster.fighterIds.length; i += 1) {
+      fighter = roster.fightersById[roster.fighterIds[i]];
+      if (!fighter || fighter.status === "retired" || fighterTrack(fighter) !== "amateur" || fighterCountry(fighter) !== countryId) {
+        continue;
+      }
+      result.push(fighter);
+    }
+    return result;
+  }
+
   function updateNationalRankings(gameState, seasonState) {
     var countries = listCountries();
-    var roster = rosterRoot(gameState);
     var hooks = competitionRoot(gameState).amateurHooks;
     var i;
     var j;
     var countryId;
     var fighter;
+    var countryFighters;
     var entry;
     var ranking;
     seasonState.nationalRankingByCountry = {};
     hooks.federationPointsByFighterId = hooks.federationPointsByFighterId || {};
     for (i = 0; i < countries.length; i += 1) {
       countryId = countries[i].id;
+      countryFighters = listCountryAmateurs(gameState, countryId);
       ranking = [];
-      for (j = 0; j < roster.fighterIds.length; j += 1) {
-        fighter = roster.fightersById[roster.fighterIds[j]];
-        if (!fighter || fighter.status === "retired" || fighterTrack(fighter) !== "amateur" || fighterCountry(fighter) !== countryId) {
-          continue;
-        }
+      for (j = 0; j < countryFighters.length; j += 1) {
+        fighter = countryFighters[j];
         entry = {
           fighterId: fighter.id,
           score: fighterSeasonScore(gameState, seasonState, fighter.id),
@@ -575,7 +598,6 @@ var AmateurSeasonEngine = (function () {
   }
 
   function listEligibleFightersForTournament(gameState, seasonState, tournament) {
-    var roster = rosterRoot(gameState);
     var result = [];
     var countries;
     var team;
@@ -583,8 +605,9 @@ var AmateurSeasonEngine = (function () {
     var i;
     var j;
     var fighter;
+    var countryFighters;
     var requiredRankId = "";
-    if (!roster || !tournament) {
+    if (!tournament) {
       return result;
     }
     if (tournament.scope === "country" && tournament.countryId) {
@@ -594,11 +617,9 @@ var AmateurSeasonEngine = (function () {
       }
     }
     if (tournament.scope === "country") {
-      for (i = 0; i < roster.fighterIds.length; i += 1) {
-        fighter = roster.fightersById[roster.fighterIds[i]];
-        if (!fighter || fighterCountry(fighter) !== tournament.countryId) {
-          continue;
-        }
+      countryFighters = listCountryAmateurs(gameState, tournament.countryId);
+      for (i = 0; i < countryFighters.length; i += 1) {
+        fighter = countryFighters[i];
         if (requiredRankId && fighterRank(fighter) !== requiredRankId) {
           continue;
         }

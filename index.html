@@ -1137,7 +1137,7 @@
 <script type="text/javascript" src="src/core/validators.js"></script>
   <script type="text/javascript" src="game_data.js"></script>
   <script type="text/javascript">
-    var APP_VERSION = "2026.03.27.2";
+var APP_VERSION = "2026.04.05.1";
     var SAVE_KEY = "street_boxer_save_v1";
     var LEGEND_ARCHIVE_KEY = "street_boxer_hall_of_fame_v1";
     var DEBUG_MODE = false;
@@ -1483,7 +1483,10 @@
     }
 
     function legendArchiveCount() {
-      return loadLegendArchive().length;
+      if (typeof state !== "undefined" && typeof state.menuArchiveCount === "number") {
+        return state.menuArchiveCount;
+      }
+      return 0;
     }
 
     function generateRunId() {
@@ -1734,7 +1737,19 @@
 
     function openLegendArchive() {
       state.screen = "archive";
+      state.archiveLoading = true;
+      if (!(state.archiveListCache instanceof Array)) {
+        state.archiveListCache = [];
+      }
       render();
+      window.setTimeout(function () {
+        if (state.screen !== "archive") {
+          return;
+        }
+        state.archiveListCache = loadLegendArchive();
+        state.archiveLoading = false;
+        render();
+      }, 16);
     }
 
     function returnToMainMenu() {
@@ -1751,6 +1766,7 @@
         state.archivedLegendId = "";
       }
       state.screen = "menu";
+      state.menuArchiveCount = state.archiveListCache instanceof Array ? state.archiveListCache.length : loadLegendArchive().length;
       render();
     }
 
@@ -1767,7 +1783,7 @@
       if (!state.fighter) {
         return null;
       }
-      return syncGameStateFromRuntime();
+      return state.game || ensurePersistentGameState(false);
     }
 
     function archiveEntriesByWeek(entries) {
@@ -1821,8 +1837,6 @@
           "<div class='muted'>Разряд: " + (legend.amateurRankLabel || "—") + ".</div>" +
           "<div class='muted'>Зал: " + (legend.gymName || "—") + ".</div>" +
           "<div class='muted'>Страны: " + countryListLabel(legend.countriesVisited || []) + ".</div>" +
-          "<div class='muted'>Взлёт: " + (legend.riseReason || "—") + "</div>" +
-          "<div class='muted'>Спад: " + (legend.fallReason || "—") + "</div>" +
         "</div>";
     }
 
@@ -2939,6 +2953,7 @@
     function refreshSavedPreview() {
       var saved = loadSavedSnapshot();
       state.savedPreview = buildSavePreview(saved);
+      state.menuArchiveCount = loadLegendArchive().length;
       if (state.game && state.game.ui) {
         state.game.ui.savedPreview = state.savedPreview;
       }
@@ -4550,11 +4565,11 @@
     }
 
     function listDevelopmentPerks() {
-      return ContentLoader.listDevelopmentPerks ? ContentLoader.listDevelopmentPerks() : [];
+      return [];
     }
 
     function getDevelopmentPerk(perkId) {
-      return ContentLoader.getDevelopmentPerk ? ContentLoader.getDevelopmentPerk(perkId) : null;
+      return null;
     }
 
     function trainerDevelopmentProfile(trainerTypeId) {
@@ -4631,12 +4646,8 @@
       if (typeof development.totalXp !== "number") {
         development.totalXp = 0;
       }
-      if (typeof development.perkPoints !== "number") {
-        development.perkPoints = 0;
-      }
-      if (!(development.activePerks instanceof Array)) {
-        development.activePerks = [];
-      }
+      development.perkPoints = 0;
+      development.activePerks = [];
       if (!development.focusProgress || typeof development.focusProgress !== "object") {
         development.focusProgress = {};
       }
@@ -4660,8 +4671,8 @@
         }
       }
       development.totalXp = Math.max(0, Math.round(development.totalXp));
-      development.perkPoints = Math.max(0, Math.round(development.perkPoints));
-      development.activePerks = uniqueList(development.activePerks);
+      development.perkPoints = 0;
+      development.activePerks = [];
       return development;
     }
 
@@ -4746,20 +4757,7 @@
     }
 
     function activePerkDefinitions(fighter) {
-      var development = currentDevelopment(fighter);
-      var list = [];
-      var i;
-      var perk;
-      if (!development) {
-        return list;
-      }
-      for (i = 0; i < development.activePerks.length; i += 1) {
-        perk = getDevelopmentPerk(development.activePerks[i]);
-        if (perk) {
-          list.push(perk);
-        }
-      }
-      return list;
+      return [];
     }
 
     function allDevelopmentBonusSources(fighter) {
@@ -4855,9 +4853,6 @@
       development.focusProgress[focusId] = Math.max(0, development.focusProgress[focusId] + amount);
       development.totalXp = Math.max(0, development.totalXp + amount);
       newLevel = Math.floor(development.totalXp / 20);
-      if (newLevel > oldLevel) {
-        development.perkPoints += newLevel - oldLevel;
-      }
       return newLevel - oldLevel;
     }
 
@@ -4985,32 +4980,7 @@
     }
 
     function unlockPerk(perkId) {
-      var fighter = state.fighter;
-      var development = currentDevelopment(fighter);
-      var perk = getDevelopmentPerk(perkId);
-      if (!fighter || !development || !perk) {
-        return;
-      }
-      if (containsTag(development.activePerks, perkId)) {
-        pushLog("Этот перк уже активен.", "warn");
-        render();
-        return;
-      }
-      if (!perkRequirementMet(perk, fighter)) {
-        pushLog("Для перка '" + perk.label + "' пока не выполнены требования.", "bad");
-        render();
-        return;
-      }
-      if (development.perkPoints < 5) {
-        pushLog("Пока нет очков перков.", "bad");
-        render();
-        return;
-      }
-      development.perkPoints -= 5;
-      development.activePerks.push(perkId);
-      development.activePerks = uniqueList(development.activePerks);
-      pushLog("Открыт перк '" + perk.label + "'.", "good");
-      render();
+      openPanel("skills");
     }
 
     function setTrainingFocus(focusId) {
@@ -7595,6 +7565,7 @@
         gymName: gym.name
       });
       scheduleSaveGameState();
+      state.screen = "game";
       state.panel = "careerTrainer";
       if (!updateFacilitySubtree({ refreshNavigation: true, suppressSave: false }) && !updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
         render();
@@ -7930,10 +7901,6 @@
       var targetStyleId = randomStyleByWeights(profileDef ? profileDef.styleWeights : null) || "outboxer";
       var styleId;
       var styleAmount;
-      var perkPool;
-      var perkLimit;
-      var i;
-      var perk;
       development.focusId = focusId;
       development.totalXp = Math.max(0, baseXp);
       development.focusProgress[focusId] = Math.max(0, baseXp + (gymProfile && gymProfile.focusBoosts && gymProfile.focusBoosts[focusId] ? gymProfile.focusBoosts[focusId] * 4 : 0) + (trainerProfile && trainerProfile.focusBoosts && trainerProfile.focusBoosts[focusId] ? trainerProfile.focusBoosts[focusId] * 5 : 0));
@@ -7957,16 +7924,8 @@
           development.styleProgress[styleId] = Math.max(0, styleAmount);
         }
       }
-      perkPool = profileDef && profileDef.perkPool ? profileDef.perkPool.slice(0) : [];
-      perkLimit = tier === "danger" ? 3 : (tier === "even" ? 2 : 1);
-      for (i = 0; i < perkPool.length && development.activePerks.length < perkLimit; i += 1) {
-        perk = getDevelopmentPerk(perkPool[i]);
-        if (perk && perkRequirementMet(perk, { stats: stats, development: development, week: 12, fame: tier === "danger" ? 24 : (tier === "even" ? 14 : 6), morale: 55, support: 40 })) {
-          development.activePerks.push(perk.id);
-        }
-      }
-      development.activePerks = uniqueList(development.activePerks);
       development.perkPoints = 0;
+      development.activePerks = [];
       return development;
     }
 
@@ -9661,6 +9620,30 @@
       return ids.length ? ids[ids.length - 1] : "pro_debut";
     }
 
+    function dedupeFightOffersByFighterId(offers) {
+      var result = [];
+      var seen = {};
+      var i;
+      var offer;
+      var key;
+      if (!(offers instanceof Array)) {
+        return result;
+      }
+      for (i = 0; i < offers.length; i += 1) {
+        offer = offers[i];
+        if (!offer) {
+          continue;
+        }
+        key = offer.fighterId ? ("fighter:" + offer.fighterId) : ("offer:" + (offer.id || i));
+        if (seen[key]) {
+          continue;
+        }
+        seen[key] = true;
+        result.push(offer);
+      }
+      return result;
+    }
+
     function buildFightOffers() {
       var ids = ["home_safe", "home_even", "home_danger"];
       var seasonGameState;
@@ -9681,9 +9664,12 @@
       if (isStreetTrack()) {
         seasonGameState = ensurePersistentGameState(false);
         ids = listStreetFightTemplateIds();
-        rankedCandidates = streetRankingCandidates(seasonGameState, 4);
-        for (i = 0; i < ids.length; i += 1) {
-          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем уличном рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
+        if (!ids.length) {
+          ids = ["street_even"];
+        }
+        rankedCandidates = streetRankingCandidates(seasonGameState, 8);
+        for (i = 0; i < Math.max(ids.length, rankedCandidates.length) && offers.length < 4; i += 1) {
+          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[Math.min(i, ids.length - 1)], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем уличном рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
           if (rankedCandidates[rankedIndex]) {
             rankedIndex += 1;
           }
@@ -9698,15 +9684,19 @@
             offers = insertPriorityOffer(offers, builtOffer);
           }
         }
+        offers = dedupeFightOffersByFighterId(offers);
         return offers.slice(0, 4);
       }
       if (isAmateurTrack()) {
         seasonGameState = ensurePersistentGameState(false);
         ids = listEligibleAmateurFightTemplateIds();
-        rankedCandidates = amateurRankingCandidates(seasonGameState, 4);
+        if (!ids.length) {
+          ids = ["adult_amateur_class"];
+        }
+        rankedCandidates = amateurRankingCandidates(seasonGameState, 8);
         rankedIndex = 0;
-        for (i = 0; i < ids.length; i += 1) {
-          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, (rankedCandidates[rankedIndex].amateurRank === (currentAmateurState(state.fighter) || {}).rankId ? "Соперник твоего разряда: " : "Соперник на разряд ниже: ") + localizedAmateurRankLabel(rankedCandidates[rankedIndex].amateurRank || "", rankedCandidates[rankedIndex].countryId || state.fighter.currentCountry) + ".") : null;
+        for (i = 0; i < Math.max(ids.length, rankedCandidates.length) && offers.length < 4; i += 1) {
+          builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[Math.min(i, ids.length - 1)], rankedCandidates[rankedIndex], null, (rankedCandidates[rankedIndex].amateurRank === (currentAmateurState(state.fighter) || {}).rankId ? "Соперник твоего разряда: " : "Соперник на разряд ниже: ") + localizedAmateurRankLabel(rankedCandidates[rankedIndex].amateurRank || "", rankedCandidates[rankedIndex].countryId || state.fighter.currentCountry) + ".") : null;
           if (rankedCandidates[rankedIndex]) {
             rankedIndex += 1;
           }
@@ -9725,6 +9715,7 @@
             offers = insertPriorityOffer(offers, builtOffer);
           }
         }
+        offers = dedupeFightOffersByFighterId(offers);
         return offers.slice(0, rematchRivalry && rematchRivalry.lastOpponentSnapshot ? 5 : 4);
       }
       if (isProTrack()) {
@@ -9732,14 +9723,17 @@
         if (typeof ProCareerEngine !== "undefined" && ProCareerEngine.ensureState) {
           ProCareerEngine.ensureState(seasonGameState);
           ids = listEligibleProFightTemplateIds();
-          rankedCandidates = proRankingCandidates(seasonGameState, 4);
+          if (!ids.length) {
+            ids = ["pro_debut"];
+          }
+          rankedCandidates = proRankingCandidates(seasonGameState, 8);
           rankedIndex = 0;
-          for (i = 0; i < ids.length; i += 1) {
-            template = getFightOfferTemplate(ids[i]);
+          for (i = 0; i < Math.max(ids.length, rankedCandidates.length) && offers.length < 4; i += 1) {
+            template = getFightOfferTemplate(ids[Math.min(i, ids.length - 1)]);
             if (template && (template.pipelineStage === "title_path" || template.pipelineStage === "eliminator")) {
-              builtOffer = buildFightOffer(ids[i], null, null);
+              builtOffer = buildFightOffer(ids[Math.min(i, ids.length - 1)], null, null);
             } else {
-              builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[i], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем Ring-рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
+              builtOffer = rankedCandidates[rankedIndex] ? buildRankingMatchedOffer(ids[Math.min(i, ids.length - 1)], rankedCandidates[rankedIndex], null, "Соперник рядом с тобой в общем Ring-рейтинге: " + offerRankingLabel(rankedCandidates[rankedIndex]) + ".") : null;
               if (rankedCandidates[rankedIndex]) {
                 rankedIndex += 1;
               }
@@ -9760,6 +9754,7 @@
               offers = insertPriorityOffer(offers, builtOffer);
             }
           }
+          offers = dedupeFightOffersByFighterId(offers);
           ProCareerEngine.rememberOffers(seasonGameState, offers, state.fighter ? state.fighter.week : 1);
           state.game = seasonGameState;
           syncWorldSimSectionsFromGameState(seasonGameState);
@@ -10253,31 +10248,17 @@
 
     function refreshWorldState(lightMode) {
       var fighter = state.fighter;
+      var activeGameState;
       var refreshedGameState;
       var noticeCount = 0;
-      var startupMode = !!lightMode;
-      ensurePersistentGameState(true);
+      activeGameState = ensurePersistentGameState(false);
       ensureLifeState();
       ensureBiographyState();
       ensureNpcWorld();
-      state.world.offers = buildWeeklyOffers();
-      state.opponents = [];
-      if (state.world.offers.fightOffers instanceof Array) {
-        var i;
-        for (i = 0; i < state.world.offers.fightOffers.length; i += 1) {
-          if (state.world.offers.fightOffers[i] && state.world.offers.fightOffers[i].opponent) {
-            state.opponents.push(state.world.offers.fightOffers[i].opponent);
-          }
-        }
-      }
-      state.world.opponents = state.opponents;
-      state.world.scene.updatedWeek = fighter.week;
-      state.world.scene.buzz = clamp(Math.round(fighter.fame + fighter.morale * 0.35 - fighter.stress * 0.2), 0, 100);
-      state.world.scene.temperature = clamp(Math.round(35 + fighter.fatigue * 0.35 + fighter.wear * 0.25), 0, 100);
-      rememberCountryVisit(fighter.currentCountry);
-      syncAllNpcRelationSnapshots();
-      refreshReputationState();
-      refreshedGameState = syncGameStateFromRuntime(startupMode ? { lightweightWorld: true } : null);
+      refreshReputationState(activeGameState);
+      rebuildWeeklyRuntimeViews();
+      normalizeWorldOffers();
+      refreshedGameState = activeGameState;
       ensureEncounterHistoryState(refreshedGameState);
       if (typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
         SparringCampEngine.ensureState(refreshedGameState);
@@ -10287,12 +10268,12 @@
         WorldStoryEngine.ensureState(refreshedGameState);
         WorldStoryEngine.syncWorldStory(refreshedGameState);
       }
-      syncRuntimeStateFromGame(refreshedGameState, startupMode ? { lightweightWorld: true } : null);
+      bindCanonicalGameState(refreshedGameState);
       noticeCount += drainAmateurSeasonNotices(refreshedGameState, true);
       noticeCount += drainWorldCareerNotices(refreshedGameState, true);
       noticeCount += drainCareerTransitionNotices(refreshedGameState, true);
       if (noticeCount > 0) {
-        syncGameStateFromRuntime();
+        bindCanonicalGameState(refreshedGameState);
       }
     }
 
@@ -11582,7 +11563,7 @@
     }
 
     function runPersistentWorldCareerSimulation(action, gameState) {
-      var activeGameState = gameState || syncGameStateFromRuntime({ lightweightWorld: true });
+      var activeGameState = gameState || ensurePersistentGameState(false);
       var absoluteWeek;
       if (typeof WorldCareerSimEngine === "undefined" || !WorldCareerSimEngine.runWeeklyPass) {
         return activeGameState;
@@ -11644,7 +11625,7 @@
       var fighter = state.fighter;
       var refreshPlan = buildWeeklyRefreshPlan(action, fighter && typeof fighter.week === "number" ? fighter.week : 1);
       var noticeCount = 0;
-      var activeGameState = gameState || syncGameStateFromRuntime({ lightweightWorld: true });
+      var activeGameState = gameState || ensurePersistentGameState(false);
       ensureBiographyState();
       ensureEncounterHistoryState(activeGameState);
       if (refreshPlan.refreshSparring && typeof SparringCampEngine !== "undefined" && SparringCampEngine.refreshWeeklyOffers) {
@@ -11830,8 +11811,8 @@
         var focusKey;
         var styleKey;
         fighter.development.totalXp = Math.max(0, Math.round(fighter.development.totalXp || 0));
-        fighter.development.perkPoints = Math.max(0, Math.round(fighter.development.perkPoints || 0));
-        fighter.development.activePerks = uniqueList(fighter.development.activePerks || []);
+        fighter.development.perkPoints = 0;
+        fighter.development.activePerks = [];
         for (focusKey in fighter.development.focusProgress) {
           if (fighter.development.focusProgress.hasOwnProperty(focusKey)) {
             fighter.development.focusProgress[focusKey] = Math.max(0, Math.round(fighter.development.focusProgress[focusKey] || 0));
@@ -12160,7 +12141,6 @@
       var startProfile;
       var stats;
       var countryInfo;
-      var gameState;
       if (!state.create.country || !state.create.identity) {
         return;
       }
@@ -12225,35 +12205,17 @@
       state.runId = generateRunId();
       state.archivedLegendId = "";
       state.world = defaultWorldState();
-      gameState = buildGameStateFromRuntime(state, {
-        appVersion: APP_VERSION,
-        debugMode: DEBUG_MODE,
-        lightweightWorld: true
-      });
-      if (gameState.playerState && gameState.playerState.careerTrack && gameState.playerState.careerTrack.tracks) {
-        gameState.playerState.currentTrackId = "amateur";
-        gameState.playerState.careerTrack.currentTrackId = "amateur";
-        if (gameState.playerState.careerTrack.tracks.street) {
-          gameState.playerState.careerTrack.tracks.street.unlocked = true;
-          gameState.playerState.careerTrack.tracks.street.active = false;
-          gameState.playerState.careerTrack.tracks.street.enteredWeek = 0;
-        }
-        if (gameState.playerState.careerTrack.tracks.amateur) {
-          gameState.playerState.careerTrack.tracks.amateur.unlocked = true;
-          gameState.playerState.careerTrack.tracks.amateur.active = true;
-          gameState.playerState.careerTrack.tracks.amateur.enteredWeek = 1;
-        }
-        if (gameState.playerState.careerTrack.tracks.pro) {
-          gameState.playerState.careerTrack.tracks.pro.unlocked = false;
-          gameState.playerState.careerTrack.tracks.pro.active = false;
-        }
-      }
-      syncRuntimeStateFromGame(gameState, { lightweightWorld: true });
+      state.game = null;
+      state.playerState = {};
+      state.worldState = {};
+      state.rosterState = {};
+      state.organizationState = {};
+      state.competitionState = {};
+      state.narrativeState = {};
       resetDebugLiveBalance();
       applyBounds(state.fighter);
       ensureBiographyState();
       rememberCountryVisit(state.create.country);
-      generateCareerNpcWorld();
       state.screen = "game";
       state.panel = "home";
       countryInfo = getCountryInfo(state.fighter.homeCountry);
@@ -12264,9 +12226,35 @@
       addBiographyHistory((startingAge >= 18 ? "Начинает взрослую раннюю карьеру в " : "Начинает юниорский путь в ") + countryInfo.name + ".", "origin");
       render();
       setTimeout(function () {
+        var gameState;
         if (!state.fighter || state.screen !== "game") {
           return;
         }
+        generateCareerNpcWorld();
+        gameState = buildGameStateFromRuntime(state, {
+          appVersion: APP_VERSION,
+          debugMode: DEBUG_MODE,
+          lightweightWorld: true
+        });
+        if (gameState.playerState && gameState.playerState.careerTrack && gameState.playerState.careerTrack.tracks) {
+          gameState.playerState.currentTrackId = "amateur";
+          gameState.playerState.careerTrack.currentTrackId = "amateur";
+          if (gameState.playerState.careerTrack.tracks.street) {
+            gameState.playerState.careerTrack.tracks.street.unlocked = true;
+            gameState.playerState.careerTrack.tracks.street.active = false;
+            gameState.playerState.careerTrack.tracks.street.enteredWeek = 0;
+          }
+          if (gameState.playerState.careerTrack.tracks.amateur) {
+            gameState.playerState.careerTrack.tracks.amateur.unlocked = true;
+            gameState.playerState.careerTrack.tracks.amateur.active = true;
+            gameState.playerState.careerTrack.tracks.amateur.enteredWeek = 1;
+          }
+          if (gameState.playerState.careerTrack.tracks.pro) {
+            gameState.playerState.careerTrack.tracks.pro.unlocked = false;
+            gameState.playerState.careerTrack.tracks.pro.active = false;
+          }
+        }
+        bindCanonicalGameState(gameState);
         bootstrapWorldStateForCurrentWeek();
         if (!updatePanelSubtree({ refreshNavigation: true, suppressSave: false })) {
           render();
@@ -13247,9 +13235,9 @@
 
     function renderCareerLogPage() {
       return "" +
-        renderSectionCard("careerlog_log", "Лента карьеры", renderLogPanelInner(), true, "журнал") +
-        renderSectionCard("careerlog_world", "История мира", renderWorldMediaArchiveList(8), false, "мир") +
-        "<div class='panel'><div class='footer-actions'><button class='ghost' onclick='openLegendArchive()'>Архив и история</button></div></div>";
+        renderLazySectionCard("careerlog_log", "Лента карьеры", function () { return renderLogPanelInner(); }, true, "журнал") +
+        renderLazySectionCard("careerlog_world", "История мира", function () { return renderWorldMediaArchiveList(6); }, false, "мир") +
+        "<div class='panel'><div class='footer-actions'><button class='button' onclick='openLegendArchive()'>Архив и история</button></div></div>";
     }
 
     function eventActorLabel(slot) {
@@ -13544,14 +13532,12 @@
       var development = currentDevelopment(fighter);
       var focus = currentFocus(fighter);
       var styleSnapshot = currentStyleSnapshot(fighter);
-      var activePerks = activePerkDefinitions(fighter);
       var gym = currentGym();
       var trainerType = currentTrainerType();
       var gymProfile = gym ? gymDevelopmentProfile(gym.id) : null;
       var trainerProfile = trainerType ? trainerDevelopmentProfile(trainerType.id) : null;
       var html = [];
       var i;
-      var perk;
       var styles = listDevelopmentStyles();
       var styleDef;
       var progress;
@@ -13562,7 +13548,7 @@
       html.push("<div class='dev-highlight'>");
       html.push("<div class='fighter-class'>Текущий стиль</div>");
       html.push("<div class='fighter-name' style='font-size:30px'>" + (styleSnapshot ? styleSnapshot.style.label : "Стиль формируется") + "</div>");
-      html.push("<div class='record-row' style='margin-top:10px'><div class='chip gold'>Фокус: " + (focus ? focus.label : "Техника") + "</div><div class='chip'>XP лагеря " + development.totalXp + "</div><div class='chip'>Очки перков " + development.perkPoints + "</div><div class='chip'>Активных перков " + development.activePerks.length + "</div></div>");
+      html.push("<div class='record-row' style='margin-top:10px'><div class='chip gold'>Фокус: " + (focus ? focus.label : "Техника") + "</div><div class='chip'>XP лагеря " + development.totalXp + "</div></div>");
       if (styleSnapshot && styleSnapshot.tier) {
         html.push("<div class='dev-mini'>Текущий tier: " + styleSnapshot.tier.label + ". " + summarizeDevelopmentBonuses(styleSnapshot.tier.bonuses) + "</div>");
       }
@@ -13592,19 +13578,6 @@
         html.push("</div>");
       }
       html.push("</div></div>");
-      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Активные перки</h3>");
-      if (!activePerks.length) {
-        html.push("<div class='empty-state'>Пока активных перков нет.</div>");
-      } else {
-        html.push("<div class='choice-grid'>");
-        for (i = 0; i < activePerks.length; i += 1) {
-          perk = activePerks[i];
-          html.push("<div class='card perk-card active'><div class='meta'>" + perkCategoryLabel(perk.category) + "</div><h3>" + perk.label + "</h3><div class='dev-mini'>" + summarizeDevelopmentBonuses(perk.bonuses) + "</div><div class='perk-state active'>Активен</div></div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div>");
-      html.push("<div class='panel inset-panel' style='margin-top:14px'><h3>Перки</h3><div class='record-row'><div class='chip gold'>Активно " + development.activePerks.length + "</div><div class='chip'>Очки " + development.perkPoints + "</div></div><div class='footer-actions'><button class='button' onclick='openPanel(\"skillsPerks\")'>Показать перки</button></div></div>");
       html.push("</div>");
       return html.join("");
     }
@@ -13645,31 +13618,7 @@
     }
 
     function renderSkillPerksPanel() {
-      var fighter = state.fighter;
-      var development = currentDevelopment(fighter);
-      var perks = listDevelopmentPerks();
-      var html = [];
-      var i;
-      var perk;
-      var isActive;
-      var ready;
-      html.push("<div class='panel fill-panel'><h2 class='panel-title'>Доступные перки</h2><div class='choice-grid'>");
-      for (i = 0; i < perks.length; i += 1) {
-        perk = perks[i];
-        isActive = containsTag(development.activePerks, perk.id);
-        ready = perkRequirementMet(perk, fighter);
-        html.push("<div class='card perk-card" + (isActive ? " active" : "") + "'><div class='meta'>" + perkCategoryLabel(perk.category) + "</div><h3>" + perk.label + "</h3><div class='dev-mini'>Требования: " + perkRequirementText(perk) + ".</div><div class='dev-mini'>" + summarizeDevelopmentBonuses(perk.bonuses) + "</div>");
-        if (isActive) {
-          html.push("<div class='perk-state active'>Уже активен</div>");
-        } else if (ready) {
-          html.push("<div class='perk-state ready'>Готов к открытию</div><button class='button' " + (development.perkPoints < 5 ? "disabled='disabled'" : "") + " onclick='unlockPerk(\"" + perk.id + "\")'>Открыть за 5 очков</button>");
-        } else {
-          html.push("<div class='perk-state locked'>Условия пока не выполнены</div>");
-        }
-        html.push("</div>");
-      }
-      html.push("</div><div class='footer-actions'><button class='ghost' onclick='openPanel(\"skills\")'>Назад</button></div></div>");
-      return html.join("");
+      return renderSkillPanel();
     }
 
     function renderRecoverPanel() {
@@ -13764,27 +13713,27 @@
     }
 
     function renderLegendArchive() {
-      var archive = loadLegendArchive();
-      var gameState = activeArchiveGameState();
+      var archive = state.archiveLoading ? [] : (state.archiveListCache instanceof Array ? state.archiveListCache : loadLegendArchive());
       var html = [];
       var i;
       var entry;
+      var archiveLimit = Math.min(24, archive.length);
       html.push("<div class='shell'><div class='hero'><div class='eyebrow'>Hall of Fame</div><div class='title'>Архив легенд</div><div class='subtitle'>Здесь остаются завершённые карьеры и история всей сцены.</div>");
-      if (gameState) {
-        html.push(renderSectionCard("archive_player_bio", "Твоя биография", renderPlayerBiographyArchiveSection(), true, "игрок"));
-        html.push(renderSectionCard("archive_world_media", "История мира", renderWorldMediaArchiveList(10), false, "мир"));
-        html.push(renderSectionCard("archive_world_legends", "Легенды мира", renderWorldLegendsArchiveSection(8), false, "npc"));
-        html.push(renderSectionCard("archive_team_history", "История сборной", renderTeamHistoryArchiveSection(), false, "сборная"));
-        html.push(renderSectionCard("archive_titles", "История титулов", renderTitleHistoryArchiveSection(), false, "пояса"));
-        html.push(renderSectionCard("archive_tournaments", "История турниров", renderTournamentHistoryArchiveSection(), false, "турниры"));
-        html.push(renderSectionCard("archive_street", "История улицы", renderStreetHistoryArchiveSection(), false, "улица"));
+      if (state.fighter) {
+        html.push(renderLazySectionCard("archive_player_bio", "Твоя биография", function () { return renderPlayerBiographyArchiveSection(); }, false, "игрок"));
+        html.push(renderLazySectionCard("archive_world_media", "История мира", function () { return renderWorldMediaArchiveList(10); }, false, "мир"));
+        html.push(renderLazySectionCard("archive_world_legends", "Легенды мира", function () { return renderWorldLegendsArchiveSection(8); }, false, "npc"));
+        html.push(renderLazySectionCard("archive_team_history", "История сборной", function () { return renderTeamHistoryArchiveSection(); }, false, "сборная"));
+        html.push(renderLazySectionCard("archive_titles", "История титулов", function () { return renderTitleHistoryArchiveSection(); }, false, "пояса"));
+        html.push(renderLazySectionCard("archive_tournaments", "История турниров", function () { return renderTournamentHistoryArchiveSection(); }, false, "турниры"));
+        html.push(renderLazySectionCard("archive_street", "История улицы", function () { return renderStreetHistoryArchiveSection(); }, false, "улица"));
       }
       if (!archive.length) {
-        html.push("<div class='empty-state' style='margin-top:18px'>Пока архив пуст.</div>");
+        html.push("<div class='empty-state' style='margin-top:18px'>" + (state.archiveLoading ? "Архив загружается..." : "Пока архив пуст.") + "</div>");
       } else {
         html.push("<h3 style='margin-top:18px'>Завершённые карьеры</h3>");
         html.push("<div class='card-grid' style='margin-top:18px'>");
-        for (i = 0; i < archive.length; i += 1) {
+        for (i = 0; i < archiveLimit; i += 1) {
           entry = archive[i];
           html.push("<div class='card'><div class='meta'>" + (entry.endingLabel || "Легенда") + " · " + formatArchiveStamp(entry.archivedAt) + "</div><h3>" + entry.name + "</h3>");
           html.push("<div class='record-row'><div class='chip gold'>Рекорд " + (entry.record ? (entry.record.wins + "-" + entry.record.losses + " (KO: " + entry.record.kos + ")") : "0-0") + "</div><div class='chip'>Слава " + (entry.fame || 0) + "</div><div class='chip'>Неделя " + (entry.week || 1) + "</div></div>");
@@ -13804,6 +13753,9 @@
           html.push("</div>");
         }
         html.push("</div>");
+        if (archive.length > archiveLimit) {
+          html.push("<div class='muted' style='margin-top:12px'>Показаны последние " + archiveLimit + " карьер из " + archive.length + ".</div>");
+        }
       }
       html.push("<div class='footer-actions'><button class='ghost' onclick='returnToMainMenu()'>Назад</button></div></div></div>");
       return html.join("");
@@ -13819,8 +13771,8 @@
       html.push("<div class='menu-title'><span>Fight Club</span></div>");
       html.push("<div class='menu-actions'>");
       html.push("<button class='button' onclick='resetCreate(); render();'>Начать новую игру</button>");
-      html.push("<button class='ghost' " + (preview ? "" : "disabled='disabled'") + " onclick='continueSavedGame()'>Продолжить</button>");
-      html.push("<button class='ghost' " + (archiveCount ? "" : "disabled='disabled'") + " onclick='openLegendArchive()'>Архив легенд" + (archiveCount ? (" (" + archiveCount + ")") : "") + "</button>");
+      html.push("<button class='button' " + (preview ? "" : "disabled='disabled'") + " onclick='continueSavedGame()'>Продолжить</button>");
+      html.push("<button class='button' " + (archiveCount ? "" : "disabled='disabled'") + " onclick='openLegendArchive()'>Архив легенд" + (archiveCount ? (" (" + archiveCount + ")") : "") + "</button>");
       html.push("</div>");
       html.push("</div>");
       html.push("</div></div>");
@@ -13832,7 +13784,7 @@
       if (!app) {
         return;
       }
-      app.innerHTML = "<div class='shell'><div class='hero menu-hero'><div class='menu-stack'><div class='menu-title'><span>Fight Club</span></div><div class='menu-actions'><button class='button' onclick='resetCreate(); render();'>Начать новую игру</button><button class='ghost' onclick='continueSavedGame()'>Продолжить</button><button class='ghost' onclick='openLegendArchive()'>Архив легенд</button></div></div></div></div>";
+      app.innerHTML = "<div class='shell'><div class='hero menu-hero'><div class='menu-stack'><div class='menu-title'><span>Fight Club</span></div><div class='menu-actions'><button class='button' onclick='resetCreate(); render();'>Начать новую игру</button><button class='button' onclick='continueSavedGame()'>Продолжить</button><button class='button' onclick='openLegendArchive()'>Архив легенд</button></div></div></div></div>";
     }
 
     function renderCreate() {
@@ -13854,12 +13806,11 @@
       html.push("<div class='hero'>");
       html.push("<div class='eyebrow'>Street Boxer Career</div>");
       html.push("<div class='title'>Собери бойца для подпольной карьеры</div>");
-      html.push("<div class='subtitle'>Теперь карьера начинается с выбора возраста, страны и базового направления. В любителях кличка не используется, а позже путь уже сам выведет бойца на улицу или в профи.</div>");
       html.push("<div class='panel'><button class='section-toggle' onclick='toggleCreateSection(\"age\")'><span class='section-kicker'>Старт</span>" + ageSummary + "<span class='section-arrow'>" + (openSection === "age" ? "?" : "+") + "</span></button>");
       if (openSection === "age") {
         html.push("<div style='margin-top:14px'><div class='choice-grid'>");
-        html.push("<div class='card compact-card'><h3>Начать в 16</h3><div class='muted'>Юниорский старт, семейная опора и ранний любительский путь.</div><button class='" + (state.create.startingAge === 16 ? "ghost" : "button") + "' onclick='setCreateStartingAge(16)'>" + (state.create.startingAge === 16 ? "Выбрано" : "Выбрать") + "</button></div>");
-        html.push("<div class='card compact-card'><h3>Начать в 18</h3><div class='muted'>Сразу взрослая ранняя карьера, без юниорского вступления.</div><button class='" + (state.create.startingAge === 18 ? "ghost" : "button") + "' onclick='setCreateStartingAge(18)'>" + (state.create.startingAge === 18 ? "Выбрано" : "Выбрать") + "</button></div>");
+        html.push("<div class='card compact-card'><h3>Начать в 16</h3><button class='" + (state.create.startingAge === 16 ? "ghost" : "button") + "' onclick='setCreateStartingAge(16)'>" + (state.create.startingAge === 16 ? "Выбрано" : "Выбрать") + "</button></div>");
+        html.push("<div class='card compact-card'><h3>Начать в 18</h3><button class='" + (state.create.startingAge === 18 ? "ghost" : "button") + "' onclick='setCreateStartingAge(18)'>" + (state.create.startingAge === 18 ? "Выбрано" : "Выбрать") + "</button></div>");
         html.push("</div></div>");
       }
       html.push("</div>");
@@ -17106,7 +17057,7 @@
       if (state.panel === "train") { return wrapGamePanel("train", renderTrainPanel()); }
       if (state.panel === "skills") { return wrapGamePanel("skills", renderSkillPanel()); }
       if (state.panel === "skillsFocus") { return wrapGamePanel("skillsFocus", renderSkillFocusPanel()); }
-      if (state.panel === "skillsPerks") { return wrapGamePanel("skillsPerks", renderSkillPerksPanel()); }
+      if (state.panel === "skillsPerks") { return wrapGamePanel("skills", renderSkillPanel()); }
       if (state.panel === "recover") { return wrapGamePanel("recover", renderRecoverPanel()); }
       if (state.panel === "work") { return wrapGamePanel("work", renderWorkPanel()); }
       if (state.panel === "travel") { return wrapGamePanel("travel", renderTravelPanel()); }
@@ -17120,10 +17071,12 @@
 
     function renderLogPanelInner() {
       var html = [];
+      var entries;
       var i;
+      entries = state.log instanceof Array ? state.log.slice(0, 80) : [];
       html.push("<h2 class='panel-title'>Лента карьеры</h2><div class='log-list'>");
-      for (i = 0; i < state.log.length; i += 1) {
-        html.push("<div class='log-entry " + state.log[i].tone + "'>" + state.log[i].text + "</div>");
+      for (i = 0; i < entries.length; i += 1) {
+        html.push("<div class='log-entry " + entries[i].tone + "'>" + entries[i].text + "</div>");
       }
       html.push("</div>");
       return html.join("");
@@ -17943,7 +17896,7 @@
           }
         } catch (error) {}
         checkForAppUpdate();
-      }, 0);
+      }, 32);
     };
 
     window.onresize = function () {

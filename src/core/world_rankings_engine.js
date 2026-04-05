@@ -1131,6 +1131,22 @@ var WorldRankingsEngine = (function () {
     return fighter;
   }
 
+  function rosterRuntimeMeta(roster) {
+    if (!roster || typeof roster !== "object") {
+      return {};
+    }
+    if (!roster.__runtimeMeta || typeof roster.__runtimeMeta !== "object") {
+      roster.__runtimeMeta = {};
+    }
+    return roster.__runtimeMeta;
+  }
+
+  function expectedMinimumRosterSize() {
+    var rules = dataRoot().rosterTargets || {};
+    var countries = listCountries();
+    return countries.length * ((rules.streetPerCountry || 50) + (rules.amateurPerCountry || 50)) + (rules.proGlobal || 100);
+  }
+
   function ensureCountryTrackMinimum(gameState, countryId, trackId, targetCount) {
     var roster = rosterRoot(gameState);
     var current = activeCount(gameState, trackId, countryId);
@@ -1179,13 +1195,21 @@ var WorldRankingsEngine = (function () {
     var rules = dataRoot().rosterTargets || {};
     var countries = listCountries();
     var roster = rosterRoot(gameState);
+    var meta = rosterRuntimeMeta(roster);
     var beforeCount = roster.fighterIds.length;
+    var expectedTotal = expectedMinimumRosterSize();
     var i;
+    if (meta.minimumReady && meta.minimumExpected === expectedTotal && roster.fighterIds.length >= expectedTotal) {
+      ensureRosterAttributeBands(gameState);
+      return false;
+    }
     for (i = 0; i < countries.length; i += 1) {
       ensureCountryTrackMinimum(gameState, countries[i].id, "street", rules.streetPerCountry || 50);
       ensureCountryTrackMinimum(gameState, countries[i].id, "amateur", rules.amateurPerCountry || 50);
     }
     ensureGlobalProMinimum(gameState, rules.proGlobal || 100);
+    meta.minimumReady = true;
+    meta.minimumExpected = expectedTotal;
     if (roster.fighterIds.length !== beforeCount) {
       clearRankingProjectionCache();
       clearProfileProjectionCache();
@@ -1198,6 +1222,7 @@ var WorldRankingsEngine = (function () {
 
   function ensureRosterAttributeBands(gameState) {
     var roster = rosterRoot(gameState);
+    var meta = rosterRuntimeMeta(roster);
     var changed = false;
     var i;
     var fighter;
@@ -1207,6 +1232,9 @@ var WorldRankingsEngine = (function () {
     var currentTotal;
     var expectedTotal;
     if (!roster || !(roster.fighterIds instanceof Array)) {
+      return false;
+    }
+    if (meta.attributeBandsReady && meta.attributeBandsCount === roster.fighterIds.length) {
       return false;
     }
     for (i = 0; i < roster.fighterIds.length; i += 1) {
@@ -1239,6 +1267,8 @@ var WorldRankingsEngine = (function () {
       clearRankingProjectionCache();
       clearProfileProjectionCache();
     }
+    meta.attributeBandsReady = true;
+    meta.attributeBandsCount = roster.fighterIds.length;
     return changed;
   }
 
