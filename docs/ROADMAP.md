@@ -1,38 +1,27 @@
 # Roadmap
 
-## Done in 1.0 Vertical Slice
+## 1.0.1 Hotfix
 
-- Fight tactics.
-- Round logs.
-- Clubs and My Club screen.
-- Titles by country/path/weight.
-- Title challenge flow.
-- Tracked clubmate.
-- Fighter cards with titles and career log.
-- Save migration/repair from earlier modular saves.
-- Smoke test coverage.
+- Remove extra dashboard blocks.
+- Remove titles tab.
+- Show champions as crowns in rankings.
+- Fix insane records.
+- Fix fight chance calculation.
+- Simplify player sidebar.
+- Rework club UI with country filtering and club modal.
+- Rename World to Amateur Path.
+- Keep only player's national team there.
 
-## Bugfix phase
+## Next: 1.0.2 Bugfix pass
 
-After 1.0, stop adding large systems and test:
+- Test title/crown consistency.
+- Balance fight chances.
+- Check save migration with old careers.
+- Improve club modal layout.
+- Add missing empty states.
 
-- title challenge eligibility;
-- save/load;
-- club transitions;
-- ranking filters;
-- fight result modal;
-- mobile layout;
-- old save migration.
+## Later: 1.1
 
-## 1.1
-
-- Patch bugs.
-- Improve UI wording.
 - Better onboarding.
-- Better title eligibility.
-
-## 1.2
-
-- More stable story generation.
-- More countries/gyms.
-- Cleaner balance.
+- Dedicated career settings screen.
+- Better amateur path progression.

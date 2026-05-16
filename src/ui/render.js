@@ -30,7 +30,7 @@
             "<div class=\"logo\">FS</div>" +
             "<div>" +
               "<h1>Fight Simulator</h1>" +
-              "<p>Season Bundle 0.9.0: раунды, тактика, клубы, титулы и живые истории NPC в одном стабильном слое.</p>" +
+              "<p>Vertical Slice 1.0.1: чистка интерфейса, ремонт рекордов, короны чемпионов в рейтинге и более честные шансы боя.</p>" +
             "</div>" +
           "</div>" +
           "<div class=\"ring-line\"></div>" +
@@ -45,7 +45,6 @@
             "<label><div class=\"label\">Стойка</div><select id=\"careerStance\">" + stanceOptions + "</select></label>" +
           "</div>" +
           "<div class=\"row\" style=\"margin-top:18px\"><button class=\"primary\" data-action=\"create-career\">Начать карьеру</button></div>" +
-          "<div class=\"footer-note\">Сборка использует только модульный runtime. Старый монолит не подключается.</div>" +
         "</div>" +
       "</div>" +
     "</section>";
@@ -62,18 +61,6 @@
 
   function renderSidebar(state) {
     var p = State.player(state);
-    var countryOptions = Data.countries.map(function (country) {
-      return "<option value=\"" + U.escapeHtml(country.id) + "\"" + (country.id === p.countryId ? " selected" : "") + ">" + U.escapeHtml(country.label) + "</option>";
-    }).join("");
-    var trackOptions = Object.keys(Data.tracks).map(function (trackId) {
-      return "<option value=\"" + U.escapeHtml(trackId) + "\"" + (trackId === p.trackId ? " selected" : "") + ">" + U.escapeHtml(Data.tracks[trackId].label) + "</option>";
-    }).join("");
-    var weightOptions = Data.weightClasses.map(function (weightClass) {
-      return "<option value=\"" + U.escapeHtml(weightClass.id) + "\"" + (weightClass.id === p.weightClassId ? " selected" : "") + ">" + U.escapeHtml(weightClass.label) + "</option>";
-    }).join("");
-    var tacticOptions = Data.tactics.map(function (tactic) {
-      return "<option value=\"" + U.escapeHtml(tactic.id) + "\"" + (tactic.id === state.selectedTacticId ? " selected" : "") + ">" + U.escapeHtml(tactic.label) + "</option>";
-    }).join("");
 
     return "<aside class=\"panel stack\">" +
       "<div><div class=\"label\">Боец</div><h2>" + U.escapeHtml(p.name) + "</h2><div class=\"muted small\">" + U.escapeHtml(U.findCountry(p.countryId).label) + " · " + U.escapeHtml(U.findTrack(p.trackId).label) + " · " + U.escapeHtml(U.findStance(p.stanceId).label) + "</div></div>" +
@@ -84,39 +71,33 @@
         "<div class=\"stat-card\"><div class=\"label\">Титулы</div><div class=\"value\">" + (p.titles ? p.titles.length : 0) + "</div></div>" +
       "</div>" +
       "<div class=\"skills\"><div class=\"label\">Навыки</div>" +
-        renderSkillRow("Сила", p.stats.power) + renderSkillRow("Техника", p.stats.technique) + renderSkillRow("Скорость", p.stats.speed) + renderSkillRow("Выносливость", p.stats.stamina) + renderSkillRow("Защита", p.stats.defense) +
+        renderSkillRow("Сила", p.stats.power) +
+        renderSkillRow("Техника", p.stats.technique) +
+        renderSkillRow("Скорость", p.stats.speed) +
+        renderSkillRow("Выносливость", p.stats.stamina) +
+        renderSkillRow("Защита", p.stats.defense) +
       "</div>" +
-      "<label><div class=\"label\">Страна</div><select data-action=\"set-country\">" + countryOptions + "</select></label>" +
-      "<label><div class=\"label\">Путь</div><select data-action=\"set-track\">" + trackOptions + "</select></label>" +
-      "<label><div class=\"label\">Вес</div><select data-action=\"set-weight-class\">" + weightOptions + "</select></label>" +
-      "<label><div class=\"label\">Тактика боя</div><select data-action=\"set-tactic\">" + tacticOptions + "</select></label>" +
       "<button class=\"primary\" data-action=\"train-week\">Тренировка</button>" +
     "</aside>";
   }
 
   function renderTabs(state) {
-    var tabs = [["dashboard", "Обзор"], ["profile", "Профиль"], ["fights", "Бои"], ["training", "Тренировка"], ["ranking", "Рейтинг"], ["myclub", "Мой клуб"], ["clubs", "Клубы"], ["titles", "Титулы"], ["stories", "Истории"], ["world", "Мир"], ["people", "Люди"]];
+    var tabs = [
+      ["dashboard", "Обзор"],
+      ["profile", "Профиль"],
+      ["fights", "Бои"],
+      ["training", "Тренировка"],
+      ["ranking", "Рейтинг"],
+      ["myclub", "Мой клуб"],
+      ["clubs", "Клубы"],
+      ["stories", "Истории"],
+      ["world", "Любительский путь"],
+      ["people", "Люди"]
+    ];
+
     return "<div class=\"tabs\">" + tabs.map(function (tab) {
       return "<button class=\"" + (state.selectedTab === tab[0] ? "active" : "") + "\" data-tab=\"" + tab[0] + "\">" + tab[1] + "</button>";
     }).join("") + "</div>";
-  }
-
-  function renderDashboardTab(state) {
-    var p = State.player(state);
-    var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
-    return "<div class=\"grid two\">" +
-      "<div class=\"content-card\"><h3>Текущее положение</h3>" +
-        "<div class=\"split-row\"><span>Путь</span><strong>" + U.escapeHtml(U.findTrack(p.trackId).label) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Вес</span><strong>" + U.escapeHtml(U.findWeightClass(p.weightClassId).label) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Клуб</span><strong>" + U.escapeHtml(club ? club.name : "Без клуба") + "</strong></div>" +
-        "<div class=\"split-row\"><span>Рекорд</span><strong>" + U.escapeHtml(U.recordText(p.record)) + "</strong></div>" +
-      "</div>" +
-      "<div class=\"content-card\"><h3>Титулы</h3>" + renderFighterTitles(state, p) + "</div>" +
-      "<div class=\"content-card\"><h3>Одноклубник</h3>" + renderTrackedFighter(state) + "</div>" +
-      "<div class=\"content-card\"><h3>Одноклубник</h3>" + renderTrackedFighter(state) + "</div>" +
-      "<div class=\"content-card\"><h3>Последние новости</h3>" + renderNewsList(state, 5) + "</div>" +
-      "<div class=\"content-card\"><h3>Ближайшие бои</h3><div class=\"muted small\">3 предложения на текущем пути и весе.</div><div class=\"pills\"><span class=\"pill red\">3 боя</span><span class=\"pill\">" + U.escapeHtml(U.findTrack(p.trackId).label) + "</span><span class=\"pill gold\">" + U.escapeHtml(U.findWeightClass(p.weightClassId).label) + "</span></div></div>" +
-    "</div>";
   }
 
   function renderFighterTitles(state, fighter) {
@@ -125,7 +106,7 @@
       return "<div class=\"muted small\">Титулов пока нет.</div>";
     }
     return titles.map(function (title) {
-      return "<div class=\"split-row\"><span>" + U.escapeHtml(title.label) + "</span><strong>" + U.escapeHtml(U.findWeightClass(title.weightClassId).label) + "</strong></div>";
+      return "<div class=\"split-row\"><span>👑 " + U.escapeHtml(title.label) + "</span><strong>" + U.escapeHtml(U.findWeightClass(title.weightClassId).label) + "</strong></div>";
     }).join("");
   }
 
@@ -140,17 +121,29 @@
     return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
   }
 
+  function renderDashboardTab(state) {
+    var p = State.player(state);
+    var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
+
+    return "<div class=\"grid two\">" +
+      "<div class=\"content-card\"><h3>Текущее положение</h3>" +
+        "<div class=\"split-row\"><span>Путь</span><strong>" + U.escapeHtml(U.findTrack(p.trackId).label) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Вес</span><strong>" + U.escapeHtml(U.findWeightClass(p.weightClassId).label) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Клуб</span><strong>" + U.escapeHtml(club ? club.name : "Без клуба") + "</strong></div>" +
+        "<div class=\"split-row\"><span>Рекорд</span><strong>" + U.escapeHtml(U.recordText(p.record)) + "</strong></div>" +
+      "</div>" +
+      "<div class=\"content-card\"><h3>Одноклубник</h3>" + renderTrackedFighter(state) + "</div>" +
+    "</div>";
+  }
+
   function renderProfileTab(state) {
     var p = State.player(state);
-    return "<div class=\"grid two\">" +
-      "<div class=\"content-card\"><h3>Паспорт бойца</h3>" +
-        "<div class=\"split-row\"><span>Имя</span><strong>" + U.escapeHtml(p.name) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Возраст</span><strong>" + p.age + "</strong></div>" +
-        "<div class=\"split-row\"><span>Страна</span><strong>" + U.escapeHtml(U.findCountry(p.countryId).label) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Вес</span><strong>" + U.escapeHtml(U.formatWeightClass(p.weightClassId)) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Стойка</span><strong>" + U.escapeHtml(U.findStance(p.stanceId).label) + "</strong></div>" +
-      "</div>" +
-      "<div class=\"content-card\"><h3>Карьера</h3>" + renderCareerLog(p, 10) + "</div>" +
+    return "<div class=\"content-card\"><h3>Паспорт бойца</h3>" +
+      "<div class=\"split-row\"><span>Имя</span><strong>" + U.escapeHtml(p.name) + "</strong></div>" +
+      "<div class=\"split-row\"><span>Возраст</span><strong>" + p.age + "</strong></div>" +
+      "<div class=\"split-row\"><span>Страна</span><strong>" + U.escapeHtml(U.findCountry(p.countryId).label) + "</strong></div>" +
+      "<div class=\"split-row\"><span>Вес</span><strong>" + U.escapeHtml(U.formatWeightClass(p.weightClassId)) + "</strong></div>" +
+      "<div class=\"split-row\"><span>Стойка</span><strong>" + U.escapeHtml(U.findStance(p.stanceId).label) + "</strong></div>" +
     "</div>";
   }
 
@@ -175,26 +168,64 @@
   }
 
   function renderTrainingTab(state) {
-    return "<div class=\"content-card\"><h3>Тренировка</h3><div class=\"muted small\" style=\"margin-bottom:12px\">Одна тренировка занимает неделю и даёт +1 к выбранному навыку.</div><div class=\"grid three\">" +
-      Data.statKeys.map(function (stat) { return "<button data-train-stat=\"" + U.escapeHtml(stat.id) + "\">" + U.escapeHtml(stat.label) + "</button>"; }).join("") +
+    return "<div class=\"content-card\"><h3>Тренировка</h3><div class=\"grid three\">" +
+      Data.statKeys.map(function (stat) {
+        return "<button data-train-stat=\"" + U.escapeHtml(stat.id) + "\">" + U.escapeHtml(stat.label) + "</button>";
+      }).join("") +
     "</div></div>";
   }
 
   function renderRankingFilters(state) {
     return "<div class=\"filters\"><div class=\"filter-group\"><span class=\"filter-title\">Страна</span>" +
-      Data.countries.map(function (country) { return "<button class=\"small-btn " + (state.rankingCountryId === country.id ? "active" : "") + "\" data-ranking-country=\"" + country.id + "\">" + U.escapeHtml(country.label) + "</button>"; }).join("") +
+      Data.countries.map(function (country) {
+        return "<button class=\"small-btn " + (state.rankingCountryId === country.id ? "active" : "") + "\" data-ranking-country=\"" + country.id + "\">" + U.escapeHtml(country.label) + "</button>";
+      }).join("") +
       "</div><div class=\"filter-group\"><span class=\"filter-title\">Путь</span>" +
-      Object.keys(Data.tracks).map(function (trackId) { return "<button class=\"small-btn " + (state.rankingTrackId === trackId ? "active" : "") + "\" data-ranking-track=\"" + trackId + "\">" + U.escapeHtml(Data.tracks[trackId].label) + "</button>"; }).join("") +
+      Object.keys(Data.tracks).map(function (trackId) {
+        return "<button class=\"small-btn " + (state.rankingTrackId === trackId ? "active" : "") + "\" data-ranking-track=\"" + trackId + "\">" + U.escapeHtml(Data.tracks[trackId].label) + "</button>";
+      }).join("") +
       "</div><div class=\"filter-group\"><span class=\"filter-title\">Вес</span>" +
-      Data.weightClasses.map(function (weightClass) { return "<button class=\"small-btn " + (state.rankingWeightClassId === weightClass.id ? "active" : "") + "\" data-ranking-weight=\"" + weightClass.id + "\">" + U.escapeHtml(weightClass.label) + "</button>"; }).join("") +
+      Data.weightClasses.map(function (weightClass) {
+        return "<button class=\"small-btn " + (state.rankingWeightClassId === weightClass.id ? "active" : "") + "\" data-ranking-weight=\"" + weightClass.id + "\">" + U.escapeHtml(weightClass.label) + "</button>";
+      }).join("") +
       "</div></div>";
   }
 
+  function findChampionForRanking(state) {
+    var key;
+    var title;
+
+    if (!state.titles) {
+      return null;
+    }
+
+    for (key in state.titles) {
+      if (Object.prototype.hasOwnProperty.call(state.titles, key)) {
+        title = state.titles[key];
+        if (title.countryId === state.rankingCountryId &&
+            title.trackId === state.rankingTrackId &&
+            title.weightClassId === state.rankingWeightClassId) {
+          return U.getFighterById(state, title.championId);
+        }
+      }
+    }
+
+    return null;
+  }
+
   function renderRankingTab(state) {
-    var list = State.ranking(state, state.rankingCountryId, state.rankingTrackId, state.rankingWeightClassId).slice(0, 24);
-    return "<div class=\"content-card\"><h3>Рейтинг</h3>" + renderRankingFilters(state) + "<div class=\"ranking-list\">" + list.map(function (fighter, index) {
-      return "<div class=\"split-row\"><div><div class=\"name-line\">#" + (index + 1) + " <button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "</div><div class=\"muted small\">" + U.escapeHtml(U.recordText(fighter.record)) + " · " + U.escapeHtml(U.findWeightClass(fighter.weightClassId).label) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
-    }).join("") + "</div></div>";
+    var champion = findChampionForRanking(state);
+    var list = State.ranking(state, state.rankingCountryId, state.rankingTrackId, state.rankingWeightClassId)
+      .filter(function (fighter) {
+        return !champion || fighter.id !== champion.id;
+      })
+      .slice(0, 24);
+
+    return "<div class=\"content-card\"><h3>Рейтинг</h3>" + renderRankingFilters(state) + "<div class=\"ranking-list\">" +
+      (champion ? "<div class=\"split-row\"><div><div class=\"name-line\">👑 <button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(champion.id) + "\">" + U.escapeHtml(champion.name) + "</button>" + (champion.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "</div><div class=\"muted small\">" + U.escapeHtml(U.recordText(champion.record)) + " · " + U.escapeHtml(U.findWeightClass(champion.weightClassId).label) + "</div></div><span class=\"pill gold\">Чемпион · " + U.statAverage(champion.stats) + "</span></div>" : "") +
+      list.map(function (fighter, index) {
+        return "<div class=\"split-row\"><div><div class=\"name-line\">#" + (index + 1) + " <button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "</div><div class=\"muted small\">" + U.escapeHtml(U.recordText(fighter.record)) + " · " + U.escapeHtml(U.findWeightClass(fighter.weightClassId).label) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
+      }).join("") + "</div></div>";
   }
 
   function renderMyClubTab(state) {
@@ -211,25 +242,30 @@
       }).join("") + "</div>";
   }
 
-  function renderClubsTab(state) {
-    var clubs = state.clubs || [];
-    return "<div class=\"grid two\">" + clubs.slice(0, 12).map(function (club) {
-      var roster = window.FS.Clubs.clubRoster(state, club.id).slice(0, 4);
-      return "<div class=\"content-card\"><h3>" + U.escapeHtml(club.name) + "</h3><div class=\"muted small\">" + U.escapeHtml(U.findCountry(club.countryId).label) + " · уровень " + club.level + "</div><div class=\"row\" style=\"margin:10px 0\"><button class=\"small-btn\" data-join-club=\"" + U.escapeHtml(club.id) + "\">Перейти</button></div>" +
-        roster.map(function (fighter) {
-          return "<div class=\"split-row\"><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button><span class=\"pill\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
-        }).join("") + "</div>";
+  function renderClubModal(state, club) {
+    var roster = window.FS.Clubs.clubRoster(state, club.id).slice(0, 24);
+
+    return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(club.name) + "</h2><div class=\"muted small\">" + U.escapeHtml(U.findCountry(club.countryId).label) + " · уровень " + club.level + "</div></div><div class=\"modal-body\">" +
+      roster.map(function (fighter) {
+        return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "<div class=\"muted small\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
+      }).join("") +
+      "</div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+  }
+
+  function renderClubCountryFilters(state) {
+    return "<div class=\"filter-group\"><span class=\"filter-title\">Страна</span>" + Data.countries.map(function (country) {
+      return "<button class=\"small-btn " + (state.rankingCountryId === country.id ? "active" : "") + "\" data-ranking-country=\"" + country.id + "\">" + U.escapeHtml(country.label) + "</button>";
     }).join("") + "</div>";
   }
 
-  function renderTitlesTab(state) {
-    var titles = window.FS.Titles ? window.FS.Titles.listVisibleTitles(state, state.rankingCountryId) : [];
-    return "<div class=\"content-card\"><h3>Титулы: " + U.escapeHtml(U.findCountry(state.rankingCountryId).label) + "</h3>" + renderRankingFilters(state) +
-      titles.filter(function (title) { return title.trackId === state.rankingTrackId && title.weightClassId === state.rankingWeightClassId; }).map(function (title) {
-        var champion = U.getFighterById(state, title.championId);
-        var challenge = window.FS.Titles ? window.FS.Titles.playerTitleChallenge(state, title.id) : { eligible: false, reason: "" };
-        return "<div class=\"split-row\"><div><div class=\"name-line\">" + U.escapeHtml(title.label) + "</div><div class=\"muted small\">" + U.escapeHtml(U.findWeightClass(title.weightClassId).label) + " · защит: " + title.defenses + "</div><div class=\"muted small\">" + U.escapeHtml(challenge.reason || "") + "</div></div><span>" + (champion ? "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(champion.id) + "\">" + U.escapeHtml(champion.name) + "</button>" : "<span class=\"muted small\">нет чемпиона</span>") + (challenge.eligible ? " <button class=\"small-btn primary\" data-title-challenge=\"" + U.escapeHtml(title.id) + "\">Вызов</button>" : "") + "</span></div>";
-      }).join("") + "</div>";
+  function renderClubsTab(state) {
+    var clubs = (state.clubs || []).filter(function (club) {
+      return club.countryId === state.rankingCountryId;
+    });
+
+    return "<div class=\"content-card\"><h3>Клубы</h3><div class=\"filters\">" + renderClubCountryFilters(state) + "</div><div class=\"grid two\">" + clubs.map(function (club) {
+      return "<div class=\"content-card\"><h3>" + U.escapeHtml(club.name) + "</h3><div class=\"muted small\">" + U.escapeHtml(U.findCountry(club.countryId).label) + " · уровень " + club.level + "</div><div class=\"row\" style=\"margin-top:10px\"><button class=\"small-btn\" data-club=\"" + U.escapeHtml(club.id) + "\">Открыть карточку</button><button class=\"small-btn\" data-join-club=\"" + U.escapeHtml(club.id) + "\">Перейти</button></div></div>";
+    }).join("") + "</div></div>";
   }
 
   function renderStoriesTab(state) {
@@ -242,18 +278,10 @@
     }).join("") + "</div>";
   }
 
-  function renderNewsList(state, limit) {
-    var news = state.world.news.slice(0, limit || 12);
-    if (!news.length) {
-      return "<div class=\"muted small\">Новостей пока нет.</div>";
-    }
-    return "<div class=\"news-list\">" + news.map(function (entry) {
-      return "<div class=\"split-row\"><div><div class=\"name-line\">Неделя " + entry.week + "</div><div class=\"muted small\">" + U.escapeHtml(entry.text) + "</div></div><span class=\"pill blue\">" + U.escapeHtml(entry.tone) + "</span></div>";
-    }).join("") + "</div>";
-  }
-
   function renderWorldTab(state) {
-    var team = state.world.teamsByCountry[state.rankingCountryId] || { main: [], reserve: [] };
+    var p = State.player(state);
+    var team = state.world.teamsByCountry[p.countryId] || { main: [], reserve: [] };
+
     function renderTeam(ids) {
       if (!ids.length) {
         return "<div class=\"muted small\">Пусто.</div>";
@@ -263,11 +291,12 @@
         return fighter ? "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(id) + "\">" + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + U.escapeHtml(U.recordText(fighter.record)) + " · " + U.escapeHtml(U.findWeightClass(fighter.weightClassId).label) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>" : "";
       }).join("");
     }
-    return "<div class=\"grid two\"><div class=\"content-card\"><h3>Новости мира</h3>" + renderNewsList(state, 12) + "</div><div class=\"content-card\"><h3>Сборная: " + U.escapeHtml(U.findCountry(state.rankingCountryId).label) + "</h3><div class=\"label\">Состав</div>" + renderTeam(team.main) + "<div class=\"label\" style=\"margin-top:14px\">Резерв</div>" + renderTeam(team.reserve) + "</div></div>";
+
+    return "<div class=\"content-card\"><h3>Любительский путь: сборная " + U.escapeHtml(U.findCountry(p.countryId).label) + "</h3><div class=\"label\">Состав</div>" + renderTeam(team.main) + "<div class=\"label\" style=\"margin-top:14px\">Резерв</div>" + renderTeam(team.reserve) + "</div>";
   }
 
   function renderPeopleTab(state) {
-    return "<div class=\"content-card\"><h3>Знакомые люди</h3><div class=\"muted small\" style=\"margin-bottom:12px\">Пока только список. Без шкал и действий.</div><div class=\"people-list\">" + state.people.map(function (person) {
+    return "<div class=\"content-card\"><h3>Знакомые люди</h3><div class=\"people-list\">" + state.people.map(function (person) {
       return "<div class=\"split-row\"><div><div class=\"name-line\">" + U.escapeHtml(person.name) + "</div><div class=\"muted small\">" + U.escapeHtml(person.note) + "</div></div><span class=\"pill\">" + U.escapeHtml(Data.peopleRoles[person.role] || person.role) + "</span></div>";
     }).join("") + "</div></div>";
   }
@@ -281,7 +310,6 @@
     else if (state.selectedTab === "ranking") { content = renderRankingTab(state); }
     else if (state.selectedTab === "myclub") { content = renderMyClubTab(state); }
     else if (state.selectedTab === "clubs") { content = renderClubsTab(state); }
-    else if (state.selectedTab === "titles") { content = renderTitlesTab(state); }
     else if (state.selectedTab === "stories") { content = renderStoriesTab(state); }
     else if (state.selectedTab === "world") { content = renderWorldTab(state); }
     else { content = renderPeopleTab(state); }
@@ -296,6 +324,7 @@
   function renderModal(state) {
     var modal = state.modal;
     var fighter;
+    var club;
     if (!modal) { return ""; }
 
     if (modal.type === "fighter") {
@@ -303,12 +332,13 @@
       return fighter ? renderFighterModal(state, fighter) : "";
     }
 
-    if (modal.type === "fightPreview") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.tacticLabel) + "</span><span class=\"pill\">" + U.escapeHtml(modal.difficultyLabel) + "</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Принять бой</button></div></div></div>";
+    if (modal.type === "club") {
+      club = window.FS.Clubs.findClub(state, modal.clubId);
+      return club ? renderClubModal(state, club) : "";
     }
 
-    if (modal.type === "titleChallengePreview") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Вызов чемпиону</h2><div class=\"muted small\">" + U.escapeHtml(modal.titleLabel) + " · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Чемпион</div><div class=\"value\">" + modal.championRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.championName) + " · " + U.escapeHtml(modal.championRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"muted small\" style=\"margin-top:12px\">" + U.escapeHtml(modal.reason) + "</div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button>" + (modal.eligible ? "<button class=\"primary\" data-accept-title-challenge=\"" + U.escapeHtml(modal.titleId) + "\">Бросить вызов</button>" : "") + "</div></div></div>";
+    if (modal.type === "fightPreview") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.tacticLabel) + "</span><span class=\"pill\">" + U.escapeHtml(modal.difficultyLabel) + "</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Принять бой</button></div></div></div>";
     }
 
     if (modal.type === "fightResult") {

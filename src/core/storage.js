@@ -5,6 +5,39 @@
 
   var Data = window.FS.Data;
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function repairRecord(record) {
+    var safe = record && typeof record === "object" ? record : {};
+    var wins = clamp(Number(safe.wins) || 0, 0, 80);
+    var losses = clamp(Number(safe.losses) || 0, 0, 80);
+    var draws = clamp(Number(safe.draws) || 0, 0, 20);
+    var kos = clamp(Number(safe.kos) || 0, 0, wins);
+
+    return {
+      wins: wins,
+      losses: losses,
+      draws: draws,
+      kos: kos
+    };
+  }
+
+  function repairFighter(fighter) {
+    if (!fighter || typeof fighter !== "object") {
+      return;
+    }
+
+    fighter.record = repairRecord(fighter.record);
+    fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
+    fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
+    fighter.weightClassId = fighter.weightClassId || "welter";
+    fighter.trackId = fighter.trackId || "amateur";
+    fighter.countryId = fighter.countryId || "russia";
+  }
+
   function readRaw(key) {
     try {
       return localStorage.getItem(key);
@@ -51,6 +84,10 @@
     state.world.teamsByCountry = state.world.teamsByCountry && typeof state.world.teamsByCountry === "object" ? state.world.teamsByCountry : {};
     state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
     state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
+
+    for (var i = 0; i < state.roster.length; i += 1) {
+      repairFighter(state.roster[i]);
+    }
 
     return state;
   }

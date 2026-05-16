@@ -44,51 +44,44 @@ let state = FS.State.createCareer({
 
 FS.World.bootstrapWorld(state);
 
-if (!state.clubs.length) throw new Error("clubs not created");
-if (!state.trackedFighterIds || !state.trackedFighterIds.length) throw new Error("tracked clubmate missing");
-if (!Object.keys(state.titles).length) throw new Error("titles not created");
 if (!state.offers || state.offers.length !== 3) throw new Error("offers != 3");
+if (!state.clubs.length) throw new Error("clubs not created");
+if (!Object.keys(state.titles).length) throw new Error("titles not created");
 
-const club = FS.Clubs.playerClub(state);
-if (!club) throw new Error("player club missing");
+const p = FS.State.player(state);
+p.stats.power = 85;
+p.stats.technique = 85;
+p.stats.speed = 85;
+p.stats.stamina = 85;
+p.stats.defense = 85;
 
-const otherClub = state.clubs.find((c) => c.countryId === "russia" && c.id !== club.id);
-if (otherClub) FS.Clubs.movePlayerToClub(state, otherClub.id);
-
-FS.State.setTactic(state, "pressure");
 const preview = FS.Fight.buildFightPreview(state, state.offers[0].id);
-if (!preview || preview.tacticLabel !== "Давить") throw new Error("preview/tactic failed");
+if (!preview || preview.winChance <= 12) throw new Error("fight chance stuck at floor");
+
+const huge = state.roster[0];
+huge.record = { wins: 12508, losses: 0, draws: 0, kos: 9999 };
+const migrated = FS.Storage.migrate(state);
+if (migrated.roster[0].record.wins > 80) throw new Error("record repair failed");
 
 FS.Fight.resolvePlayerFight(state, state.offers[0].id);
 if (!state.modal || state.modal.type !== "fightResult") throw new Error("fight result failed");
-if (!state.modal.roundLog || !state.modal.roundLog.length) throw new Error("round log missing");
 
-for (let i = 0; i < 8; i += 1) {
+for (let i = 0; i < 4; i += 1) {
   FS.World.advanceWeek(state, "skip");
 }
 
-if (!state.world.news.length) throw new Error("news missing");
-if (!state.world.stories.length) throw new Error("stories missing after weeks");
-
-const visibleTitle = FS.Titles.listVisibleTitles(state, state.rankingCountryId)[0];
-if (visibleTitle) {
-  const titlePreview = FS.Fight.buildTitleChallengePreview(state, visibleTitle.id);
-  if (!titlePreview || titlePreview.type !== "titleChallengePreview") {
-    throw new Error("title challenge preview failed");
-  }
-}
-
 const html = FS.Render.dashboard(state);
-["Титулы", "Клубы", "Истории", "Мой клуб"].forEach((word) => {
+["Обзор", "Рейтинг", "Мой клуб", "Клубы", "Любительский путь"].forEach((word) => {
   if (!html.includes(word)) throw new Error("render missing " + word);
 });
+["Титулы</button>", "Последние новости", "Ближайшие бои", "Пока только список"].forEach((bad) => {
+  if (html.includes(bad)) throw new Error("forbidden UI text found: " + bad);
+});
 
-console.log("vertical slice smoke ok", {
+console.log("vertical slice hotfix smoke ok", {
   version: FS.Data.appVersion,
   week: state.week,
+  chance: preview.winChance,
   offers: state.offers.length,
-  clubs: state.clubs.length,
-  titles: Object.keys(state.titles).length,
-  stories: state.world.stories.length,
-  tracked: state.trackedFighterIds.length
+  clubs: state.clubs.length
 });

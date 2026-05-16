@@ -4,23 +4,15 @@ Static modular boxing sim.
 
 ## Current version
 
-`vertical-slice-1.0.0`
+`vertical-slice-1.0.1`
 
-## Main features
+## Hotfix focus
 
-- Fast static web app.
-- Career creation.
-- Country / path / weight / stance.
-- 3 offers at all times.
-- Tactical fight preview.
-- Round-by-round fight result.
-- Clubs and player club.
-- Titles and title challenge.
-- Tracked clubmate story.
-- Living world stories.
-
-## Runtime
-
-`index.html` loads only modular files from `src/`.
-
-Old experimental files are not loaded.
+- Cleaned overview screen.
+- Removed sidebar selectors.
+- Fixed impossible fight chances caused by oversized NPC records.
+- Repaired records during save migration.
+- Removed Titles tab from UI.
+- Champions are now shown with crowns in ranking.
+- Clubs are filtered by country and open as cards.
+- World tab is now Amateur Path and shows only player's national team.

@@ -1,11 +1,13 @@
 {
-  "version": "vertical-slice-1.0.0",
-  "mode": "modular-mvp",
-  "features": [
-    "title challenge",
-    "my club",
-    "tracked clubmate",
-    "save migration",
-    "round fight layer"
+  "version": "vertical-slice-1.0.1",
+  "mode": "hotfix-cleanup",
+  "fixes": [
+    "dashboard cleanup",
+    "sidebar cleanup",
+    "fight chance fix",
+    "record repair",
+    "champions as crowns in ranking",
+    "clubs filtered by country",
+    "world tab renamed to amateur path"
   ]
 }

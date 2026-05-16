@@ -29,9 +29,9 @@
 
   function estimateWinChance(player, opponent, tacticId) {
     var tactic = U.findTactic(tacticId || "balanced");
-    var playerScore = U.scoreFighter(player) + tactic.power * 0.35 + tactic.defense * 0.25 + tactic.stamina * 0.15;
-    var opponentScore = U.scoreFighter(opponent);
-    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.2), 12, 88);
+    var playerScore = U.statAverage(player.stats) + tactic.power * 0.35 + tactic.defense * 0.25 + tactic.stamina * 0.15 + Math.min((player.record.wins || 0) * 0.25, 12);
+    var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.25, 12) - Math.min((opponent.record.losses || 0) * 0.12, 8);
+    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.5), 12, 88);
   }
 
   function buildFightPreview(state, offerId) {

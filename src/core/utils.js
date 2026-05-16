@@ -96,7 +96,13 @@
   }
 
   function scoreFighter(fighter) {
-    return statAverage(fighter.stats) + (fighter.record.wins || 0) * 1.6 - (fighter.record.losses || 0) * 0.9 + (fighter.record.kos || 0) * 0.25 + (fighter.titles ? fighter.titles.length * 2 : 0);
+    var record = fighter.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
+    var wins = clamp(record.wins || 0, 0, 80);
+    var losses = clamp(record.losses || 0, 0, 80);
+    var kos = clamp(record.kos || 0, 0, wins);
+    var titleBonus = fighter.titles ? Math.min(fighter.titles.length * 2, 6) : 0;
+
+    return statAverage(fighter.stats) + wins * 0.35 - losses * 0.22 + kos * 0.12 + titleBonus;
   }
 
   function recordText(record) {

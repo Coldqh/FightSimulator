@@ -107,6 +107,12 @@
         World.refreshOffers(state);
       }
       saveAndRender();
+    } else if (button.dataset.club) {
+      state.modal = {
+        type: "club",
+        clubId: button.dataset.club
+      };
+      saveAndRender();
     } else if (button.dataset.fighter) {
       state.modal = {
         type: "fighter",

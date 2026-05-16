@@ -22,14 +22,16 @@
   }
 
   function createRecord(seed) {
-    var wins = U.randomInt(0, 9) + Math.floor(seed / 5);
+    var tier = Math.abs(seed) % 7;
+    var wins = U.randomInt(0, 6) + tier * 2;
     var losses = U.randomInt(0, 4);
     var draws = U.randomInt(0, 1);
+
     return {
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, 7)))
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, 8)))
     };
   }
 
