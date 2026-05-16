@@ -3,8 +3,8 @@
   "short_name": "FightSim",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b0b0c",
-  "theme_color": "#0f0f10",
+  "background_color": "#09090a",
+  "theme_color": "#0b0b0c",
   "lang": "ru",
   "orientation": "portrait"
 }
