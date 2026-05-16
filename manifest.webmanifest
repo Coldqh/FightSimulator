@@ -1,10 +1,10 @@
 {
-  "name": "Fight Simulator Mobile",
+  "name": "Fight Simulator",
   "short_name": "FightSim",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0e1116",
-  "theme_color": "#11161d",
+  "background_color": "#080a0f",
+  "theme_color": "#111827",
   "lang": "ru",
   "orientation": "portrait"
 }

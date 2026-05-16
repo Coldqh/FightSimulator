@@ -1,4 +1,28 @@
-<!doctype html>
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = process.cwd();
+
+function writeFile(relativePath, content) {
+  fs.writeFileSync(path.join(ROOT, relativePath), content, "utf8");
+}
+
+function removeTarget(relativePath) {
+  const targetPath = path.join(ROOT, relativePath);
+
+  if (!fs.existsSync(targetPath)) {
+    return;
+  }
+
+  fs.rmSync(targetPath, {
+    recursive: true,
+    force: true
+  });
+
+  console.log("removed " + relativePath);
+}
+
+const cleanIndexHtml = String.raw`<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
@@ -1077,3 +1101,42 @@
   </script>
 </body>
 </html>
+`;
+
+const cleanManifest = String.raw`{
+  "name": "Fight Simulator",
+  "short_name": "FightSim",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#080a0f",
+  "theme_color": "#111827",
+  "lang": "ru",
+  "orientation": "portrait"
+}
+`;
+
+const versionJson = JSON.stringify({
+  version: "clean-core-0.1.0",
+  mode: "clean-core",
+  updatedAt: new Date().toISOString()
+}, null, 2) + "\n";
+
+const runtimeRemovalTargets = [
+  "src",
+  "data",
+  "country_data.js",
+  "game_data.js",
+  "fight_simulator.hta",
+  "launch_ui.bat",
+  "MOBILE_DEPLOY.md",
+  "ring_top_view.png"
+];
+
+runtimeRemovalTargets.forEach(removeTarget);
+
+writeFile("index.html", cleanIndexHtml);
+writeFile("manifest.webmanifest", cleanManifest);
+writeFile("version.json", versionJson);
+
+console.log("clean core reset completed");
+console.log("runtime now uses only index.html + manifest.webmanifest + version.json");
