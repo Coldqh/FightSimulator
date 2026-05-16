@@ -1,42 +1,37 @@
-# Fight Simulator Roadmap
+# Roadmap
 
-## Done in 0.5.0 Career Depth
+## Done in Season Bundle 0.9.0
 
-- Modular runtime kept compatible with current GitHub `index.html`.
-- Weight classes added.
-- Stance and age added to career creation.
-- Ranking filters now include country, path and weight class.
-- Matchmaking now searches by country, path and weight class.
-- Fight preview shows win chance.
-- Fight result shows score/method/purse.
-- NPC weekly training added.
-- NPC weekly fights remain lightweight.
-- NPC track transitions remain constrained.
-- Player profile tab added.
-- Player can change weight class.
-- Old heavy systems remain disconnected from runtime.
+### 0.6 Fight Layer
+- Tactical choice.
+- Round log.
+- Knockdown event.
+- Result modal with score and method.
 
-## Next: 0.6.0 Fight Layer
+### 0.7 Club Layer
+- Gyms by country.
+- Fighter club assignment.
+- Club roster screen.
+- Player club display.
 
-- Round-by-round fight log.
-- Judges cards.
-- Knockdown chance.
-- Different rule profiles for street/amateur/pro.
-- Tactical choice before fight: pressure / balanced / careful.
-- Clear post-fight summary.
+### 0.8 Titles Layer
+- Street country champions.
+- Amateur country champions.
+- Pro regional champions.
+- Titles by weight class.
+- Automatic title holder updates.
 
-## Then: 0.7.0 Club Layer
+### 0.9 Living Stories
+- NPC story flags.
+- Breakout stories.
+- Falling career stories.
+- Champion stories.
+- Story feed.
 
-- Gyms as simple entities.
-- Trainer as simple entity without relationship bars.
-- Clubmate tracking.
-- Gym roster screen.
-- Club-level rankings.
+## Next 1.0 Vertical Slice
 
-## Then: 0.8.0 Titles and Championships
-
-- Amateur national champions.
-- Street champions by country.
-- Pro regional belts.
-- Title fight eligibility.
-- Defenses and title history.
+- Better title fight eligibility.
+- Direct challenge for title if top-ranked.
+- Stable save migration.
+- More focused onboarding.
+- UI polish.

@@ -1,37 +1,20 @@
 # Fight Simulator
 
-Static browser boxing sim.
+Static modular boxing sim.
 
 ## Current version
 
-`career-depth-0.5.0`
+`season-bundle-0.9.0`
 
-## Runtime architecture
+## Included layers
 
-The runtime intentionally uses only:
+- Fight Layer: tactics, round logs, knockdowns, score line.
+- Club Layer: gyms, club rosters, player club.
+- Titles Layer: country titles by track and weight class.
+- Living Stories Layer: NPC career stories and world story feed.
 
-- `index.html`
-- `src/data/game-data.js`
-- `src/core/utils.js`
-- `src/core/storage.js`
-- `src/core/state.js`
-- `src/core/world.js`
-- `src/core/fight.js`
-- `src/ui/render.js`
-- `src/app.js`
+## Runtime
 
-Old experimental files may remain in the repository, but they are not loaded by `index.html`.
+`index.html` loads only modular runtime files from `src/`.
 
-## Run locally
-
-```powershell
-cd C:\FightSimulator_GitHub
-start index.html
-```
-
-## Smoke test
-
-```powershell
-cd C:\FightSimulator_GitHub
-node tools\core-smoke-test.cjs
-```
+Old experimental files are not loaded.

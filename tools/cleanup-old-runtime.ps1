@@ -17,4 +17,4 @@ foreach ($target in $targets) {
   }
 }
 
-Write-Host "Cleanup done. Modular runtime remains in index.html + src."
+Write-Host "Cleanup done. Modular runtime remains."

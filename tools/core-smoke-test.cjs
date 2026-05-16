@@ -21,6 +21,9 @@ sandbox.global = sandbox;
   "src/core/utils.js",
   "src/core/storage.js",
   "src/core/state.js",
+  "src/core/clubs.js",
+  "src/core/titles.js",
+  "src/core/stories.js",
   "src/core/world.js",
   "src/core/fight.js",
   "src/ui/render.js"
@@ -40,19 +43,35 @@ let state = FS.State.createCareer({
 
 FS.World.bootstrapWorld(state);
 
-if (!state.offers || state.offers.length !== 3) throw new Error("Expected exactly 3 offers.");
-if (!state.world.teamsByCountry.russia || !state.world.teamsByCountry.russia.main.length) throw new Error("Expected national team.");
+if (!state.clubs.length) throw new Error("clubs not created");
+if (!Object.keys(state.titles).length) throw new Error("titles not created");
+if (!state.offers || state.offers.length !== 3) throw new Error("offers != 3");
+
+FS.State.setTactic(state, "pressure");
 const preview = FS.Fight.buildFightPreview(state, state.offers[0].id);
-if (!preview || preview.type !== "fightPreview" || typeof preview.winChance !== "number") throw new Error("Preview failed.");
+if (!preview || preview.tacticLabel !== "Давить") throw new Error("preview/tactic failed");
+
 FS.Fight.resolvePlayerFight(state, state.offers[0].id);
-if (!state.modal || state.modal.type !== "fightResult") throw new Error("Result modal missing.");
-const weekAfterFight = state.week;
-FS.World.advanceWeek(state, "skip");
-if (state.week !== weekAfterFight + 1) throw new Error("Week failed.");
-FS.State.trainPlayer(state, "speed");
-FS.World.advanceWeek(state, "training");
-const ranking = FS.State.ranking(state, "russia", "amateur", "welter");
-if (!ranking.length) throw new Error("Ranking empty.");
+if (!state.modal || state.modal.type !== "fightResult") throw new Error("fight result failed");
+if (!state.modal.roundLog || !state.modal.roundLog.length) throw new Error("round log missing");
+
+for (let i = 0; i < 6; i += 1) {
+  FS.World.advanceWeek(state, "skip");
+}
+
+if (!state.world.news.length) throw new Error("news missing");
+if (!state.world.stories.length) throw new Error("stories missing after weeks");
+
 const html = FS.Render.dashboard(state);
-if (!html.includes("Fight Simulator") || !html.includes("Вес")) throw new Error("Render output bad.");
-console.log("core smoke ok", { week: state.week, offers: state.offers.length, ranking: ranking.length, version: FS.Data.appVersion });
+if (!html.includes("Титулы") || !html.includes("Клубы") || !html.includes("Истории")) {
+  throw new Error("render tabs missing");
+}
+
+console.log("season bundle smoke ok", {
+  version: FS.Data.appVersion,
+  week: state.week,
+  offers: state.offers.length,
+  clubs: state.clubs.length,
+  titles: Object.keys(state.titles).length,
+  stories: state.world.stories.length
+});
