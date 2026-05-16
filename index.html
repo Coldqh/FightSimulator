@@ -9852,11 +9852,47 @@ var APP_VERSION = "2026.04.05.1";
       return offers;
     }
 
+    
     function buildWeeklyOffers() {
       var fightOffers = buildFightOffers();
       var contractOffers = buildContractOffers();
       var summaries = [];
       var headline = "";
+      var fallbackIds = [];
+      var fallbackOffer;
+      var i;
+
+      if (!fightOffers.length) {
+        if (isStreetTrack()) {
+          fallbackIds = listStreetFightTemplateIds();
+          if (!fallbackIds.length) {
+            fallbackIds = ["street_even"];
+          }
+        } else if (isAmateurTrack()) {
+          fallbackIds = listEligibleAmateurFightTemplateIds();
+          if (!fallbackIds.length) {
+            fallbackIds = ["adult_amateur_class"];
+          }
+        } else if (isProTrack()) {
+          fallbackIds = listEligibleProFightTemplateIds();
+          if (!fallbackIds.length) {
+            fallbackIds = ["pro_debut"];
+          }
+        } else {
+          fallbackIds = ["home_even", "away_even"];
+        }
+
+        for (i = 0; i < fallbackIds.length && fightOffers.length < 3; i += 1) {
+          fallbackOffer = buildFightOffer(fallbackIds[i], null, null, {
+            matchmakingNote: "Запасной матчмейкинг: игра не нашла рейтингового соперника, поэтому подобрала бой вручную."
+          });
+
+          if (fallbackOffer) {
+            fightOffers.push(fallbackOffer);
+          }
+        }
+      }
+
       if (fightOffers.length) {
         headline = fightOffers[0].label + ": $" + fightOffers[0].guaranteedPurse + " гарантии";
         summaries.push({
@@ -9866,6 +9902,7 @@ var APP_VERSION = "2026.04.05.1";
           text: "Гарантия $" + fightOffers[0].guaranteedPurse
         });
       }
+
       if (contractOffers.length) {
         summaries.push({
           id: contractOffers[0].id,
@@ -9873,13 +9910,16 @@ var APP_VERSION = "2026.04.05.1";
           title: contractOffers[0].label,
           text: "Контракт от " + contractOffers[0].promoterName + " с гарантией $" + contractOffers[0].guaranteedPurse + "."
         });
+
         if (!headline) {
           headline = contractOffers[0].label + " от " + contractOffers[0].promoterName;
         }
       }
+
       if (!headline) {
         headline = "На этой неделе новых вариантов мало.";
       }
+
       return {
         weekStamp: state.fighter.week,
         refreshStamp: currentOfferRefreshStamp(),

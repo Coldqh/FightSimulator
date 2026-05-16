@@ -541,8 +541,13 @@ var WorldRankingsEngine = (function () {
     return source[Math.abs(slotIndex) % source.length];
   }
 
+  
   function identityForSlot(countryId, trackId, slotIndex) {
-    var pool = getCountryPool(countryId) || { firstNames: ["Alex"], lastNames: ["Stone"], nicknames: ["Rook"] };
+    var pool = getCountryPool(countryId) || {
+      firstNames: ["Alex"],
+      lastNames: ["Stone"],
+      nicknames: ["Rook"]
+    };
     var seed = typeof ContentLoader !== "undefined" && ContentLoader.getCountrySeedConfig ? ContentLoader.getCountrySeedConfig(countryId) : null;
     var firstNames = seed ?
       ((seed.firstJoin === "join") ?
@@ -555,14 +560,25 @@ var WorldRankingsEngine = (function () {
         (seed.lastLeft && seed.lastLeft.length ? seed.lastLeft.slice(0) : (pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"]))) :
       (pool.lastNames && pool.lastNames.length ? pool.lastNames : ["Stone"]);
     var nicknames = pool.nicknames && pool.nicknames.length ? pool.nicknames : ["Rook"];
-    var firstName = firstNames[(slotIndex * 5 + (trackId === "pro" ? 3 : 1)) % firstNames.length];
-    var lastName = lastNames[(slotIndex * 7 + (trackId === "street" ? 4 : 2)) % lastNames.length];
+    var baseSeed = String(countryId || "") + "|" + String(trackId || "") + "|" + String(slotIndex || 0);
+    var firstName = firstNames[deterministicRange(baseSeed + "|first", 0, firstNames.length - 1)];
+    var lastName = lastNames[deterministicRange(baseSeed + "|last", 0, lastNames.length - 1)];
     var nickname = "";
-    if (trackId === "street") {
-      nickname = sanitizeNicknameWord(nicknames[(slotIndex * 3 + 1) % nicknames.length]);
-    } else if (trackId === "pro" && deterministicRange(countryId + ":" + slotIndex + ":nick", 0, 100) >= 64) {
-      nickname = sanitizeNicknameWord(nicknames[(slotIndex * 11 + 2) % nicknames.length]);
+
+    if (firstNames.length > 1 && slotIndex > 0 && firstName === firstNames[deterministicRange(String(countryId || "") + "|" + String(trackId || "") + "|" + String(slotIndex - 1) + "|first", 0, firstNames.length - 1)]) {
+      firstName = firstNames[(deterministicRange(baseSeed + "|first_shift", 0, firstNames.length - 1) + slotIndex) % firstNames.length];
     }
+
+    if (lastNames.length > 1 && slotIndex > 0 && lastName === lastNames[deterministicRange(String(countryId || "") + "|" + String(trackId || "") + "|" + String(slotIndex - 1) + "|last", 0, lastNames.length - 1)]) {
+      lastName = lastNames[(deterministicRange(baseSeed + "|last_shift", 0, lastNames.length - 1) + slotIndex * 2) % lastNames.length];
+    }
+
+    if (trackId === "street") {
+      nickname = sanitizeNicknameWord(nicknames[deterministicRange(baseSeed + "|street_nick", 0, nicknames.length - 1)]);
+    } else if (trackId === "pro" && deterministicRange(baseSeed + "|pro_nick_roll", 0, 100) >= 64) {
+      nickname = sanitizeNicknameWord(nicknames[deterministicRange(baseSeed + "|pro_nick", 0, nicknames.length - 1)]);
+    }
+
     return {
       firstName: firstName,
       lastName: lastName,
