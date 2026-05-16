@@ -299,6 +299,9 @@
     state.week += 1;
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
+      if (window.FS.Clubs.chooseTrackedClubmate) {
+        window.FS.Clubs.chooseTrackedClubmate(state);
+      }
     }
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
@@ -324,10 +327,16 @@
     State.updateAllDerived(state);
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
+      if (window.FS.Clubs.chooseTrackedClubmate) {
+        window.FS.Clubs.chooseTrackedClubmate(state);
+      }
     }
     buildNationalTeams(state);
     if (window.FS.Titles) {
       window.FS.Titles.ensureTitles(state);
+      if (window.FS.Titles.normalizeFighterTitles) {
+        window.FS.Titles.normalizeFighterTitles(state);
+      }
     }
     refreshOffers(state);
     if (!state.world.news.length) {

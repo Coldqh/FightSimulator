@@ -37,7 +37,20 @@
     }
   }
 
+  function trackFocusFighter(state) {
+    var fighter = null;
+    if (window.FS.Clubs && window.FS.Clubs.chooseTrackedClubmate) {
+      fighter = window.FS.Clubs.chooseTrackedClubmate(state);
+    }
+    if (fighter && !hasFlag(fighter, "tracked_intro")) {
+      addFlag(fighter, "tracked_intro");
+      addStory(state, fighter, "становится бойцом, за чьей карьерой стоит следить.", "tracked");
+    }
+    return fighter;
+  }
+
   function simulateStories(state) {
+    trackFocusFighter(state);
     var i;
     var fighter;
     var rating;
@@ -78,6 +91,7 @@
   window.FS.Stories = {
     addStory: addStory,
     simulateStories: simulateStories,
+    trackFocusFighter: trackFocusFighter,
     storiesForFighter: storiesForFighter
   };
 }());

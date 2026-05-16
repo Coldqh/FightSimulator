@@ -14,18 +14,20 @@
 10. src/ui/render.js
 11. src/app.js
 
-## Module boundaries
+## Rule
 
-- data: constants only.
+No monolith. No runtime imports from old experimental files.
+
+## Modules
+
+- data: constants.
 - utils: pure helpers.
-- storage: localStorage only.
-- state: player, roster, training, rankings.
-- clubs: gyms and club rosters.
-- titles: title ownership and updates.
-- stories: career events.
+- storage: save/load/migration.
+- state: state mutations.
+- clubs: gyms and club roster.
+- titles: champion ownership and challenge eligibility.
+- stories: NPC/player stories.
 - world: weekly simulation.
-- fight: player fight preview/resolution.
-- render: HTML only.
+- fight: previews/results.
+- render: HTML.
 - app: DOM events.
-
-Old runtime files must not be imported.

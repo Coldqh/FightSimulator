@@ -141,6 +141,7 @@
       roster: [],
       people: createPeople(countryId),
       offers: [],
+      trackedFighterIds: [],
       clubs: [],
       titles: {},
       world: {

@@ -4,17 +4,23 @@ Static modular boxing sim.
 
 ## Current version
 
-`season-bundle-0.9.0`
+`vertical-slice-1.0.0`
 
-## Included layers
+## Main features
 
-- Fight Layer: tactics, round logs, knockdowns, score line.
-- Club Layer: gyms, club rosters, player club.
-- Titles Layer: country titles by track and weight class.
-- Living Stories Layer: NPC career stories and world story feed.
+- Fast static web app.
+- Career creation.
+- Country / path / weight / stance.
+- 3 offers at all times.
+- Tactical fight preview.
+- Round-by-round fight result.
+- Clubs and player club.
+- Titles and title challenge.
+- Tracked clubmate story.
+- Living world stories.
 
 ## Runtime
 
-`index.html` loads only modular runtime files from `src/`.
+`index.html` loads only modular files from `src/`.
 
 Old experimental files are not loaded.

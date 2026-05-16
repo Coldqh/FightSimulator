@@ -92,6 +92,21 @@
     } else if (button.dataset.acceptFight) {
       Fight.resolvePlayerFight(state, button.dataset.acceptFight);
       saveAndRender();
+    } else if (button.dataset.titleChallenge) {
+      preview = Fight.buildTitleChallengePreview(state, button.dataset.titleChallenge);
+      if (preview) {
+        state.modal = preview;
+        saveAndRender();
+      }
+    } else if (button.dataset.acceptTitleChallenge) {
+      Fight.resolveTitleChallenge(state, button.dataset.acceptTitleChallenge);
+      saveAndRender();
+    } else if (button.dataset.joinClub) {
+      if (window.FS.Clubs && window.FS.Clubs.movePlayerToClub) {
+        window.FS.Clubs.movePlayerToClub(state, button.dataset.joinClub);
+        World.refreshOffers(state);
+      }
+      saveAndRender();
     } else if (button.dataset.fighter) {
       state.modal = {
         type: "fighter",

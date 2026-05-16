@@ -203,11 +203,94 @@
     return true;
   }
 
+
+  function buildTitleChallengePreview(state, titleId) {
+    var p = State.player(state);
+    var title = state.titles ? state.titles[titleId] : null;
+    var champion;
+    var check;
+
+    if (!p || !title) {
+      return null;
+    }
+
+    check = window.FS.Titles ? window.FS.Titles.playerTitleChallenge(state, titleId) : { eligible: false, reason: "Титулы недоступны." };
+    champion = U.getFighterById(state, title.championId);
+
+    if (!champion) {
+      return null;
+    }
+
+    return {
+      type: "titleChallengePreview",
+      titleId: title.id,
+      titleLabel: title.label,
+      eligible: check.eligible,
+      reason: check.reason,
+      championId: champion.id,
+      championName: champion.name,
+      rounds: U.findTrack(title.trackId).rounds,
+      purse: Math.round(U.findTrack(title.trackId).basePurse * 2.25),
+      winChance: estimateWinChance(p, champion, state.selectedTacticId || "balanced"),
+      playerRating: U.statAverage(p.stats),
+      championRating: U.statAverage(champion.stats),
+      playerRecord: U.recordText(p.record),
+      championRecord: U.recordText(champion.record),
+      weightClassLabel: U.formatWeightClass(title.weightClassId)
+    };
+  }
+
+  function resolveTitleChallenge(state, titleId) {
+    var title = state.titles ? state.titles[titleId] : null;
+    var p = State.player(state);
+    var champion;
+    var fakeOffer;
+    var beforeWins;
+
+    if (!title || !p || !window.FS.Titles || !window.FS.Titles.playerTitleChallenge(state, titleId).eligible) {
+      state.feed = "Вызов чемпиону сейчас недоступен.";
+      return false;
+    }
+
+    champion = U.getFighterById(state, title.championId);
+    if (!champion) {
+      return false;
+    }
+
+    fakeOffer = {
+      id: "title_" + title.id,
+      opponentId: champion.id,
+      rounds: U.findTrack(title.trackId).rounds,
+      purse: Math.round(U.findTrack(title.trackId).basePurse * 2.25),
+      difficultyId: "hard"
+    };
+
+    state.offers.push(fakeOffer);
+    beforeWins = p.record.wins;
+    resolvePlayerFight(state, fakeOffer.id);
+    state.offers = state.offers.filter(function (offer) {
+      return offer.id !== fakeOffer.id;
+    });
+
+    if (p.record.wins > beforeWins) {
+      window.FS.Titles.transferTitle(state, title.id, p.id, p.name + " выиграл титульный бой: " + title.label);
+      state.feed = "Ты выиграл титул: " + title.label + ".";
+      if (window.FS.Stories) {
+        window.FS.Stories.addStory(state, p, "стал чемпионом: " + title.label + ".", "player_title");
+      }
+    }
+
+    return true;
+  }
+
+
   window.FS.Fight = {
     buildFightPreview: buildFightPreview,
     resolvePlayerFight: resolvePlayerFight,
     resultClass: resultClass,
     estimateWinChance: estimateWinChance,
-    simulateRounds: simulateRounds
+    simulateRounds: simulateRounds,
+    buildTitleChallengePreview: buildTitleChallengePreview,
+    resolveTitleChallenge: resolveTitleChallenge
   };
 }());

@@ -4,8 +4,8 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "season-bundle-0.9.0",
-    saveKey: "fight_simulator_season_bundle_v9",
+    appVersion: "vertical-slice-1.0.0",
+    saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
       amateur: {
@@ -145,6 +145,8 @@
       { id: "amateur_country", label: "Чемпион любителей", trackId: "amateur", scope: "country" },
       { id: "pro_regional", label: "Региональный пояс", trackId: "pro", scope: "country" }
     ],
+
+    legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     defaultFilters: {
       tab: "dashboard",

@@ -1,16 +1,11 @@
 {
-  "version": "season-bundle-0.9.0",
+  "version": "vertical-slice-1.0.0",
   "mode": "modular-mvp",
   "features": [
-    "round fight layer",
-    "club layer",
-    "titles layer",
-    "living stories layer"
-  ],
-  "runtime": [
-    "index.html",
-    "src/data",
-    "src/core",
-    "src/ui"
+    "title challenge",
+    "my club",
+    "tracked clubmate",
+    "save migration",
+    "round fight layer"
   ]
 }

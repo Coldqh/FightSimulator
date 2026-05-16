@@ -93,6 +93,70 @@
     return p ? findClub(state, p.gymId) : null;
   }
 
+  function movePlayerToClub(state, clubId) {
+    var p = window.FS.State.player(state);
+    var club = findClub(state, clubId);
+
+    if (!p || !club || club.countryId !== p.countryId) {
+      if (state) {
+        state.feed = "Нельзя перейти в этот клуб.";
+      }
+      return false;
+    }
+
+    p.gymId = club.id;
+    if (p.careerLog) {
+      p.careerLog.unshift({ week: state.week, text: "Переход в клуб: " + club.name + "." });
+    }
+    assignFightersToClubs(state);
+    state.feed = "Ты перешёл в клуб: " + club.name + ".";
+    return true;
+  }
+
+  function chooseTrackedClubmate(state) {
+    var p = window.FS.State.player(state);
+    var club;
+    var roster;
+
+    if (!p) {
+      return null;
+    }
+
+    if (!(state.trackedFighterIds instanceof Array)) {
+      state.trackedFighterIds = [];
+    }
+
+    if (state.trackedFighterIds.length) {
+      return U.getFighterById(state, state.trackedFighterIds[0]);
+    }
+
+    club = playerClub(state);
+    if (!club) {
+      return null;
+    }
+
+    roster = clubRoster(state, club.id).filter(function (fighter) {
+      return !fighter.isPlayer && fighter.trackId === p.trackId;
+    });
+
+    if (!roster.length) {
+      roster = clubRoster(state, club.id).filter(function (fighter) {
+        return !fighter.isPlayer;
+      });
+    }
+
+    if (roster.length) {
+      roster[0].known = true;
+      state.trackedFighterIds.push(roster[0].id);
+      if (roster[0].careerLog) {
+        roster[0].careerLog.unshift({ week: state.week, text: "Стал заметным одноклубником игрока." });
+      }
+      return roster[0];
+    }
+
+    return null;
+  }
+
   function clubRoster(state, clubId) {
     var club = findClub(state, clubId);
     if (!club) {
@@ -110,6 +174,8 @@
     assignFightersToClubs: assignFightersToClubs,
     findClub: findClub,
     playerClub: playerClub,
+    movePlayerToClub: movePlayerToClub,
+    chooseTrackedClubmate: chooseTrackedClubmate,
     clubRoster: clubRoster
   };
 }());

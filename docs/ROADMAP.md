@@ -1,37 +1,38 @@
 # Roadmap
 
-## Done in Season Bundle 0.9.0
+## Done in 1.0 Vertical Slice
 
-### 0.6 Fight Layer
-- Tactical choice.
-- Round log.
-- Knockdown event.
-- Result modal with score and method.
+- Fight tactics.
+- Round logs.
+- Clubs and My Club screen.
+- Titles by country/path/weight.
+- Title challenge flow.
+- Tracked clubmate.
+- Fighter cards with titles and career log.
+- Save migration/repair from earlier modular saves.
+- Smoke test coverage.
 
-### 0.7 Club Layer
-- Gyms by country.
-- Fighter club assignment.
-- Club roster screen.
-- Player club display.
+## Bugfix phase
 
-### 0.8 Titles Layer
-- Street country champions.
-- Amateur country champions.
-- Pro regional champions.
-- Titles by weight class.
-- Automatic title holder updates.
+After 1.0, stop adding large systems and test:
 
-### 0.9 Living Stories
-- NPC story flags.
-- Breakout stories.
-- Falling career stories.
-- Champion stories.
-- Story feed.
+- title challenge eligibility;
+- save/load;
+- club transitions;
+- ranking filters;
+- fight result modal;
+- mobile layout;
+- old save migration.
 
-## Next 1.0 Vertical Slice
+## 1.1
 
-- Better title fight eligibility.
-- Direct challenge for title if top-ranked.
-- Stable save migration.
-- More focused onboarding.
-- UI polish.
+- Patch bugs.
+- Improve UI wording.
+- Better onboarding.
+- Better title eligibility.
+
+## 1.2
+
+- More stable story generation.
+- More countries/gyms.
+- Cleaner balance.
