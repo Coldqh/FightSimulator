@@ -1,12 +1,12 @@
 {
-  "version": "mvp-ecosystem-0.2.0",
-  "mode": "clean-overlay",
-  "runtime": [
-    "index.html",
-    "src/styles.css",
-    "src/data/game-data.js",
-    "src/core/*.js",
-    "src/ui/render.js",
-    "src/app.js"
+  "version": "ecosystem-mvp-0.4.0",
+  "mode": "clean-ecosystem",
+  "notes": [
+    "weekly NPC world simulation",
+    "track transitions",
+    "national teams",
+    "fight preview/result modals",
+    "training panel",
+    "rankings and fighter profiles"
   ]
 }

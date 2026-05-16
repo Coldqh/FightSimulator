@@ -1,38 +1,31 @@
-# Fight Simulator MVP Overlay
+# Fight Simulator — Ecosystem MVP Overlay 0.4.0
 
-Готовая сборка для установки поверх текущей папки проекта.
+Это overlay-сборка поверх текущего проекта. Новый runtime подключает только чистую архитектуру:
 
-## Установка
+- `src/data/game-data.js`
+- `src/core/utils.js`
+- `src/core/storage.js`
+- `src/core/state.js`
+- `src/core/world.js`
+- `src/core/fight.js`
+- `src/ui/render.js`
+- `src/app.js`
 
-```powershell
-cd C:\FightSimulator_GitHub
-Expand-Archive -Path C:\Users\%USERNAME%\Downloads\fight-simulator-mvp-overlay.zip -DestinationPath C:\FightSimulator_GitHub -Force
-start index.html
-```
+Старые тяжёлые файлы могут лежать в папке, но не участвуют в запуске.
 
-После проверки:
+## Что появилось
 
-```powershell
-cd C:\FightSimulator_GitHub
-git status
-git add .
-git commit -m "Install MVP ecosystem overlay"
-git push origin main
-```
-
-## Что добавлено
-
-- чистая архитектура по файлам;
-- быстрый старт карьеры;
+- стабильное создание карьеры;
 - 3 боя в любой стране и любом пути;
-- улица / любители / профи;
-- запрет возврата в любители после профи;
-- запрет возврата в профи после ухода из профи на улицу;
+- предпросмотр боя;
+- окно результата боя;
 - карточки бойцов;
+- вкладка тренировки;
 - рейтинги с фильтрами;
-- знакомые люди без шкал и действий;
-- лёгкая недельная симуляция NPC;
-- переходы NPC между путями;
-- вкладка мира со сборной и событиями недели.
-
-Старые файлы могут остаться в папке, но новый `index.html` их не подключает.
+- вкладка мира;
+- сборная и резерв по стране;
+- NPC проводят бои каждую неделю;
+- NPC меняют путь: улица → любители → профи, профи → улица;
+- ограничения переходов после профи;
+- новости мира;
+- история карьеры конкретного бойца в карточке.

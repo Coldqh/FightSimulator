@@ -1,1 +1,298 @@
-(function(){"use strict";window.FS=window.FS||{};var U=window.FS.Utils,S=window.FS.State,D=window.FightSimData;function notice(state,text,tone){if(!text){return}state.notices.unshift({id:U.uid("notice"),week:state.week,tone:tone||"neutral",text:text});if(state.notices.length>8){state.notices=state.notices.slice(0,8)}}function transitionAllowed(f,next){if(!f||!D.tracks[next]){return{ok:false,reason:"Неверный путь."}}if(f.trackId===next){return{ok:true,reason:""}}if(f.career&&f.career.hasBeenPro&&next==="amateur"){return{ok:false,reason:"После старта профи-карьеры нельзя вернуться в любители."}}if(f.career&&f.career.leftProForStreet&&next==="pro"){return{ok:false,reason:"После ухода из профи на улицу нельзя вернуться в профи."}}return{ok:true,reason:""}}function applyTransition(state,f,next,source){var ok=transitionAllowed(f,next),prev,msg;if(!ok.ok){return ok}if(f.trackId===next){return ok}prev=f.trackId;f.trackId=next;f.career=f.career||{hasBeenPro:false,leftProForStreet:false,lastTransitionWeek:0};if(next==="pro"){f.career.hasBeenPro=true}if(prev==="pro"&&next==="street"){f.career.leftProForStreet=true}f.career.lastTransitionWeek=state.week;if(source==="player"){state.feed="Путь изменён: "+D.tracks[next].label+"."}else{msg=f.name+" меняет путь: "+D.tracks[prev].label+" → "+D.tracks[next].label+".";notice(state,msg,"blue")}return{ok:true,reason:""}}function chooseTransition(state,f){var r=f.record,score=U.trackScore(f),age=f.age||20,last=(f.career&&f.career.lastTransitionWeek)||0;if(state.week-last<5){return""}if(f.trackId==="street"){return age<=23&&r.wins>=5&&score>=330&&U.randomInt(1,100)<=8?"amateur":""}if(f.trackId==="amateur"){if(age>=19&&r.wins>=8&&score>=430&&U.randomInt(1,100)<=7){return"pro"}if(r.losses>=r.wins+4&&U.randomInt(1,100)<=4){return"street"}return""}if(f.trackId==="pro"&&r.losses>=r.wins+6&&U.randomInt(1,100)<=3){return"street"}return""}function npcFight(list){if(list.length<2){return null}var a=U.randomInt(0,list.length-1),b=U.randomInt(0,list.length-1);if(a===b){b=(b+1)%list.length}var f1=list[a],f2=list[b],s1=U.statAverage(f1.stats)+f1.record.wins*.7,s2=U.statAverage(f2.stats)+f2.record.wins*.7,ch=U.clamp(50+Math.round((s1-s2)*2),15,85),win=U.randomInt(1,100)<=ch?f1:f2,lose=win===f1?f2:f1,method=U.randomInt(1,100)<=18?"KO/TKO":"решение";win.record.wins+=1;lose.record.losses+=1;if(method==="KO/TKO"){win.record.kos+=1}return win.name+" победил "+lose.name+" ("+method+")."}function simulateWorldWeek(state){var groups={},worldFights=0,transitions=0;state.roster.forEach(function(f){var key,next;if(!f||f.isPlayer){return}key=f.countryId+"|"+f.trackId;if(!groups[key]){groups[key]=[]}groups[key].push(f);next=chooseTransition(state,f);if(next&&applyTransition(state,f,next,"npc").ok){transitions+=1}});Object.keys(groups).forEach(function(key){var list=groups[key],attempts=Math.min(2,Math.floor(list.length/4)),i,text;for(i=0;i<attempts;i+=1){if(worldFights>=9){return}text=npcFight(list);if(text&&U.randomInt(1,100)<=35){notice(state,text,"neutral")}worldFights+=1}});if(transitions===0&&state.notices.length===0){notice(state,"Мир провёл неделю без громких переходов. Рейтинги обновлены.","neutral")}}function opponentByIndex(state,index){var candidates=S.listFighters(state,{countryId:state.player.countryId,trackId:state.player.trackId}).filter(function(f){return!f.isPlayer}),op;candidates.sort(function(a,b){return Math.abs(U.statAverage(a.stats)-U.statAverage(state.player.stats))-Math.abs(U.statAverage(b.stats)-U.statAverage(state.player.stats))});op=candidates[index];if(!op){op=S.createFighter(state.player.countryId,state.player.trackId,9000+state.week*10+index,U.statAverage(state.player.stats)+index*3);state.roster.push(op)}return op}function refreshOffers(state){var labels=D.offerLabels[state.player.trackId],track=U.findTrack(state.player.trackId),base=D.purseBase[state.player.trackId]||100,out=[],i,op;for(i=0;i<3;i+=1){op=opponentByIndex(state,i);out.push({id:U.uid("offer"),label:labels[i],opponentId:op.id,rounds:track.rounds,purse:base+i*(state.player.trackId==="pro"?800:60)})}state.offers=out}function setPlayerTrack(state,trackId){var res=applyTransition(state,state.player,trackId,"player");if(!res.ok){state.feed=res.reason;return res}state.rankingTrackId=state.player.trackId;S.syncPlayerIntoRoster(state);refreshOffers(state);return res}function setPlayerCountry(state,countryId){var c=U.findCountry(countryId);state.player.countryId=c.id;state.rankingCountryId=c.id;state.people=S.createPeople(c.id);state.feed="Страна изменена: "+c.label+".";S.syncPlayerIntoRoster(state);refreshOffers(state)}window.FS.World={pushNotice:notice,transitionAllowed:transitionAllowed,applyTrackTransition:applyTransition,simulateWorldWeek:simulateWorldWeek,refreshOffers:refreshOffers,setPlayerTrack:setPlayerTrack,setPlayerCountry:setPlayerCountry};}());
+(function () {
+  "use strict";
+
+  window.FS = window.FS || {};
+
+  var U = window.FS.Utils;
+  var Data = window.FS.Data;
+  var State = window.FS.State;
+
+  function createNews(state, tone, text, meta) {
+    U.pushLimited(state.world.news, {
+      id: U.uid("news"),
+      week: state.week,
+      tone: tone || "neutral",
+      text: text,
+      meta: meta || {}
+    }, 60);
+  }
+
+  function findCloseOpponent(state, sourceFighter) {
+    var pool = state.roster.filter(function (fighter) {
+      return fighter.id !== sourceFighter.id &&
+        !fighter.isPlayer &&
+        fighter.countryId === sourceFighter.countryId &&
+        fighter.trackId === sourceFighter.trackId;
+    });
+
+    pool.sort(function (left, right) {
+      return Math.abs(U.statAverage(left.stats) - U.statAverage(sourceFighter.stats)) -
+        Math.abs(U.statAverage(right.stats) - U.statAverage(sourceFighter.stats));
+    });
+
+    return pool[U.randomInt(0, Math.min(5, pool.length - 1))] || pool[0] || null;
+  }
+
+  function resolveNpcFight(state, a, b) {
+    var aScore = U.statAverage(a.stats) + a.record.wins * 0.7 - a.record.losses * 0.35;
+    var bScore = U.statAverage(b.stats) + b.record.wins * 0.7 - b.record.losses * 0.35;
+    var aChance = U.clamp(50 + Math.round((aScore - bScore) * 2.2), 12, 88);
+    var roll = U.randomInt(1, 100);
+    var winner;
+    var loser;
+    var draw = Math.abs(aScore - bScore) <= 2 && U.randomInt(1, 100) <= 7;
+    var ko;
+
+    if (draw) {
+      a.record.draws += 1;
+      b.record.draws += 1;
+      a.careerLog.unshift({ week: state.week, text: "Ничья с " + b.name });
+      b.careerLog.unshift({ week: state.week, text: "Ничья с " + a.name });
+      return {
+        type: "draw",
+        text: a.name + " и " + b.name + " завершили бой вничью."
+      };
+    }
+
+    if (roll <= aChance) {
+      winner = a;
+      loser = b;
+    } else {
+      winner = b;
+      loser = a;
+    }
+
+    ko = U.randomInt(1, 100) <= 20;
+    winner.record.wins += 1;
+    loser.record.losses += 1;
+
+    if (ko) {
+      winner.record.kos += 1;
+    }
+
+    winner.careerLog.unshift({ week: state.week, text: "Победа над " + loser.name + (ko ? " KO/TKO" : " решением") });
+    loser.careerLog.unshift({ week: state.week, text: "Поражение от " + winner.name });
+
+    State.updateDerivedFighterFields(winner);
+    State.updateDerivedFighterFields(loser);
+
+    return {
+      type: "win",
+      winner: winner.id,
+      loser: loser.id,
+      text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей.")
+    };
+  }
+
+  function simulateNpcFights(state) {
+    var fighters = state.roster.filter(function (fighter) {
+      return !fighter.isPlayer;
+    });
+    var used = {};
+    var report = [];
+    var count = Math.min(12, Math.max(4, Math.floor(fighters.length / 18)));
+    var i;
+    var a;
+    var b;
+    var result;
+
+    for (i = 0; i < count; i += 1) {
+      a = fighters[U.randomInt(0, fighters.length - 1)];
+      if (!a || used[a.id]) {
+        continue;
+      }
+
+      b = findCloseOpponent(state, a);
+      if (!b || used[b.id]) {
+        continue;
+      }
+
+      used[a.id] = true;
+      used[b.id] = true;
+
+      result = resolveNpcFight(state, a, b);
+      report.push(result.text);
+
+      if (report.length <= 4) {
+        createNews(state, "fight", result.text, { type: "npc_fight" });
+      }
+    }
+
+    return report;
+  }
+
+  function canMoveToTrack(fighter, targetTrackId) {
+    if (fighter.trackId === targetTrackId) {
+      return false;
+    }
+    if (fighter.trackId === "pro" && targetTrackId === "amateur") {
+      return false;
+    }
+    if (fighter.proClosed && targetTrackId === "pro") {
+      return false;
+    }
+    return true;
+  }
+
+  function tryMoveFighter(state, fighter, targetTrackId, reason) {
+    if (!canMoveToTrack(fighter, targetTrackId)) {
+      return false;
+    }
+
+    if (fighter.trackId === "pro" && targetTrackId === "street") {
+      fighter.proClosed = true;
+    }
+
+    if (targetTrackId === "pro") {
+      fighter.hasGonePro = true;
+    }
+
+    fighter.trackId = targetTrackId;
+    fighter.lastMoveWeek = state.week;
+    State.updateDerivedFighterFields(fighter);
+    fighter.careerLog.unshift({ week: state.week, text: reason });
+
+    U.pushLimited(state.world.transitionLog, {
+      id: U.uid("move"),
+      week: state.week,
+      fighterId: fighter.id,
+      text: fighter.name + ": " + reason
+    }, 50);
+
+    createNews(state, "move", fighter.name + ": " + reason, { type: "track_move" });
+    return true;
+  }
+
+  function simulateTransitions(state) {
+    var candidates = state.roster.filter(function (fighter) {
+      return !fighter.isPlayer && state.week - (fighter.lastMoveWeek || 1) >= 5;
+    });
+    var attempts = Math.min(6, candidates.length);
+    var i;
+    var fighter;
+    var rating;
+
+    for (i = 0; i < attempts; i += 1) {
+      fighter = candidates[U.randomInt(0, candidates.length - 1)];
+      if (!fighter) {
+        continue;
+      }
+
+      rating = U.statAverage(fighter.stats);
+
+      if (fighter.trackId === "street" && rating >= 43 && U.randomInt(1, 100) <= 14) {
+        tryMoveFighter(state, fighter, "amateur", "перешёл с улицы в любители");
+      } else if (fighter.trackId === "amateur" && rating >= 58 && U.randomInt(1, 100) <= 12) {
+        tryMoveFighter(state, fighter, "pro", "подписал первый профессиональный контракт");
+      } else if (fighter.trackId === "pro" && fighter.record.losses >= fighter.record.wins + 4 && U.randomInt(1, 100) <= 10) {
+        tryMoveFighter(state, fighter, "street", "сорвался из профи на улицу");
+      }
+    }
+  }
+
+  function buildNationalTeams(state) {
+    var teams = {};
+    var i;
+    var country;
+    var pool;
+
+    for (i = 0; i < Data.countries.length; i += 1) {
+      country = Data.countries[i];
+
+      pool = State.ranking(state, country.id, "amateur").filter(function (fighter) {
+        return U.statAverage(fighter.stats) >= 40;
+      });
+
+      teams[country.id] = {
+        main: pool.slice(0, 4).map(function (fighter) { return fighter.id; }),
+        reserve: pool.slice(4, 8).map(function (fighter) { return fighter.id; })
+      };
+    }
+
+    state.world.teamsByCountry = teams;
+  }
+
+  function buildOfferOpponent(state, index) {
+    var p = State.player(state);
+    var candidates = state.roster.filter(function (fighter) {
+      return !fighter.isPlayer &&
+        fighter.countryId === p.countryId &&
+        fighter.trackId === p.trackId;
+    });
+
+    candidates.sort(function (left, right) {
+      return Math.abs(U.statAverage(left.stats) - U.statAverage(p.stats)) -
+        Math.abs(U.statAverage(right.stats) - U.statAverage(p.stats));
+    });
+
+    if (!candidates[index]) {
+      candidates[index] = State.createFighter(p.countryId, p.trackId, 9000 + state.week * 10 + index, U.statAverage(p.stats) + index * 3);
+      state.roster.push(candidates[index]);
+    }
+
+    return candidates[index];
+  }
+
+  function refreshOffers(state) {
+    var p = State.player(state);
+    var labelsByTrack = {
+      amateur: ["Любительский бой", "Бой городского уровня", "Матч отбора"],
+      street: ["Дворовый бой", "Районный вызов", "Бой на местной площадке"],
+      pro: ["Профессиональный андеркард", "Контрактный бой", "Главный бой вечера"]
+    };
+    var track = U.findTrack(p.trackId);
+    var i;
+    var opponent;
+
+    state.offers = [];
+
+    for (i = 0; i < 3; i += 1) {
+      opponent = buildOfferOpponent(state, i);
+
+      state.offers.push({
+        id: U.uid("offer"),
+        label: labelsByTrack[p.trackId][i],
+        opponentId: opponent.id,
+        rounds: track.rounds,
+        purse: track.basePurse + i * Math.round(track.basePurse * 0.35),
+        risk: Math.max(1, U.statAverage(opponent.stats) - U.statAverage(p.stats) + 50)
+      });
+    }
+  }
+
+  function advanceWeek(state, action) {
+    var npcReport;
+
+    state.week += 1;
+    npcReport = simulateNpcFights(state);
+    simulateTransitions(state);
+    buildNationalTeams(state);
+    refreshOffers(state);
+
+    U.pushLimited(state.world.weekReports, {
+      id: U.uid("week"),
+      week: state.week,
+      action: action || "week",
+      fights: npcReport.slice(0, 8)
+    }, 25);
+  }
+
+  function bootstrapWorld(state) {
+    State.updateAllDerived(state);
+    buildNationalTeams(state);
+    refreshOffers(state);
+    if (!state.world.news.length) {
+      createNews(state, "world", "Мир запущен: рейтинги, сборные и расписание боёв сформированы.", { type: "bootstrap" });
+    }
+  }
+
+  window.FS.World = {
+    createNews: createNews,
+    refreshOffers: refreshOffers,
+    advanceWeek: advanceWeek,
+    bootstrapWorld: bootstrapWorld,
+    simulateNpcFights: simulateNpcFights,
+    simulateTransitions: simulateTransitions,
+    buildNationalTeams: buildNationalTeams
+  };
+}());

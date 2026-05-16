@@ -1,1 +1,125 @@
-(function(){"use strict";window.FS=window.FS||{};function e(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function uid(p){return p+"_"+Math.random().toString(36).slice(2,10)+"_"+Date.now().toString(36)}function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a}function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function pick(l){return l[ri(0,l.length-1)]}function country(id){var c=window.FightSimData.countries;for(var i=0;i<c.length;i+=1){if(c[i].id===id){return c[i]}}return c[0]}function track(id){return window.FightSimData.tracks[id]||window.FightSimData.tracks.amateur}function avg(s){return Math.round((s.power+s.technique+s.speed+s.stamina+s.defense)/5)}function total(s){return s.power+s.technique+s.speed+s.stamina+s.defense}function rec(r){return r.wins+"-"+r.losses+"-"+r.draws+" · KO "+r.kos}function stats(t,b){var cap=track(t).maxStat;return{power:clamp(b+ri(-4,4),1,cap),technique:clamp(b+ri(-4,4),1,cap),speed:clamp(b+ri(-4,4),1,cap),stamina:clamp(b+ri(-4,4),1,cap),defense:clamp(b+ri(-4,4),1,cap)}}function name(c,seed){var fi=Math.abs(seed*3+ri(0,c.firstNames.length-1))%c.firstNames.length;var li=Math.abs(seed*5+ri(0,c.lastNames.length-1))%c.lastNames.length;return c.firstNames[fi]+" "+c.lastNames[li]}function score(f){var r=f.record||{wins:0,losses:0,draws:0,kos:0};return avg(f.stats)*10+r.wins*12+r.draws*3+r.kos*3-r.losses*9}function resultClass(r){if(r==="Победа"){return"win"}if(r==="Поражение"){return"loss"}return"draw"}window.FS.Utils={escapeHtml:e,uid:uid,randomInt:ri,clamp:clamp,pick:pick,findCountry:country,findTrack:track,statAverage:avg,statTotal:total,recordText:rec,createStats:stats,createName:name,trackScore:score,normalizeModalResult:resultClass};}());
+(function () {
+  "use strict";
+
+  window.FS = window.FS || {};
+
+  var Data = window.FS.Data;
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function uid(prefix) {
+    return prefix + "_" + Math.random().toString(36).slice(2, 10) + "_" + Date.now().toString(36);
+  }
+
+  function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function pick(list) {
+    return list[randomInt(0, list.length - 1)];
+  }
+
+  function findCountry(countryId) {
+    var i;
+    for (i = 0; i < Data.countries.length; i += 1) {
+      if (Data.countries[i].id === countryId) {
+        return Data.countries[i];
+      }
+    }
+    return Data.countries[0];
+  }
+
+  function findTrack(trackId) {
+    return Data.tracks[trackId] || Data.tracks.amateur;
+  }
+
+  function statAverage(stats) {
+    return Math.round((stats.power + stats.technique + stats.speed + stats.stamina + stats.defense) / 5);
+  }
+
+  function statTotal(stats) {
+    return stats.power + stats.technique + stats.speed + stats.stamina + stats.defense;
+  }
+
+  function recordText(record) {
+    return record.wins + "-" + record.losses + "-" + record.draws + " · KO " + record.kos;
+  }
+
+  function getStatLabel(key) {
+    var i;
+    for (i = 0; i < Data.statKeys.length; i += 1) {
+      if (Data.statKeys[i].id === key) {
+        return Data.statKeys[i].label;
+      }
+    }
+    return key;
+  }
+
+  function createStats(trackId, baseValue) {
+    var cap = findTrack(trackId).maxStat;
+    return {
+      power: clamp(baseValue + randomInt(-4, 4), 1, cap),
+      technique: clamp(baseValue + randomInt(-4, 4), 1, cap),
+      speed: clamp(baseValue + randomInt(-4, 4), 1, cap),
+      stamina: clamp(baseValue + randomInt(-4, 4), 1, cap),
+      defense: clamp(baseValue + randomInt(-4, 4), 1, cap)
+    };
+  }
+
+  function createName(country, seed) {
+    var firstIndex = Math.abs(seed * 3 + randomInt(0, country.firstNames.length - 1)) % country.firstNames.length;
+    var lastIndex = Math.abs(seed * 5 + randomInt(0, country.lastNames.length - 1)) % country.lastNames.length;
+    return country.firstNames[firstIndex] + " " + country.lastNames[lastIndex];
+  }
+
+  function getFighterById(state, fighterId) {
+    var i;
+    for (i = 0; i < state.roster.length; i += 1) {
+      if (state.roster[i].id === fighterId) {
+        return state.roster[i];
+      }
+    }
+    return null;
+  }
+
+  function pushLimited(list, entry, limit) {
+    list.unshift(entry);
+    if (list.length > limit) {
+      list.length = limit;
+    }
+  }
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  window.FS.Utils = {
+    escapeHtml: escapeHtml,
+    uid: uid,
+    randomInt: randomInt,
+    clamp: clamp,
+    pick: pick,
+    findCountry: findCountry,
+    findTrack: findTrack,
+    statAverage: statAverage,
+    statTotal: statTotal,
+    recordText: recordText,
+    getStatLabel: getStatLabel,
+    createStats: createStats,
+    createName: createName,
+    getFighterById: getFighterById,
+    pushLimited: pushLimited,
+    clone: clone
+  };
+}());

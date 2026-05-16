@@ -1,3 +1,23 @@
 cd C:\FightSimulator_GitHub
-Write-Host "Overlay uses only new runtime files from index.html and src/* listed in docs/ARCHITECTURE.md" -ForegroundColor Green
-Write-Host "Old files are harmless if index.html does not reference them." -ForegroundColor Yellow
+
+Write-Host "This script only removes old runtime leftovers that are not used by the new MVP."
+Write-Host "It does NOT remove .git, docs, README, src, index.html, manifest, version."
+
+$targets = @(
+  "data",
+  "country_data.js",
+  "game_data.js",
+  "fight_simulator.hta",
+  "launch_ui.bat",
+  "MOBILE_DEPLOY.md",
+  "ring_top_view.png"
+)
+
+foreach ($target in $targets) {
+  if (Test-Path $target) {
+    Remove-Item $target -Recurse -Force
+    Write-Host "Removed $target"
+  }
+}
+
+Write-Host "Cleanup complete."

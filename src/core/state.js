@@ -1,1 +1,263 @@
-(function(){"use strict";window.FS=window.FS||{};var U=window.FS.Utils,D=window.FightSimData;function createFighter(countryId,trackId,seed,base,opt){opt=opt||{};var c=U.findCountry(countryId);return{id:opt.id||U.uid("fighter"),name:opt.name||U.createName(c,seed),countryId:countryId,trackId:trackId,age:typeof opt.age==="number"?opt.age:U.randomInt(17,28),stats:U.createStats(trackId,base),record:opt.record||{wins:U.randomInt(0,9),losses:U.randomInt(0,4),draws:U.randomInt(0,1),kos:U.randomInt(0,5)},career:{hasBeenPro:!!opt.hasBeenPro,leftProForStreet:!!opt.leftProForStreet,lastTransitionWeek:0},clubId:opt.clubId||countryId+"_main_gym",isPlayer:!!opt.isPlayer}}function createPlayer(p){var t=U.findTrack(p.trackId).id,c=U.findCountry(p.countryId).id;return createFighter(c,t,1,35,{id:"player",name:p.name||"Новый боксёр",age:18,record:{wins:0,losses:0,draws:0,kos:0},isPlayer:true,hasBeenPro:t==="pro"})}function roster(player){var out=[],tracks=Object.keys(D.tracks),ci,ti,fi,cid,tid;for(ci=0;ci<D.countries.length;ci+=1){cid=D.countries[ci].id;for(ti=0;ti<tracks.length;ti+=1){tid=tracks[ti];for(fi=0;fi<18;fi+=1){out.push(createFighter(cid,tid,ci*1000+ti*100+fi,26+fi*3,{age:U.randomInt(tid==="pro"?21:17,tid==="pro"?34:27)}))}}}out.push(player);return out}function people(countryId){var c=U.findCountry(countryId);return D.peopleTemplates.map(function(t){return{id:U.uid("person"),role:t.role,name:U.createName(c,t.seed),note:t.note}})}function createNewCareer(payload){var player=createPlayer(payload);var state={version:D.appVersion,week:1,selectedTab:"fights",rankingCountryId:player.countryId,rankingTrackId:player.trackId,modal:null,player:player,roster:[],people:[],offers:[],notices:[],feed:"Карьера началась. Мир загружен в лёгком режиме.",createdAt:new Date().toISOString()};state.roster=roster(player);state.people=people(player.countryId);return state}function syncPlayer(state){for(var i=0;i<state.roster.length;i+=1){if(state.roster[i].id===state.player.id){state.roster[i]=state.player;return}}state.roster.push(state.player)}function getFighter(state,id){for(var i=0;i<state.roster.length;i+=1){if(state.roster[i].id===id){return state.roster[i]}}return null}function list(state,f){f=f||{};return state.roster.filter(function(x){if(!x){return false}if(f.countryId&&x.countryId!==f.countryId){return false}if(f.trackId&&x.trackId!==f.trackId){return false}return true})}function ranking(state,countryId,trackId){return list(state,{countryId:countryId,trackId:trackId}).sort(function(a,b){return U.trackScore(b)-U.trackScore(a)})}function normalize(s){if(!s||!s.player){return null}s.version=s.version||D.appVersion;s.week=typeof s.week==="number"?s.week:1;s.selectedTab=s.selectedTab||"fights";s.rankingCountryId=s.rankingCountryId||s.player.countryId;s.rankingTrackId=s.rankingTrackId||s.player.trackId;s.modal=s.modal||null;s.roster=s.roster instanceof Array?s.roster:[s.player];s.people=s.people instanceof Array?s.people:people(s.player.countryId);s.offers=s.offers instanceof Array?s.offers:[];s.notices=s.notices instanceof Array?s.notices:[];s.feed=s.feed||"Сохранение загружено.";s.roster.forEach(function(f){if(!f.career){f.career={hasBeenPro:f.trackId==="pro",leftProForStreet:false,lastTransitionWeek:0}}});if(!s.player.career){s.player.career={hasBeenPro:s.player.trackId==="pro",leftProForStreet:false,lastTransitionWeek:0}}return s}window.FS.State={createFighter:createFighter,createNewCareer:createNewCareer,createPeople:people,syncPlayerIntoRoster:syncPlayer,getFighterById:getFighter,listFighters:list,getRanking:ranking,normalizeLoadedState:normalize};}());
+(function () {
+  "use strict";
+
+  window.FS = window.FS || {};
+
+  var Data = window.FS.Data;
+  var U = window.FS.Utils;
+
+  function rankForFighter(fighter) {
+    var rating = U.statAverage(fighter.stats);
+    var ranks = Data.amateurRanks;
+    var best = ranks[0];
+    var i;
+    for (i = 0; i < ranks.length; i += 1) {
+      if (rating >= ranks[i].minRating) {
+        best = ranks[i];
+      }
+    }
+    return best;
+  }
+
+  function createRecord(seed) {
+    var wins = U.randomInt(0, 9) + Math.floor(seed / 4);
+    var losses = U.randomInt(0, 4);
+    var draws = U.randomInt(0, 1);
+    return {
+      wins: wins,
+      losses: losses,
+      draws: draws,
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, 6)))
+    };
+  }
+
+  function createFighter(countryId, trackId, seed, baseValue, options) {
+    var country = U.findCountry(countryId);
+    var opts = options || {};
+    var fighter = {
+      id: opts.id || U.uid("fighter"),
+      name: opts.name || U.createName(country, seed),
+      countryId: countryId,
+      trackId: trackId,
+      stats: opts.stats || U.createStats(trackId, baseValue),
+      record: opts.record || createRecord(seed),
+      isPlayer: !!opts.isPlayer,
+      known: !!opts.known,
+      hasGonePro: trackId === "pro" || !!opts.hasGonePro,
+      proClosed: !!opts.proClosed,
+      titles: [],
+      careerLog: [],
+      lastMoveWeek: 1,
+      seed: seed
+    };
+
+    if (trackId === "street") {
+      fighter.streetRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2 - fighter.record.losses, 1, 150);
+    }
+
+    if (trackId === "amateur") {
+      fighter.amateurRankId = rankForFighter(fighter).id;
+    }
+
+    if (trackId === "pro") {
+      fighter.proRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2, 1, 220);
+    }
+
+    return fighter;
+  }
+
+  function createRoster(player) {
+    var roster = [];
+    var trackIds = Object.keys(Data.tracks);
+    var countryIndex;
+    var trackIndex;
+    var fighterIndex;
+    var countryId;
+    var trackId;
+
+    for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
+      countryId = Data.countries[countryIndex].id;
+      for (trackIndex = 0; trackIndex < trackIds.length; trackIndex += 1) {
+        trackId = trackIds[trackIndex];
+        for (fighterIndex = 0; fighterIndex < 22; fighterIndex += 1) {
+          roster.push(createFighter(
+            countryId,
+            trackId,
+            countryIndex * 1000 + trackIndex * 100 + fighterIndex,
+            25 + fighterIndex * 3
+          ));
+        }
+      }
+    }
+
+    roster.push(player);
+    return roster;
+  }
+
+  function createPeople(countryId) {
+    var country = U.findCountry(countryId);
+    return [
+      { id: U.uid("person"), role: "coach", name: U.createName(country, 11), note: "Ведёт тренировки в зале." },
+      { id: U.uid("person"), role: "clubmate", name: U.createName(country, 22), note: "Тренируется рядом и может вырасти в сильного бойца." },
+      { id: U.uid("person"), role: "rival", name: U.createName(country, 33), note: "Появляется в местной боксёрской среде." },
+      { id: U.uid("person"), role: "organizer", name: U.createName(country, 44), note: "Помогает собрать местные бои." },
+      { id: U.uid("person"), role: "cutman", name: U.createName(country, 55), note: "Работает возле ринга." }
+    ];
+  }
+
+  function createCareer(payload) {
+    var trackId = U.findTrack(payload.trackId).id;
+    var countryId = U.findCountry(payload.countryId).id;
+    var player = createFighter(countryId, trackId, 777, 35, {
+      id: "player",
+      name: payload.name || "Новый боксёр",
+      isPlayer: true,
+      known: true,
+      record: { wins: 0, losses: 0, draws: 0, kos: 0 }
+    });
+
+    var state = {
+      version: Data.appVersion,
+      week: 1,
+      selectedTab: "dashboard",
+      playerId: player.id,
+      rankingCountryId: countryId,
+      rankingTrackId: trackId,
+      modal: null,
+      roster: [],
+      people: createPeople(countryId),
+      offers: [],
+      world: {
+        news: [],
+        weekReports: [],
+        teamsByCountry: {},
+        transitionLog: []
+      },
+      feed: "Карьера началась. Мир загружен, ближайшие соперники подобраны.",
+      createdAt: new Date().toISOString()
+    };
+
+    state.roster = createRoster(player);
+    return state;
+  }
+
+  function player(state) {
+    return U.getFighterById(state, state.playerId);
+  }
+
+  function syncPlayer(state) {
+    var p = player(state);
+    if (!p) {
+      return;
+    }
+    p.isPlayer = true;
+    p.known = true;
+  }
+
+  function setPlayerTrack(state, trackId) {
+    var p = player(state);
+    var target = U.findTrack(trackId);
+
+    if (!p || !target) {
+      return false;
+    }
+
+    if (p.trackId === "pro" && target.id === "amateur") {
+      state.feed = "После старта профессиональной карьеры нельзя вернуться в любители.";
+      return false;
+    }
+
+    if (p.proClosed && target.id === "pro") {
+      state.feed = "После ухода из профи на улицу возвращение в профи пока закрыто.";
+      return false;
+    }
+
+    if (p.trackId === "pro" && target.id === "street") {
+      p.proClosed = true;
+    }
+
+    if (target.id === "pro") {
+      p.hasGonePro = true;
+    }
+
+    p.trackId = target.id;
+    p.lastMoveWeek = state.week;
+    state.rankingTrackId = target.id;
+    state.feed = "Путь изменён: " + target.label + ".";
+    return true;
+  }
+
+  function setPlayerCountry(state, countryId) {
+    var country = U.findCountry(countryId);
+    var p = player(state);
+    if (!p) {
+      return;
+    }
+    p.countryId = country.id;
+    state.people = createPeople(country.id);
+    state.rankingCountryId = country.id;
+    state.feed = "Страна изменена: " + country.label + ".";
+  }
+
+  function updateDerivedFighterFields(fighter) {
+    if (fighter.trackId === "amateur") {
+      fighter.amateurRankId = rankForFighter(fighter).id;
+    }
+    if (fighter.trackId === "street") {
+      fighter.streetRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2 - fighter.record.losses, 1, 150);
+    }
+    if (fighter.trackId === "pro") {
+      fighter.proRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2, 1, 220);
+      fighter.hasGonePro = true;
+    }
+  }
+
+  function updateAllDerived(state) {
+    var i;
+    for (i = 0; i < state.roster.length; i += 1) {
+      updateDerivedFighterFields(state.roster[i]);
+    }
+  }
+
+  function trainPlayer(state, statKey) {
+    var p = player(state);
+    var keys = ["power", "technique", "speed", "stamina", "defense"];
+    var chosen = statKey || U.pick(keys);
+    var cap;
+
+    if (!p || typeof p.stats[chosen] !== "number") {
+      return;
+    }
+
+    cap = U.findTrack(p.trackId).maxStat;
+    p.stats[chosen] = U.clamp(p.stats[chosen] + 1, 1, cap);
+    updateDerivedFighterFields(p);
+    state.feed = "Тренировочная неделя завершена. Улучшен навык: " + U.getStatLabel(chosen) + ".";
+  }
+
+  function ranking(state, countryId, trackId) {
+    return state.roster
+      .filter(function (fighter) {
+        return fighter.countryId === countryId && fighter.trackId === trackId;
+      })
+      .sort(function (left, right) {
+        return U.statAverage(right.stats) + right.record.wins * 1.6 - right.record.losses -
+          (U.statAverage(left.stats) + left.record.wins * 1.6 - left.record.losses);
+      });
+  }
+
+  window.FS.State = {
+    createCareer: createCareer,
+    createFighter: createFighter,
+    createPeople: createPeople,
+    player: player,
+    syncPlayer: syncPlayer,
+    setPlayerTrack: setPlayerTrack,
+    setPlayerCountry: setPlayerCountry,
+    trainPlayer: trainPlayer,
+    updateDerivedFighterFields: updateDerivedFighterFields,
+    updateAllDerived: updateAllDerived,
+    rankForFighter: rankForFighter,
+    ranking: ranking
+  };
+}());

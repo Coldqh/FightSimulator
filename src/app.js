@@ -1,1 +1,130 @@
-(function(){"use strict";var Storage=window.FS.Storage,State=window.FS.State,World=window.FS.World,Fight=window.FS.Fight,Render=window.FS.Render,Data=window.FightSimData,U=window.FS.Utils,app=document.getElementById("app"),state=State.normalizeLoadedState(Storage.load());function saveRender(){Storage.save(state);render()}function ensure(){if(!state){return}state.rankingCountryId=state.rankingCountryId||state.player.countryId;state.rankingTrackId=state.rankingTrackId||state.player.trackId;if(!state.offers||state.offers.length!==3){World.refreshOffers(state)}}function createCareer(){var name=document.getElementById("careerName"),country=document.getElementById("careerCountry"),track=document.getElementById("careerTrack");state=State.createNewCareer({name:name?name.value.trim():"Новый боксёр",countryId:country?country.value:"russia",trackId:track?track.value:"amateur"});World.refreshOffers(state);saveRender()}function trainWeek(){var keys=Data.statKeys,key=keys[Math.floor(Math.random()*keys.length)],track=U.findTrack(state.player.trackId);state.player.stats[key]=U.clamp(state.player.stats[key]+1,1,track.maxStat);state.week+=1;state.feed="Тренировочная неделя завершена. Улучшен навык: "+Data.statLabels[key]+".";State.syncPlayerIntoRoster(state);World.simulateWorldWeek(state);World.refreshOffers(state);saveRender()}function nextWeek(){state.week+=1;state.feed="Неделя "+state.week+". Список боёв обновлён.";State.syncPlayerIntoRoster(state);World.simulateWorldWeek(state);World.refreshOffers(state);saveRender()}function reset(){Storage.clear();state=null;render()}function closeModal(){state.modal=null;saveRender()}function openFighter(id){if(!State.getFighterById(state,id)){return}state.modal={type:"fighter",fighterId:id};saveRender()}function render(){if(!state||!state.player){app.innerHTML=Render.startScreen();return}ensure();app.innerHTML=Render.dashboard(state)}document.addEventListener("click",function(e){var b=e.target.closest("button");if(!b){return}if(b.dataset.action==="create-career"){createCareer();return}if(!state){return}if(b.dataset.action==="next-week"){nextWeek()}else if(b.dataset.action==="train-week"){trainWeek()}else if(b.dataset.action==="reset-career"){reset()}else if(b.dataset.action==="close-modal"){closeModal()}else if(b.dataset.tab){state.selectedTab=b.dataset.tab;saveRender()}else if(b.dataset.fight){Fight.resolveFight(state,b.dataset.fight);saveRender()}else if(b.dataset.fighter){openFighter(b.dataset.fighter)}else if(b.dataset.rankingCountry){state.rankingCountryId=b.dataset.rankingCountry;saveRender()}else if(b.dataset.rankingTrack){state.rankingTrackId=b.dataset.rankingTrack;saveRender()}});document.addEventListener("change",function(e){var t=e.target;if(!state||!t||!t.dataset){return}if(t.dataset.action==="set-country"){World.setPlayerCountry(state,t.value);saveRender()}else if(t.dataset.action==="set-track"){World.setPlayerTrack(state,t.value);saveRender()}});render();}());
+(function () {
+  "use strict";
+
+  window.FS = window.FS || {};
+
+  var Storage = window.FS.Storage;
+  var State = window.FS.State;
+  var World = window.FS.World;
+  var Fight = window.FS.Fight;
+  var Render = window.FS.Render;
+  var U = window.FS.Utils;
+  var app = document.getElementById("app");
+  var state = Storage.load();
+
+  function saveAndRender() {
+    Storage.save(state);
+    render();
+  }
+
+  function createCareerFromForm() {
+    state = State.createCareer({
+      name: document.getElementById("careerName").value.trim(),
+      countryId: document.getElementById("careerCountry").value,
+      trackId: document.getElementById("careerTrack").value
+    });
+
+    World.bootstrapWorld(state);
+    saveAndRender();
+  }
+
+  function resetCareer() {
+    Storage.clear();
+    state = null;
+    render();
+  }
+
+  function render() {
+    if (!state || !State.player(state)) {
+      app.innerHTML = Render.start();
+      return;
+    }
+
+    if (!state.offers || state.offers.length !== 3) {
+      World.refreshOffers(state);
+      Storage.save(state);
+    }
+
+    app.innerHTML = Render.dashboard(state);
+  }
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    var preview;
+    if (!button) {
+      return;
+    }
+
+    if (button.dataset.action === "create-career") {
+      createCareerFromForm();
+      return;
+    }
+
+    if (!state) {
+      return;
+    }
+
+    if (button.dataset.action === "reset-career") {
+      resetCareer();
+    } else if (button.dataset.action === "next-week") {
+      state.feed = "Неделя " + (state.week + 1) + ". Мир сделал недельный ход.";
+      World.advanceWeek(state, "skip");
+      saveAndRender();
+    } else if (button.dataset.action === "train-week") {
+      State.trainPlayer(state);
+      World.advanceWeek(state, "training");
+      saveAndRender();
+    } else if (button.dataset.action === "close-modal") {
+      state.modal = null;
+      saveAndRender();
+    } else if (button.dataset.tab) {
+      state.selectedTab = button.dataset.tab;
+      saveAndRender();
+    } else if (button.dataset.previewFight) {
+      preview = Fight.buildFightPreview(state, button.dataset.previewFight);
+      if (preview) {
+        state.modal = preview;
+        saveAndRender();
+      }
+    } else if (button.dataset.acceptFight) {
+      Fight.resolvePlayerFight(state, button.dataset.acceptFight);
+      saveAndRender();
+    } else if (button.dataset.fighter) {
+      state.modal = {
+        type: "fighter",
+        fighterId: button.dataset.fighter
+      };
+      saveAndRender();
+    } else if (button.dataset.rankingCountry) {
+      state.rankingCountryId = button.dataset.rankingCountry;
+      saveAndRender();
+    } else if (button.dataset.rankingTrack) {
+      state.rankingTrackId = button.dataset.rankingTrack;
+      saveAndRender();
+    } else if (button.dataset.trainStat) {
+      State.trainPlayer(state, button.dataset.trainStat);
+      World.advanceWeek(state, "training");
+      saveAndRender();
+    }
+  });
+
+  document.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!state || !target || !target.dataset) {
+      return;
+    }
+
+    if (target.dataset.action === "set-country") {
+      State.setPlayerCountry(state, target.value);
+      World.refreshOffers(state);
+      saveAndRender();
+    } else if (target.dataset.action === "set-track") {
+      if (State.setPlayerTrack(state, target.value)) {
+        World.refreshOffers(state);
+      }
+      saveAndRender();
+    }
+  });
+
+  render();
+}());

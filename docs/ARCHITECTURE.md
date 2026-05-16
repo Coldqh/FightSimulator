@@ -1,56 +1,37 @@
 # Architecture
 
-## Структура
+## index.html
+Только подключает CSS и JS. Логики внутри нет.
 
-```text
-index.html
-manifest.webmanifest
-version.json
-src/styles.css
-src/data/game-data.js
-src/core/utils.js
-src/core/storage.js
-src/core/state.js
-src/core/world.js
-src/core/fight.js
-src/ui/render.js
-src/app.js
-```
+## src/data/game-data.js
+Страны, пути, имена, роли, ранги, настройки.
 
-## Ответственность
+## src/core/utils.js
+Общие функции: html escaping, random, clamp, поиск страны/пути, рейтинг.
 
-### src/data/game-data.js
+## src/core/storage.js
+Сохранение, загрузка, очистка, импорт/экспорт.
 
-Статичные данные: страны, пути, роли людей, названия боёв, базовые выплаты, названия характеристик.
+## src/core/state.js
+Создание карьеры, ростер, игрок, люди, тренировка, смена страны/пути, рейтинги.
 
-### src/core/utils.js
+## src/core/world.js
+Недельная симуляция мира:
+- NPC бои;
+- переходы;
+- сборные;
+- новости;
+- офферы.
 
-Общие функции: escapeHtml, random, clamp, поиск страны, поиск пути, расчёт рейтинга, формат рекорда.
+## src/core/fight.js
+Предпросмотр и расчёт боя игрока.
 
-### src/core/storage.js
+## src/ui/render.js
+Весь HTML UI:
+- старт;
+- dashboard;
+- вкладки;
+- модальные окна.
 
-Сохранения: load, save, clear, SAVE_KEY.
-
-### src/core/state.js
-
-Состояние: создание карьеры, ростер, люди, поиск бойца, рейтинг, нормализация сохранений.
-
-### src/core/world.js
-
-Мир: 3 оффера, недельная симуляция NPC, переходы, ограничения переходов, события недели.
-
-### src/core/fight.js
-
-Бои: расчёт результата, обновление рекорда, окно результата, запуск недельной симуляции после боя.
-
-### src/ui/render.js
-
-Рендер: старт, dashboard, вкладки, рейтинги, мир, модальные окна.
-
-### src/app.js
-
-Связка: загрузка, DOM-события, действия пользователя, save/render.
-
-## Правило развития
-
-Новая механика не добавляется в `render.js`. UI только отображает состояние и отправляет команды.
+## src/app.js
+Связка событий UI с core-логикой.
