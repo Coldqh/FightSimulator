@@ -9,35 +9,6 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  function repairRecord(record) {
-    var safe = record && typeof record === "object" ? record : {};
-    var wins = clamp(Number(safe.wins) || 0, 0, 80);
-    var losses = clamp(Number(safe.losses) || 0, 0, 80);
-    var draws = clamp(Number(safe.draws) || 0, 0, 20);
-    var kos = clamp(Number(safe.kos) || 0, 0, wins);
-
-    return {
-      wins: wins,
-      losses: losses,
-      draws: draws,
-      kos: kos
-    };
-  }
-
-  function repairFighter(fighter) {
-    if (!fighter || typeof fighter !== "object") {
-      return;
-    }
-
-    fighter.record = repairRecord(fighter.record);
-    fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
-    fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
-    fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
-    fighter.weightClassId = fighter.weightClassId || "welter";
-    fighter.trackId = fighter.trackId || "amateur";
-    fighter.countryId = fighter.countryId || "russia";
-  }
-
   function readRaw(key) {
     try {
       return localStorage.getItem(key);
@@ -56,24 +27,79 @@
     }
   }
 
+  function repairRecord(record) {
+    var safe = record && typeof record === "object" ? record : {};
+    var wins = clamp(Number(safe.wins) || 0, 0, 80);
+    var losses = clamp(Number(safe.losses) || 0, 0, 80);
+    var draws = clamp(Number(safe.draws) || 0, 0, 20);
+    var kos = clamp(Number(safe.kos) || 0, 0, wins);
+
+    return {
+      wins: wins,
+      losses: losses,
+      draws: draws,
+      kos: kos
+    };
+  }
+
+  function repairStats(stats, trackId) {
+    var safe = stats && typeof stats === "object" ? stats : {};
+    var cap = 200;
+
+    if (window.FS && window.FS.Utils && window.FS.Utils.findTrack) {
+      cap = window.FS.Utils.findTrack(trackId).maxStat;
+    }
+
+    return {
+      power: clamp(Number(safe.power) || 35, 1, cap),
+      technique: clamp(Number(safe.technique) || 35, 1, cap),
+      speed: clamp(Number(safe.speed) || 35, 1, cap),
+      stamina: clamp(Number(safe.stamina) || 35, 1, cap),
+      defense: clamp(Number(safe.defense) || 35, 1, cap)
+    };
+  }
+
+  function repairFighter(fighter) {
+    if (!fighter || typeof fighter !== "object") {
+      return;
+    }
+
+    fighter.trackId = fighter.trackId || "amateur";
+    fighter.countryId = fighter.countryId || "russia";
+    fighter.weightClassId = fighter.weightClassId || "welter";
+    fighter.stanceId = fighter.stanceId || "orthodox";
+    fighter.age = clamp(Number(fighter.age) || 18, 16, 48);
+    fighter.record = repairRecord(fighter.record);
+    fighter.stats = repairStats(fighter.stats, fighter.trackId);
+    fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
+    fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
+    fighter.lastMoveWeek = Number(fighter.lastMoveWeek) || 1;
+    fighter.lastFightWeek = Number(fighter.lastFightWeek) || 0;
+  }
+
   function migrate(state) {
+    var i;
+
     if (!state || typeof state !== "object") {
       return null;
     }
 
     state.version = Data.appVersion;
+    state.week = Math.max(1, Number(state.week) || 1);
     state.selectedTab = state.selectedTab || "dashboard";
     state.rankingCountryId = state.rankingCountryId || "russia";
     state.rankingTrackId = state.rankingTrackId || "amateur";
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
     state.selectedTacticId = state.selectedTacticId || "balanced";
-    state.modal = state.modal || null;
+    state.modal = null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];
     state.offers = state.offers instanceof Array ? state.offers : [];
     state.clubs = state.clubs instanceof Array ? state.clubs : [];
     state.titles = state.titles && typeof state.titles === "object" ? state.titles : {};
     state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+    state.feed = state.feed || "Сохранение загружено.";
 
     if (!state.world || typeof state.world !== "object") {
       state.world = {};
@@ -85,7 +111,7 @@
     state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
     state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
 
-    for (var i = 0; i < state.roster.length; i += 1) {
+    for (i = 0; i < state.roster.length; i += 1) {
       repairFighter(state.roster[i]);
     }
 
@@ -144,10 +170,20 @@
     }
   }
 
+  function exportString(state) {
+    return JSON.stringify(migrate(JSON.parse(JSON.stringify(state))), null, 2);
+  }
+
+  function importString(raw) {
+    return migrate(parse(raw));
+  }
+
   window.FS.Storage = {
     load: load,
     save: save,
     clear: clear,
-    migrate: migrate
+    migrate: migrate,
+    exportString: exportString,
+    importString: importString
   };
 }());

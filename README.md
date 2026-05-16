@@ -4,15 +4,13 @@ Static modular boxing sim.
 
 ## Current version
 
-`vertical-slice-1.0.1`
+`foundation-pack-1.1.0`
 
-## Hotfix focus
+## Patch focus
 
-- Cleaned overview screen.
-- Removed sidebar selectors.
-- Fixed impossible fight chances caused by oversized NPC records.
-- Repaired records during save migration.
-- Removed Titles tab from UI.
-- Champions are now shown with crowns in ranking.
-- Clubs are filtered by country and open as cards.
-- World tab is now Amateur Path and shows only player's national team.
+- Career settings are moved into a dedicated tab.
+- Save repair/export/import.
+- Better fight preview and round log.
+- Path progress blocks for amateur/street/pro.
+- Champion challenge stays in ranking, no separate titles tab.
+- State repair runs safely during load/render.

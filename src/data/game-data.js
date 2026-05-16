@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "vertical-slice-1.0.1",
+    appVersion: "foundation-pack-1.1.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

@@ -1,13 +1,13 @@
 {
-  "version": "vertical-slice-1.0.1",
-  "mode": "hotfix-cleanup",
-  "fixes": [
-    "dashboard cleanup",
-    "sidebar cleanup",
-    "fight chance fix",
-    "record repair",
-    "champions as crowns in ranking",
-    "clubs filtered by country",
-    "world tab renamed to amateur path"
+  "version": "foundation-pack-1.1.0",
+  "mode": "foundation-pack",
+  "patches": [
+    "career settings screen",
+    "save export import repair",
+    "path progress",
+    "better fight preview and round log",
+    "ranking champion challenge",
+    "more detailed fight stats",
+    "state repair on render"
   ]
 }

@@ -5,7 +5,10 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const sandbox = {
   console,
-  window: {},
+  window: {
+    prompt() { return ""; },
+    alert() {}
+  },
   localStorage: {
     store: {},
     getItem(key) { return this.store[key] || null; },
@@ -13,8 +16,10 @@ const sandbox = {
     removeItem(key) { delete this.store[key]; }
   }
 };
-sandbox.window = sandbox;
-sandbox.global = sandbox;
+sandbox.window.window = sandbox.window;
+sandbox.window.console = console;
+sandbox.window.localStorage = sandbox.localStorage;
+sandbox.global = sandbox.window;
 
 [
   "src/data/game-data.js",
@@ -28,10 +33,10 @@ sandbox.global = sandbox;
   "src/core/fight.js",
   "src/ui/render.js"
 ].forEach((file) => {
-  vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox, { filename: file });
+  vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox.window, { filename: file });
 });
 
-const FS = sandbox.FS;
+const FS = sandbox.window.FS;
 
 let state = FS.State.createCareer({
   name: "Smoke",
@@ -43,10 +48,12 @@ let state = FS.State.createCareer({
 });
 
 FS.World.bootstrapWorld(state);
+FS.State.repairState(state);
 
 if (!state.offers || state.offers.length !== 3) throw new Error("offers != 3");
 if (!state.clubs.length) throw new Error("clubs not created");
 if (!Object.keys(state.titles).length) throw new Error("titles not created");
+if (!state.trackedFighterIds.length) throw new Error("tracked fighter missing");
 
 const p = FS.State.player(state);
 p.stats.power = 85;
@@ -55,33 +62,65 @@ p.stats.speed = 85;
 p.stats.stamina = 85;
 p.stats.defense = 85;
 
-const preview = FS.Fight.buildFightPreview(state, state.offers[0].id);
-if (!preview || preview.winChance <= 12) throw new Error("fight chance stuck at floor");
-
-const huge = state.roster[0];
-huge.record = { wins: 12508, losses: 0, draws: 0, kos: 9999 };
-const migrated = FS.Storage.migrate(state);
-if (migrated.roster[0].record.wins > 80) throw new Error("record repair failed");
+FS.State.setTactic(state, "pressure");
+let preview = FS.Fight.buildFightPreview(state, state.offers[0].id);
+if (!preview || preview.winChance <= 12 || !preview.expectation) throw new Error("fight preview bad");
 
 FS.Fight.resolvePlayerFight(state, state.offers[0].id);
 if (!state.modal || state.modal.type !== "fightResult") throw new Error("fight result failed");
+if (!state.modal.roundLog || !state.modal.roundLog.length) throw new Error("round log missing");
+if (!state.modal.statsLine) throw new Error("fight stats missing");
+
+const exported = FS.Storage.exportString(state);
+const imported = FS.Storage.importString(exported);
+if (!imported || !FS.State.player(imported)) throw new Error("export/import failed");
+
+const progress = FS.State.pathProgress(state, p);
+if (!progress || !progress.lines || !progress.lines.length) throw new Error("path progress failed");
 
 for (let i = 0; i < 4; i += 1) {
   FS.World.advanceWeek(state, "skip");
 }
 
 const html = FS.Render.dashboard(state);
-["Обзор", "Рейтинг", "Мой клуб", "Клубы", "Любительский путь"].forEach((word) => {
+[
+  "Версия",
+  FS.Data.appVersion,
+  "Настройки",
+  "Любительский путь",
+  "Мой клуб"
+].forEach((word) => {
   if (!html.includes(word)) throw new Error("render missing " + word);
 });
-["Титулы</button>", "Последние новости", "Ближайшие бои", "Пока только список"].forEach((bad) => {
+
+state.selectedTab = "settings";
+const settingsHtml = FS.Render.dashboard(state);
+[
+  "Экспорт",
+  "Импорт",
+  "Починить сохранение",
+  "Настройки карьеры"
+].forEach((word) => {
+  if (!settingsHtml.includes(word)) throw new Error("settings render missing " + word);
+});
+
+state.selectedTab = "ranking";
+const rankingHtml = FS.Render.dashboard(state);
+if (!rankingHtml.includes("👑")) throw new Error("ranking crown missing");
+
+[
+  "Season Bundle 0.9.0",
+  "Старый монолит",
+  "Титулы</button>"
+].forEach((bad) => {
   if (html.includes(bad)) throw new Error("forbidden UI text found: " + bad);
 });
 
-console.log("vertical slice hotfix smoke ok", {
+console.log("foundation pack smoke ok", {
   version: FS.Data.appVersion,
   week: state.week,
   chance: preview.winChance,
   offers: state.offers.length,
-  clubs: state.clubs.length
+  clubs: state.clubs.length,
+  stories: state.world.stories.length
 });

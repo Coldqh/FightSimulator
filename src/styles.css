@@ -475,3 +475,9 @@ input:focus, select:focus {
   .brand { align-items: flex-start; }
   .logo { width: 46px; height: 46px; font-size: 18px; }
 }
+
+
+.modal textarea {
+  font-family: Consolas, "Courier New", monospace;
+  resize: vertical;
+}

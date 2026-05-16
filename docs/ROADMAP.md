@@ -1,27 +1,40 @@
 # Roadmap
 
-## 1.0.1 Hotfix
+## 1.1.0 Foundation Pack
 
-- Remove extra dashboard blocks.
-- Remove titles tab.
-- Show champions as crowns in rankings.
-- Fix insane records.
-- Fix fight chance calculation.
-- Simplify player sidebar.
-- Rework club UI with country filtering and club modal.
-- Rename World to Amateur Path.
-- Keep only player's national team there.
+- Career settings tab.
+- Save repair/export/import.
+- Improved fight preview and round logs.
+- Better win chance model.
+- Path progress UI.
+- Champion challenge from ranking.
+- More robust state repair.
 
-## Next: 1.0.2 Bugfix pass
+## 1.1.x bugfix
 
-- Test title/crown consistency.
-- Balance fight chances.
-- Check save migration with old careers.
-- Improve club modal layout.
-- Add missing empty states.
+- Balance fight chance.
+- Check old saves.
+- Improve club card layout.
+- Tune title challenge eligibility.
 
-## Later: 1.1
+## 1.2
 
-- Better onboarding.
-- Dedicated career settings screen.
-- Better amateur path progression.
+- Realistic records and matchmaking pass.
+- Better distinction between official and street records.
+- Better amateur rank progression.
+
+## 1.3
+
+- Amateur competitions.
+- City/regional/national ladder.
+- National team goals.
+
+## 1.4
+
+- Street path systems.
+- Street rankings and risk.
+
+## 1.5
+
+- Pro contracts/promoters.
+- Regional titles and title defenses.

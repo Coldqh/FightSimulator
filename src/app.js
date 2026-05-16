@@ -16,6 +16,13 @@
     render();
   }
 
+  function rebuildWorld(message) {
+    State.repairState(state);
+    World.bootstrapWorld(state);
+    World.refreshOffers(state);
+    state.feed = message || "Состояние игры обновлено.";
+  }
+
   function createCareerFromForm() {
     state = State.createCareer({
       name: document.getElementById("careerName").value.trim(),
@@ -36,11 +43,32 @@
     render();
   }
 
+  function importSave() {
+    var raw = window.prompt("Вставь JSON сохранения:");
+    var imported;
+
+    if (!raw) {
+      return;
+    }
+
+    imported = Storage.importString(raw);
+    if (!imported || !State.player(imported)) {
+      window.alert("Не удалось импортировать сохранение.");
+      return;
+    }
+
+    state = imported;
+    rebuildWorld("Сохранение импортировано.");
+    saveAndRender();
+  }
+
   function render() {
     if (!state || !State.player(state)) {
       app.innerHTML = Render.start();
       return;
     }
+
+    State.repairState(state);
 
     if (!state.offers || state.offers.length !== 3) {
       World.refreshOffers(state);
@@ -77,6 +105,17 @@
       State.trainPlayer(state);
       World.advanceWeek(state, "training");
       saveAndRender();
+    } else if (button.dataset.action === "repair-save") {
+      rebuildWorld("Сохранение проверено и починено.");
+      saveAndRender();
+    } else if (button.dataset.action === "export-save") {
+      state.modal = {
+        type: "saveExport",
+        payload: Storage.exportString(state)
+      };
+      saveAndRender();
+    } else if (button.dataset.action === "import-save") {
+      importSave();
     } else if (button.dataset.action === "close-modal") {
       state.modal = null;
       saveAndRender();
@@ -144,6 +183,9 @@
 
     if (target.dataset.action === "set-country") {
       State.setPlayerCountry(state, target.value);
+      if (window.FS.Clubs) {
+        window.FS.Clubs.ensureClubs(state);
+      }
       World.refreshOffers(state);
       saveAndRender();
     } else if (target.dataset.action === "set-track") {

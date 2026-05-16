@@ -285,6 +285,130 @@
       });
   }
 
+
+  function repairState(state) {
+    var i;
+    var p;
+
+    if (!state) {
+      return null;
+    }
+
+    state.version = Data.appVersion;
+    state.week = Math.max(1, Number(state.week) || 1);
+    state.selectedTacticId = U.findTactic ? U.findTactic(state.selectedTacticId || "balanced").id : (state.selectedTacticId || "balanced");
+    state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+    state.offers = state.offers instanceof Array ? state.offers : [];
+    state.clubs = state.clubs instanceof Array ? state.clubs : [];
+    state.titles = state.titles && typeof state.titles === "object" ? state.titles : {};
+    state.people = state.people instanceof Array ? state.people : [];
+    if (!state.world) {
+      state.world = { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [] };
+    }
+    state.world.news = state.world.news instanceof Array ? state.world.news : [];
+    state.world.weekReports = state.world.weekReports instanceof Array ? state.world.weekReports : [];
+    state.world.teamsByCountry = state.world.teamsByCountry || {};
+    state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
+    state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
+
+    for (i = 0; i < state.roster.length; i += 1) {
+      state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];
+      state.roster[i].careerLog = state.roster[i].careerLog instanceof Array ? state.roster[i].careerLog : [];
+      state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
+      updateDerivedFighterFields(state.roster[i]);
+    }
+
+    p = player(state);
+    if (p) {
+      state.rankingCountryId = state.rankingCountryId || p.countryId;
+      state.rankingTrackId = state.rankingTrackId || p.trackId;
+      state.rankingWeightClassId = state.rankingWeightClassId || p.weightClassId;
+    }
+
+    return state;
+  }
+
+  function playerRank(state, countryId, trackId, weightClassId) {
+    var p = player(state);
+    var list;
+    var i;
+
+    if (!p) {
+      return 0;
+    }
+
+    list = ranking(state, countryId || p.countryId, trackId || p.trackId, weightClassId || p.weightClassId);
+    for (i = 0; i < list.length; i += 1) {
+      if (list[i].id === p.id) {
+        return i + 1;
+      }
+    }
+
+    return 0;
+  }
+
+  function pathProgress(state, fighter) {
+    var target = fighter || player(state);
+    var rank;
+    var score;
+    var nextRank;
+    var i;
+
+    if (!target) {
+      return {
+        title: "Нет данных",
+        lines: []
+      };
+    }
+
+    score = U.statAverage(target.stats);
+
+    if (target.trackId === "amateur") {
+      rank = rankForFighter(target);
+      nextRank = null;
+
+      for (i = 0; i < Data.amateurRanks.length; i += 1) {
+        if (score < Data.amateurRanks[i].minRating) {
+          nextRank = Data.amateurRanks[i];
+          break;
+        }
+      }
+
+      return {
+        title: "Любительский путь",
+        badge: rank.label,
+        lines: [
+          "Текущий разряд: " + rank.label,
+          nextRank ? ("Следующий разряд: " + nextRank.label + " с рейтинга " + nextRank.minRating) : "Следующий разряд: максимум текущей шкалы",
+          "Позиция в дивизионе: #" + (playerRank(state, target.countryId, target.trackId, target.weightClassId) || "—")
+        ]
+      };
+    }
+
+    if (target.trackId === "street") {
+      return {
+        title: "Уличный путь",
+        badge: "Рейтинг " + (target.streetRating || score),
+        lines: [
+          "Уличный рейтинг: " + (target.streetRating || score),
+          "Сильная сторона: быстрый рост через частые бои",
+          "Переход в любители доступен при хорошем уровне"
+        ]
+      };
+    }
+
+    return {
+      title: "Профессиональный путь",
+      badge: "Профи " + (target.proRating || score),
+      lines: [
+        "Профи-рейтинг: " + (target.proRating || score),
+        "Позиция в дивизионе: #" + (playerRank(state, target.countryId, target.trackId, target.weightClassId) || "—"),
+        "Титульный вызов открывается около топ-3"
+      ]
+    };
+  }
+
+
   window.FS.State = {
     createCareer: createCareer,
     createFighter: createFighter,
@@ -299,6 +423,9 @@
     updateDerivedFighterFields: updateDerivedFighterFields,
     updateAllDerived: updateAllDerived,
     rankForFighter: rankForFighter,
-    ranking: ranking
+    ranking: ranking,
+    repairState: repairState,
+    playerRank: playerRank,
+    pathProgress: pathProgress
   };
 }());
