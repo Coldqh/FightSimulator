@@ -1,7 +1,16 @@
-# Fight Simulator — Ecosystem MVP Overlay 0.4.0
+# Fight Simulator
 
-Это overlay-сборка поверх текущего проекта. Новый runtime подключает только чистую архитектуру:
+Static browser boxing sim.
 
+## Current version
+
+`career-depth-0.5.0`
+
+## Runtime architecture
+
+The runtime intentionally uses only:
+
+- `index.html`
 - `src/data/game-data.js`
 - `src/core/utils.js`
 - `src/core/storage.js`
@@ -11,21 +20,18 @@
 - `src/ui/render.js`
 - `src/app.js`
 
-Старые тяжёлые файлы могут лежать в папке, но не участвуют в запуске.
+Old experimental files may remain in the repository, but they are not loaded by `index.html`.
 
-## Что появилось
+## Run locally
 
-- стабильное создание карьеры;
-- 3 боя в любой стране и любом пути;
-- предпросмотр боя;
-- окно результата боя;
-- карточки бойцов;
-- вкладка тренировки;
-- рейтинги с фильтрами;
-- вкладка мира;
-- сборная и резерв по стране;
-- NPC проводят бои каждую неделю;
-- NPC меняют путь: улица → любители → профи, профи → улица;
-- ограничения переходов после профи;
-- новости мира;
-- история карьеры конкретного бойца в карточке.
+```powershell
+cd C:\FightSimulator_GitHub
+start index.html
+```
+
+## Smoke test
+
+```powershell
+cd C:\FightSimulator_GitHub
+node tools\core-smoke-test.cjs
+```

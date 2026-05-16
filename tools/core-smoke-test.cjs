@@ -1,39 +1,58 @@
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
 
-const fs = require('fs');
-const vm = require('vm');
-const path = require('path');
-const base = process.argv[2];
-const context = {
+const root = path.resolve(__dirname, "..");
+const sandbox = {
+  console,
   window: {},
-  console: console,
   localStorage: {
-    _data: {},
-    getItem(k){ return this._data[k] || null; },
-    setItem(k,v){ this._data[k]=String(v); },
-    removeItem(k){ delete this._data[k]; }
+    store: {},
+    getItem(key) { return this.store[key] || null; },
+    setItem(key, value) { this.store[key] = String(value); },
+    removeItem(key) { delete this.store[key]; }
   }
 };
-context.window = context;
-vm.createContext(context);
-for (const file of [
-  'src/data/game-data.js',
-  'src/core/utils.js',
-  'src/core/storage.js',
-  'src/core/state.js',
-  'src/core/world.js',
-  'src/core/fight.js'
-]) {
-  vm.runInContext(fs.readFileSync(path.join(base,file),'utf8'), context, {filename:file});
-}
-let state = context.FS.State.createCareer({name:'Влад', countryId:'russia', trackId:'amateur'});
-context.FS.World.bootstrapWorld(state);
-if (!state.offers || state.offers.length !== 3) throw new Error('offers not 3');
-if (!state.world.teamsByCountry.russia) throw new Error('no team');
-const preview = context.FS.Fight.buildFightPreview(state, state.offers[0].id);
-if (!preview || preview.type !== 'fightPreview') throw new Error('no preview');
-context.FS.Fight.resolvePlayerFight(state, state.offers[0].id);
-if (state.week !== 2) throw new Error('week not advanced: '+state.week);
-context.FS.State.trainPlayer(state, 'power');
-context.FS.World.advanceWeek(state, 'training');
-if (state.week !== 3) throw new Error('week not advanced after training: '+state.week);
-console.log('core smoke ok', state.offers.length, state.world.news.length);
+sandbox.window = sandbox;
+sandbox.global = sandbox;
+
+[
+  "src/data/game-data.js",
+  "src/core/utils.js",
+  "src/core/storage.js",
+  "src/core/state.js",
+  "src/core/world.js",
+  "src/core/fight.js",
+  "src/ui/render.js"
+].forEach((file) => {
+  vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox, { filename: file });
+});
+
+const FS = sandbox.FS;
+let state = FS.State.createCareer({
+  name: "Smoke",
+  age: 18,
+  countryId: "russia",
+  trackId: "amateur",
+  weightClassId: "welter",
+  stanceId: "orthodox"
+});
+
+FS.World.bootstrapWorld(state);
+
+if (!state.offers || state.offers.length !== 3) throw new Error("Expected exactly 3 offers.");
+if (!state.world.teamsByCountry.russia || !state.world.teamsByCountry.russia.main.length) throw new Error("Expected national team.");
+const preview = FS.Fight.buildFightPreview(state, state.offers[0].id);
+if (!preview || preview.type !== "fightPreview" || typeof preview.winChance !== "number") throw new Error("Preview failed.");
+FS.Fight.resolvePlayerFight(state, state.offers[0].id);
+if (!state.modal || state.modal.type !== "fightResult") throw new Error("Result modal missing.");
+const weekAfterFight = state.week;
+FS.World.advanceWeek(state, "skip");
+if (state.week !== weekAfterFight + 1) throw new Error("Week failed.");
+FS.State.trainPlayer(state, "speed");
+FS.World.advanceWeek(state, "training");
+const ranking = FS.State.ranking(state, "russia", "amateur", "welter");
+if (!ranking.length) throw new Error("Ranking empty.");
+const html = FS.Render.dashboard(state);
+if (!html.includes("Fight Simulator") || !html.includes("Вес")) throw new Error("Render output bad.");
+console.log("core smoke ok", { week: state.week, offers: state.offers.length, ranking: ranking.length, version: FS.Data.appVersion });

@@ -1,14 +1,11 @@
 (function () {
   "use strict";
-
   window.FS = window.FS || {};
-
   var Storage = window.FS.Storage;
   var State = window.FS.State;
   var World = window.FS.World;
   var Fight = window.FS.Fight;
   var Render = window.FS.Render;
-  var U = window.FS.Utils;
   var app = document.getElementById("app");
   var state = Storage.load();
 
@@ -20,10 +17,12 @@
   function createCareerFromForm() {
     state = State.createCareer({
       name: document.getElementById("careerName").value.trim(),
+      age: Math.max(16, Math.min(40, parseInt(document.getElementById("careerAge").value, 10) || 18)),
       countryId: document.getElementById("careerCountry").value,
-      trackId: document.getElementById("careerTrack").value
+      trackId: document.getElementById("careerTrack").value,
+      weightClassId: document.getElementById("careerWeightClass").value,
+      stanceId: document.getElementById("careerStance").value
     });
-
     World.bootstrapWorld(state);
     saveAndRender();
   }
@@ -39,30 +38,22 @@
       app.innerHTML = Render.start();
       return;
     }
-
     if (!state.offers || state.offers.length !== 3) {
       World.refreshOffers(state);
       Storage.save(state);
     }
-
     app.innerHTML = Render.dashboard(state);
   }
 
   document.addEventListener("click", function (event) {
     var button = event.target.closest("button");
     var preview;
-    if (!button) {
-      return;
-    }
-
+    if (!button) { return; }
     if (button.dataset.action === "create-career") {
       createCareerFromForm();
       return;
     }
-
-    if (!state) {
-      return;
-    }
+    if (!state) { return; }
 
     if (button.dataset.action === "reset-career") {
       resetCareer();
@@ -82,24 +73,21 @@
       saveAndRender();
     } else if (button.dataset.previewFight) {
       preview = Fight.buildFightPreview(state, button.dataset.previewFight);
-      if (preview) {
-        state.modal = preview;
-        saveAndRender();
-      }
+      if (preview) { state.modal = preview; saveAndRender(); }
     } else if (button.dataset.acceptFight) {
       Fight.resolvePlayerFight(state, button.dataset.acceptFight);
       saveAndRender();
     } else if (button.dataset.fighter) {
-      state.modal = {
-        type: "fighter",
-        fighterId: button.dataset.fighter
-      };
+      state.modal = { type: "fighter", fighterId: button.dataset.fighter };
       saveAndRender();
     } else if (button.dataset.rankingCountry) {
       state.rankingCountryId = button.dataset.rankingCountry;
       saveAndRender();
     } else if (button.dataset.rankingTrack) {
       state.rankingTrackId = button.dataset.rankingTrack;
+      saveAndRender();
+    } else if (button.dataset.rankingWeight) {
+      state.rankingWeightClassId = button.dataset.rankingWeight;
       saveAndRender();
     } else if (button.dataset.trainStat) {
       State.trainPlayer(state, button.dataset.trainStat);
@@ -110,18 +98,17 @@
 
   document.addEventListener("change", function (event) {
     var target = event.target;
-    if (!state || !target || !target.dataset) {
-      return;
-    }
-
+    if (!state || !target || !target.dataset) { return; }
     if (target.dataset.action === "set-country") {
       State.setPlayerCountry(state, target.value);
       World.refreshOffers(state);
       saveAndRender();
     } else if (target.dataset.action === "set-track") {
-      if (State.setPlayerTrack(state, target.value)) {
-        World.refreshOffers(state);
-      }
+      if (State.setPlayerTrack(state, target.value)) { World.refreshOffers(state); }
+      saveAndRender();
+    } else if (target.dataset.action === "set-weight-class") {
+      State.setPlayerWeightClass(state, target.value);
+      World.refreshOffers(state);
       saveAndRender();
     }
   });

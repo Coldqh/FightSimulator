@@ -1,8 +1,5 @@
 cd C:\FightSimulator_GitHub
 
-Write-Host "This script only removes old runtime leftovers that are not used by the new MVP."
-Write-Host "It does NOT remove .git, docs, README, src, index.html, manifest, version."
-
 $targets = @(
   "data",
   "country_data.js",
@@ -20,4 +17,4 @@ foreach ($target in $targets) {
   }
 }
 
-Write-Host "Cleanup complete."
+Write-Host "Cleanup done. Modular runtime remains in index.html + src."

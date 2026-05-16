@@ -1,37 +1,27 @@
 # Architecture
 
-## index.html
-Только подключает CSS и JS. Логики внутри нет.
+## Loading order
 
-## src/data/game-data.js
-Страны, пути, имена, роли, ранги, настройки.
+`index.html` loads modules in this order:
 
-## src/core/utils.js
-Общие функции: html escaping, random, clamp, поиск страны/пути, рейтинг.
+1. `src/data/game-data.js`
+2. `src/core/utils.js`
+3. `src/core/storage.js`
+4. `src/core/state.js`
+5. `src/core/world.js`
+6. `src/core/fight.js`
+7. `src/ui/render.js`
+8. `src/app.js`
 
-## src/core/storage.js
-Сохранение, загрузка, очистка, импорт/экспорт.
+This order matches the current GitHub runtime and should not be broken.
 
-## src/core/state.js
-Создание карьеры, ростер, игрок, люди, тренировка, смена страны/пути, рейтинги.
+## Responsibilities
 
-## src/core/world.js
-Недельная симуляция мира:
-- NPC бои;
-- переходы;
-- сборные;
-- новости;
-- офферы.
-
-## src/core/fight.js
-Предпросмотр и расчёт боя игрока.
-
-## src/ui/render.js
-Весь HTML UI:
-- старт;
-- dashboard;
-- вкладки;
-- модальные окна.
-
-## src/app.js
-Связка событий UI с core-логикой.
+- `data`: static config.
+- `utils`: pure helpers.
+- `storage`: LocalStorage adapter.
+- `state`: player, roster, people, rankings, training, path changes.
+- `world`: weekly simulation, teams, transitions, offers.
+- `fight`: player fight preview and resolution.
+- `render`: HTML rendering.
+- `app`: DOM event routing.

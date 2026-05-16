@@ -1,51 +1,35 @@
-# Test Checklist
+# Test checklist
 
-## Старт
-- Открыть `index.html`.
-- Нажать "Начать карьеру".
-- Карьера начинается сразу.
-- В стартовом пути нет моргания через другой путь.
+## Career creation
 
-## Бои
-- Во вкладке "Бои" ровно 3 боя.
-- Открывается предпросмотр боя.
-- Кнопка "Принять бой" проводит бой.
-- Окно результата закрывается.
-- Рекорд игрока меняется.
+- Create career in Russia, amateur, welter.
+- Create career in Mexico, street, light.
+- Create career in Japan, pro, heavy.
+- Career starts immediately.
 
-## Тренировка
-- Открыть "Тренировка".
-- Нажать любой навык.
-- Неделя увеличивается.
-- Навык увеличивается на 1.
+## Offers
 
-## Рейтинг
-- Фильтры страны работают.
-- Фильтры пути работают.
-- Открывается карточка бойца.
+- Every country/path/weight combination has 3 offers.
+- Opening fight preview works.
+- Accepting fight works.
+- Fight result modal works.
 
-## Мир
-- Смена недели создаёт новости.
-- В сборной есть состав и резерв.
-- NPC бои появляются в новостях.
-- После нескольких недель есть переходы NPC.
+## Week
 
-## Переходы игрока
-- Перейти в профи.
-- Попробовать вернуться в любители — должно быть запрещено.
-- Перейти из профи на улицу.
-- Попробовать вернуться в профи — должно быть запрещено.
+- Next week works.
+- Training week works.
+- NPC news updates.
+- Ranking changes after several weeks.
 
+## Filters
 
-## Автотест ядра
+- Ranking country filter works.
+- Ranking path filter works.
+- Ranking weight filter works.
+
+## Smoke test
 
 ```powershell
 cd C:\FightSimulator_GitHub
 node tools\core-smoke-test.cjs
-```
-
-Ожидаемый вывод:
-
-```text
-core smoke ok 3 ...
 ```

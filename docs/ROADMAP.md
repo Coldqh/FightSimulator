@@ -1,78 +1,42 @@
-# Roadmap Fight Simulator
+# Fight Simulator Roadmap
 
-## Уже входит в этот zip — Ecosystem MVP 0.4.0
+## Done in 0.5.0 Career Depth
 
-### 1. Архитектура
-- Разделение на data/core/ui.
-- Старый тяжёлый runtime не подключается.
-- Сохранение через отдельный storage слой.
-- Мир, бой, состояние и UI разделены.
+- Modular runtime kept compatible with current GitHub `index.html`.
+- Weight classes added.
+- Stance and age added to career creation.
+- Ranking filters now include country, path and weight class.
+- Matchmaking now searches by country, path and weight class.
+- Fight preview shows win chance.
+- Fight result shows score/method/purse.
+- NPC weekly training added.
+- NPC weekly fights remain lightweight.
+- NPC track transitions remain constrained.
+- Player profile tab added.
+- Player can change weight class.
+- Old heavy systems remain disconnected from runtime.
 
-### 2. Базовая карьера
-- Создание карьеры.
-- Выбор страны.
-- Выбор пути: улица / любители / профи.
-- Тренировка по конкретному навыку.
-- Смена недели.
+## Next: 0.6.0 Fight Layer
 
-### 3. Бои
-- Всегда 3 доступных боя.
-- Предпросмотр боя.
-- Результат боя в модальном окне.
-- Обновление рекорда игрока и соперника.
+- Round-by-round fight log.
+- Judges cards.
+- Knockdown chance.
+- Different rule profiles for street/amateur/pro.
+- Tactical choice before fight: pressure / balanced / careful.
+- Clear post-fight summary.
 
-### 4. Мир
-- NPC проводят бои каждую неделю.
-- Новости мира.
-- NPC переходят между путями.
-- После профи нельзя вернуться в любители.
-- После ухода из профи на улицу возврат в профи закрывается.
+## Then: 0.7.0 Club Layer
 
-### 5. Рейтинги
-- Фильтр по стране.
-- Фильтр по пути.
-- Карточки бойцов.
-- История карьеры бойца в профиле.
+- Gyms as simple entities.
+- Trainer as simple entity without relationship bars.
+- Clubmate tracking.
+- Gym roster screen.
+- Club-level rankings.
 
-### 6. Сборные
-- Автоматический состав топ-4 любителей страны.
-- Резерв топ-4 после состава.
+## Then: 0.8.0 Titles and Championships
 
-## Следующий zip — Career Depth 0.5.0
-
-- Любительские разряды в UI и прогресс разрядов.
-- Уличный рейтинг.
-- Профи-рейтинг.
-- Разные правила развития характеристик по путям.
-- Более умный matchmaking.
-- Больше стран.
-- Весовые категории.
-- Отдельный экран бойца игрока.
-- Базовые достижения без перегруза.
-
-## Дальше — Fight Layer 0.6.0
-
-- Раунды.
-- Решение судей по раундам.
-- Простой план боя.
-- Разные правила: улица / любители / профи.
-- Шанс нокдаунов.
-- Лог боя.
-
-## Дальше — Living World 0.7.0
-
-- Клубы.
-- Тренеры без отношений и шкал.
-- Карьерные истории NPC.
-- Чемпионы.
-- Титульные бои.
-- Новостная лента мира.
-
-## Только после стабильности
-
-- Травмы.
-- Спарринги.
-- Турниры.
-- Отношения.
-- События.
-- Архив истории мира.
+- Amateur national champions.
+- Street champions by country.
+- Pro regional belts.
+- Title fight eligibility.
+- Defenses and title history.
