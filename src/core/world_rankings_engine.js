@@ -115,15 +115,22 @@ var WorldRankingsEngine = (function () {
     projectionCache.profileViews = {};
   }
 
+  
   function defaultRankingVersionToken(gameState) {
     var roster = rosterRoot(gameState);
     var calendar = gameState && gameState.career ? gameState.career.calendar || {} : {};
+    var calendarView = typeof TimeSystem !== "undefined" && TimeSystem.getCalendarView ? TimeSystem.getCalendarView(calendar) : null;
+    var totalWeeks = typeof calendar.totalWeeks === "number" ? calendar.totalWeeks : 0;
+    var currentWeek = calendarView && typeof calendarView.weekNumber === "number" ? calendarView.weekNumber : (gameState && gameState.career && typeof gameState.career.week === "number" ? gameState.career.week : totalWeeks + 1);
+    var currentYear = calendarView && typeof calendarView.year === "number" ? calendarView.year : (typeof calendar.startYear === "number" ? calendar.startYear : 2026);
     var seasonState = getSeasonState(gameState);
     var orgState = gameState && gameState.organizationState ? gameState.organizationState : {};
+
     return [
       roster.fighterIds.length,
-      calendar.year || 0,
-      calendar.week || 0,
+      totalWeeks,
+      currentWeek,
+      currentYear,
       seasonState.currentSeasonYear || 0,
       seasonState.currentSeasonWeek || 0,
       seasonState.resultHistory instanceof Array ? seasonState.resultHistory.length : 0,

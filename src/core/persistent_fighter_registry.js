@@ -121,15 +121,22 @@ var PersistentFighterRegistry = (function () {
     mapObject[key].push(value);
   }
 
+  
   function defaultRosterVersionToken(gameState) {
     var roster = rosterRoot(gameState);
     var calendar = gameState && gameState.career ? gameState.career.calendar || {} : {};
+    var calendarView = typeof TimeSystem !== "undefined" && TimeSystem.getCalendarView ? TimeSystem.getCalendarView(calendar) : null;
+    var totalWeeks = typeof calendar.totalWeeks === "number" ? calendar.totalWeeks : 0;
+    var currentWeek = calendarView && typeof calendarView.weekNumber === "number" ? calendarView.weekNumber : (gameState && gameState.career && typeof gameState.career.week === "number" ? gameState.career.week : totalWeeks + 1);
+    var currentYear = calendarView && typeof calendarView.year === "number" ? calendarView.year : (typeof calendar.startYear === "number" ? calendar.startYear : 2026);
+
     return [
       roster.fighterIds.length,
       roster.gymIds ? roster.gymIds.length : 0,
       roster.trainerIds ? roster.trainerIds.length : 0,
-      calendar.year || 0,
-      calendar.week || 0
+      totalWeeks,
+      currentWeek,
+      currentYear
     ].join("|");
   }
 
