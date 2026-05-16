@@ -3,41 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#0f0f10">
   <title>Fight Simulator</title>
   <link rel="manifest" href="manifest.webmanifest">
   <style>
     :root {
-      --bg: #080a0f;
-      --panel: #111827;
-      --panel-soft: #172033;
-      --panel-strong: #1f2937;
-      --text: #f9fafb;
-      --muted: #9ca3af;
-      --line: rgba(255, 255, 255, 0.10);
-      --good: #86efac;
-      --bad: #fca5a5;
-      --warn: #fcd34d;
-      --accent: #93c5fd;
-      --button: #243044;
-      --button-hover: #334155;
-      --shadow: 0 18px 70px rgba(0, 0, 0, 0.32);
-      --radius: 22px;
+      --bg: #0b0b0c;
+      --bg-soft: #131416;
+      --panel: #17191c;
+      --panel-2: #1d2024;
+      --panel-3: #22262b;
+      --line: #2d3138;
+      --text: #f3f4f6;
+      --muted: #9aa1ab;
+      --red: #d62828;
+      --red-2: #b91c1c;
+      --gold: #d4a017;
+      --green: #16a34a;
+      --shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+      --radius: 16px;
+      --radius-lg: 22px;
     }
 
     * {
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
       margin: 0;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(59, 130, 246, 0.18), transparent 32rem),
-        radial-gradient(circle at bottom right, rgba(248, 113, 113, 0.10), transparent 28rem),
-        var(--bg);
+      padding: 0;
+      min-height: 100%;
+      background: var(--bg);
       color: var(--text);
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      background:
+        linear-gradient(180deg, rgba(212, 40, 40, 0.07), transparent 220px),
+        linear-gradient(0deg, rgba(212, 160, 23, 0.04), transparent 180px),
+        var(--bg);
     }
 
     button,
@@ -48,53 +53,62 @@
 
     button {
       border: 1px solid var(--line);
-      background: var(--button);
+      background: var(--panel-2);
       color: var(--text);
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 10px 14px;
       cursor: pointer;
-      transition: 0.12s ease;
+      transition: background 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
     }
 
     button:hover {
-      background: var(--button-hover);
+      background: #262a30;
+      border-color: #3a4049;
       transform: translateY(-1px);
     }
 
     button.primary {
-      background: #2563eb;
-      border-color: rgba(147, 197, 253, 0.55);
+      background: var(--red);
+      border-color: #ef4444;
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: var(--red-2);
+      border-color: #f87171;
+    }
+
+    button.secondary {
+      background: #252930;
     }
 
     button.danger {
-      background: rgba(185, 28, 28, 0.75);
-      border-color: rgba(252, 165, 165, 0.38);
-    }
-
-    button.ghost {
-      background: transparent;
+      background: #3a1717;
+      border-color: #5d2323;
+      color: #ffd7d7;
     }
 
     input,
     select {
       width: 100%;
       border: 1px solid var(--line);
-      background: #0f172a;
+      background: #101214;
       color: var(--text);
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 11px 12px;
       outline: none;
     }
 
     input:focus,
     select:focus {
-      border-color: rgba(147, 197, 253, 0.7);
+      border-color: #7f1d1d;
+      box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.14);
     }
 
-    .app {
-      width: min(1220px, calc(100% - 28px));
+    .app-shell {
+      width: min(1240px, calc(100% - 28px));
       margin: 0 auto;
-      padding: 24px 0 42px;
+      padding: 22px 0 34px;
     }
 
     .topbar {
@@ -105,33 +119,54 @@
       margin-bottom: 18px;
     }
 
-    .brand {
+    .brand-wrap {
       display: flex;
-      flex-direction: column;
-      gap: 3px;
+      align-items: center;
+      gap: 14px;
     }
 
-    .brand h1 {
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, rgba(212, 40, 40, 0.92), rgba(127, 29, 29, 0.95));
+      display: grid;
+      place-items: center;
+      box-shadow: var(--shadow);
+      font-size: 22px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .brand-text h1 {
       margin: 0;
-      font-size: clamp(24px, 4vw, 40px);
-      letter-spacing: -0.04em;
+      font-size: clamp(24px, 3.6vw, 34px);
+      letter-spacing: -0.03em;
     }
 
-    .brand span {
+    .brand-text p {
+      margin: 3px 0 0;
       color: var(--muted);
-      font-size: 14px;
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .layout {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: 330px 1fr;
       gap: 18px;
     }
 
     .panel {
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent), var(--panel);
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
+      border-radius: var(--radius-lg);
       box-shadow: var(--shadow);
       padding: 18px;
     }
@@ -148,6 +183,14 @@
 
     .small {
       font-size: 13px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
     }
 
     .stack {
@@ -172,33 +215,24 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .grid.three {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .cards {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .card {
+    .mini-card {
+      background: var(--panel-2);
       border: 1px solid var(--line);
-      background: var(--panel-soft);
-      border-radius: 18px;
+      border-radius: var(--radius);
       padding: 14px;
     }
 
-    .card.strong {
-      background: var(--panel-strong);
-    }
-
-    .label {
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 6px;
-    }
-
-    .value {
-      font-size: 22px;
+    .mini-card .value {
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: -0.03em;
+      margin-top: 5px;
     }
 
     .tabs {
@@ -208,92 +242,189 @@
       margin-bottom: 14px;
     }
 
+    .tabs button {
+      background: var(--panel-2);
+    }
+
     .tabs button.active {
-      background: #2563eb;
-      border-color: rgba(147, 197, 253, 0.6);
+      background: var(--red);
+      border-color: #ef4444;
+      color: #fff;
+    }
+
+    .content-card {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .offer-list,
+    .people-list,
+    .ranking-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
     .offer {
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 12px;
+      gap: 14px;
       align-items: center;
+      background: var(--panel-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
     }
 
     .offer-title {
       font-size: 18px;
       font-weight: 800;
       margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
     }
 
     .pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: var(--accent);
-      border: 1px solid rgba(147, 197, 253, 0.25);
-      background: rgba(37, 99, 235, 0.14);
       padding: 5px 9px;
       border-radius: 999px;
       font-size: 12px;
+      border: 1px solid #3a4049;
+      background: #242931;
+      color: #dbe0e7;
     }
 
-    .person {
+    .pill.red {
+      background: rgba(214, 40, 40, 0.12);
+      border-color: rgba(214, 40, 40, 0.32);
+      color: #ffb4b4;
+    }
+
+    .pill.gold {
+      background: rgba(212, 160, 23, 0.12);
+      border-color: rgba(212, 160, 23, 0.28);
+      color: #f4d98a;
+    }
+
+    .feed {
+      background: #111315;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      line-height: 1.55;
+    }
+
+    .person-row,
+    .ranking-row {
       display: flex;
+      align-items: flex-start;
       justify-content: space-between;
-      gap: 10px;
+      gap: 14px;
+      padding: 12px 0;
       border-bottom: 1px solid var(--line);
-      padding: 10px 0;
     }
 
-    .person:last-child {
-      border-bottom: 0;
+    .person-row:last-child,
+    .ranking-row:last-child {
+      border-bottom: none;
       padding-bottom: 0;
     }
 
-    .result {
-      border: 1px solid rgba(147, 197, 253, 0.25);
-      background: rgba(37, 99, 235, 0.10);
-      border-radius: 18px;
-      padding: 13px 14px;
+    .person-row:first-child,
+    .ranking-row:first-child {
+      padding-top: 0;
     }
 
-    .good {
-      color: var(--good);
+    .person-name,
+    .ranking-name {
+      font-weight: 700;
+      margin-bottom: 4px;
     }
 
-    .bad {
-      color: var(--bad);
+    .accent {
+      color: #ffd7d7;
     }
 
-    .warn {
-      color: var(--warn);
-    }
-
-    .start {
+    .start-screen {
       min-height: calc(100vh - 48px);
       display: grid;
       place-items: center;
     }
 
     .start-card {
-      width: min(720px, 100%);
+      width: min(780px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .start-hero {
+      padding: 22px 22px 18px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(214, 40, 40, 0.18), transparent),
+        linear-gradient(180deg, rgba(212, 160, 23, 0.06), transparent),
+        var(--panel-2);
+    }
+
+    .start-hero h1 {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 42px);
+      letter-spacing: -0.04em;
+    }
+
+    .start-hero p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 640px;
+      line-height: 1.6;
+    }
+
+    .start-body {
+      padding: 20px 22px 22px;
+    }
+
+    .boxing-line {
+      height: 4px;
+      width: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--red));
+      margin: 14px 0 0;
+      opacity: 0.9;
     }
 
     .footer-note {
-      margin-top: 16px;
+      margin-top: 6px;
       color: var(--muted);
       font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .empty-note {
+      color: var(--muted);
+      font-size: 14px;
       line-height: 1.5;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 920px) {
       .layout {
         grid-template-columns: 1fr;
       }
 
-      .grid.two,
-      .grid.three {
+      .cards,
+      .grid.two {
         grid-template-columns: 1fr;
       }
 
@@ -302,41 +433,27 @@
       }
 
       .topbar {
-        align-items: flex-start;
         flex-direction: column;
+        align-items: flex-start;
       }
     }
   </style>
 </head>
 <body>
-  <main id="app" class="app"></main>
+  <main id="app" class="app-shell"></main>
 
   <script>
     (function () {
       "use strict";
 
-      var APP_VERSION = "clean-core-0.1.0";
-      var SAVE_KEY = "fight_simulator_clean_core_save_v1";
+      var SAVE_KEY = "fight_simulator_boxing_webapp_v2";
+      var APP_VERSION = "boxing-webapp-v2";
+      var app = document.getElementById("app");
 
       var TRACKS = {
-        street: {
-          id: "street",
-          label: "Улица",
-          short: "УЛ",
-          maxStat: 150
-        },
-        amateur: {
-          id: "amateur",
-          label: "Любители",
-          short: "ЛБ",
-          maxStat: 100
-        },
-        pro: {
-          id: "pro",
-          label: "Профи",
-          short: "ПР",
-          maxStat: 200
-        }
+        amateur: { id: "amateur", label: "Любители", short: "ЛБ", maxStat: 100 },
+        street: { id: "street", label: "Улица", short: "УЛ", maxStat: 150 },
+        pro: { id: "pro", label: "Профи", short: "ПР", maxStat: 200 }
       };
 
       var COUNTRIES = [
@@ -344,7 +461,7 @@
           id: "russia",
           label: "Россия",
           city: "Москва",
-          firstNames: ["Дмитрий", "Артем", "Илья", "Максим", "Никита", "Кирилл", "Егор", "Роман", "Павел", "Алексей", "Сергей", "Владислав"],
+          firstNames: ["Влад", "Дмитрий", "Артем", "Илья", "Максим", "Никита", "Кирилл", "Егор", "Павел", "Роман", "Алексей", "Сергей"],
           lastNames: ["Васильев", "Морозов", "Орлов", "Павлов", "Козлов", "Волков", "Иванов", "Кузнецов", "Соколов", "Лебедев", "Федоров", "Комаров"]
         },
         {
@@ -363,33 +480,17 @@
         }
       ];
 
-      var ROLE_LABELS = {
+      var PEOPLE_ROLES = {
         coach: "Тренер",
         clubmate: "Одноклубник",
-        rival: "Знакомый соперник",
-        promoter: "Организатор",
-        doctor: "Врач"
+        rival: "Соперник",
+        organizer: "Организатор",
+        cutman: "Секундант"
       };
 
       var state = loadState();
 
-      function getCountry(countryId) {
-        var i;
-
-        for (i = 0; i < COUNTRIES.length; i += 1) {
-          if (COUNTRIES[i].id === countryId) {
-            return COUNTRIES[i];
-          }
-        }
-
-        return COUNTRIES[0];
-      }
-
-      function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-      }
-
-      function escapeHtml(value) {
+      function safeText(value) {
         return String(value == null ? "" : value)
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
@@ -406,11 +507,25 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
       }
 
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
       function pick(list) {
         return list[randomInt(0, list.length - 1)];
       }
 
-      function rating(stats) {
+      function findCountry(countryId) {
+        var i;
+        for (i = 0; i < COUNTRIES.length; i += 1) {
+          if (COUNTRIES[i].id === countryId) {
+            return COUNTRIES[i];
+          }
+        }
+        return COUNTRIES[0];
+      }
+
+      function statAverage(stats) {
         return Math.round((stats.power + stats.technique + stats.speed + stats.stamina + stats.defense) / 5);
       }
 
@@ -418,56 +533,69 @@
         return record.wins + "-" + record.losses + "-" + record.draws + " · KO " + record.kos;
       }
 
-      function makeName(country, indexSeed) {
-        var firstIndex = (indexSeed * 5 + randomInt(0, country.firstNames.length - 1)) % country.firstNames.length;
-        var lastIndex = (indexSeed * 7 + randomInt(0, country.lastNames.length - 1)) % country.lastNames.length;
-
-        return country.firstNames[firstIndex] + " " + country.lastNames[lastIndex];
+      function statLabel(key) {
+        var labels = {
+          power: "Сила",
+          technique: "Техника",
+          speed: "Скорость",
+          stamina: "Выносливость",
+          defense: "Защита"
+        };
+        return labels[key] || key;
       }
 
-      function makeStats(trackId, base) {
+      function createStats(trackId, baseValue) {
         var cap = TRACKS[trackId].maxStat;
-
         return {
-          power: clamp(base + randomInt(-4, 5), 1, cap),
-          technique: clamp(base + randomInt(-4, 5), 1, cap),
-          speed: clamp(base + randomInt(-4, 5), 1, cap),
-          stamina: clamp(base + randomInt(-4, 5), 1, cap),
-          defense: clamp(base + randomInt(-4, 5), 1, cap)
+          power: clamp(baseValue + randomInt(-4, 4), 1, cap),
+          technique: clamp(baseValue + randomInt(-4, 4), 1, cap),
+          speed: clamp(baseValue + randomInt(-4, 4), 1, cap),
+          stamina: clamp(baseValue + randomInt(-4, 4), 1, cap),
+          defense: clamp(baseValue + randomInt(-4, 4), 1, cap)
         };
       }
 
-      function makeFighter(countryId, trackId, indexSeed, base) {
-        var country = getCountry(countryId);
-        var name = makeName(country, indexSeed);
+      function createName(country, seed) {
+        var first = country.firstNames[(seed * 3 + randomInt(0, country.firstNames.length - 1)) % country.firstNames.length];
+        var last = country.lastNames[(seed * 5 + randomInt(0, country.lastNames.length - 1)) % country.lastNames.length];
+        return first + " " + last;
+      }
 
+      function createFighter(countryId, trackId, seed, baseValue) {
+        var country = findCountry(countryId);
         return {
           id: uid("fighter"),
-          name: name,
+          name: createName(country, seed),
           countryId: countryId,
           trackId: trackId,
-          stats: makeStats(trackId, base),
+          stats: createStats(trackId, baseValue),
           record: {
-            wins: randomInt(0, 8),
+            wins: randomInt(0, 9),
             losses: randomInt(0, 4),
             draws: randomInt(0, 1),
-            kos: randomInt(0, 4)
+            kos: randomInt(0, 5)
           }
         };
       }
 
-      function makeRoster(player) {
+      function createRoster(player) {
         var roster = [];
+        var trackIds = Object.keys(TRACKS);
         var countryIndex;
-        var trackId;
-        var trackKeys = Object.keys(TRACKS);
-        var i;
-        var base;
+        var trackIndex;
+        var fighterIndex;
 
         for (countryIndex = 0; countryIndex < COUNTRIES.length; countryIndex += 1) {
-          for (i = 0; i < trackKeys.length; i += 1) {
-            for (base = 0; base < 12; base += 1) {
-              roster.push(makeFighter(COUNTRIES[countryIndex].id, trackKeys[i], countryIndex * 1000 + i * 100 + base, 28 + base * 3));
+          for (trackIndex = 0; trackIndex < trackIds.length; trackIndex += 1) {
+            for (fighterIndex = 0; fighterIndex < 12; fighterIndex += 1) {
+              roster.push(
+                createFighter(
+                  COUNTRIES[countryIndex].id,
+                  trackIds[trackIndex],
+                  countryIndex * 1000 + trackIndex * 100 + fighterIndex,
+                  28 + fighterIndex * 3
+                )
+              );
             }
           }
         }
@@ -485,110 +613,120 @@
         return roster;
       }
 
-      function makePeople(countryId) {
-        var country = getCountry(countryId);
-
+      function createPeople(countryId) {
+        var country = findCountry(countryId);
         return [
           {
             id: uid("person"),
             role: "coach",
-            name: makeName(country, 11),
-            note: "Ведёт тренировки в зале."
+            name: createName(country, 11),
+            note: "Работает с тобой в зале."
           },
           {
             id: uid("person"),
             role: "clubmate",
-            name: makeName(country, 22),
-            note: "Тренируется рядом с тобой."
+            name: createName(country, 22),
+            note: "Тренируется рядом и идёт своим путём."
           },
           {
             id: uid("person"),
             role: "rival",
-            name: makeName(country, 33),
-            note: "Периодически попадается на местных боях."
+            name: createName(country, 33),
+            note: "Часто мелькает в местной боксёрской среде."
           },
           {
             id: uid("person"),
-            role: "promoter",
-            name: makeName(country, 44),
-            note: "Помогает находить бои."
+            role: "organizer",
+            name: createName(country, 44),
+            note: "Помогает собрать местные бои."
           },
           {
             id: uid("person"),
-            role: "doctor",
-            name: makeName(country, 55),
-            note: "Следит за допуском к боям."
+            role: "cutman",
+            name: createName(country, 55),
+            note: "Работает на турнирах и возле ринга."
           }
         ];
       }
 
-      function createCareer(form) {
-        var player = {
-          id: "player",
-          name: form.name || "Новый боксёр",
-          countryId: form.countryId || "russia",
-          trackId: form.trackId || "amateur",
-          stats: makeStats(form.trackId || "amateur", 35),
-          record: {
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            kos: 0
-          }
-        };
-
-        state = {
-          version: APP_VERSION,
-          week: 1,
-          screen: "home",
-          selectedTab: "offers",
-          player: player,
-          roster: makeRoster(player),
-          people: makePeople(player.countryId),
-          offers: [],
-          lastResult: "Карьера создана. Мир загружен в чистом режиме.",
-          createdAt: new Date().toISOString()
-        };
-
-        refreshOffers();
-        saveState();
-        render();
-      }
-
-      function loadState() {
-        var raw;
-
-        try {
-          raw = localStorage.getItem(SAVE_KEY);
-
-          if (!raw) {
-            return null;
-          }
-
-          return JSON.parse(raw);
-        } catch (error) {
-          return null;
-        }
-      }
-
-      function saveState() {
-        if (!state) {
-          localStorage.removeItem(SAVE_KEY);
-          return;
-        }
-
-        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-      }
-
-      function resetCareer() {
-        localStorage.removeItem(SAVE_KEY);
-        state = null;
-        render();
-      }
-
-      function syncPlayerIntoRoster() {
+      function buildOpponentByIndex(index) {
+        var candidates = [];
         var i;
+        var fighter;
 
+        for (i = 0; i < state.roster.length; i += 1) {
+          fighter = state.roster[i];
+
+          if (!fighter || fighter.isPlayer) {
+            continue;
+          }
+
+          if (fighter.countryId === state.player.countryId && fighter.trackId === state.player.trackId) {
+            candidates.push(fighter);
+          }
+        }
+
+        candidates.sort(function (left, right) {
+          return Math.abs(statAverage(left.stats) - statAverage(state.player.stats)) -
+                 Math.abs(statAverage(right.stats) - statAverage(state.player.stats));
+        });
+
+        if (!candidates[index]) {
+          fighter = createFighter(
+            state.player.countryId,
+            state.player.trackId,
+            9000 + state.week * 10 + index,
+            statAverage(state.player.stats) + index * 3
+          );
+          state.roster.push(fighter);
+          return fighter;
+        }
+
+        return candidates[index];
+      }
+
+      function refreshOffers() {
+        var labelsByTrack = {
+          amateur: ["Любительский бой", "Бой городского уровня", "Матч отбора"],
+          street: ["Дворовый бой", "Районный вызов", "Бой на местной площадке"],
+          pro: ["Профессиональный андеркард", "Контрактный бой", "Главный бой вечера"]
+        };
+        var roundsByTrack = {
+          amateur: 3,
+          street: 4,
+          pro: 8
+        };
+        var offers = [];
+        var i;
+        var opponent;
+
+        for (i = 0; i < 3; i += 1) {
+          opponent = buildOpponentByIndex(i);
+
+          offers.push({
+            id: uid("offer"),
+            label: labelsByTrack[state.player.trackId][i],
+            opponentId: opponent.id,
+            rounds: roundsByTrack[state.player.trackId],
+            purse: state.player.trackId === "pro" ? (1000 + i * 800) : (state.player.trackId === "street" ? 200 + i * 70 : 120 + i * 40)
+          });
+        }
+
+        state.offers = offers;
+      }
+
+      function getFighterById(fighterId) {
+        var i;
+        for (i = 0; i < state.roster.length; i += 1) {
+          if (state.roster[i].id === fighterId) {
+            return state.roster[i];
+          }
+        }
+        return null;
+      }
+
+      function syncPlayerInRoster() {
+        var i;
         for (i = 0; i < state.roster.length; i += 1) {
           if (state.roster[i].id === state.player.id) {
             state.roster[i].name = state.player.name;
@@ -611,85 +749,97 @@
         });
       }
 
-      function buildOfferOpponent(index) {
-        var sameCountry = [];
-        var i;
-        var candidate;
-        var opponent;
+      function createCareer(payload) {
+        var trackId = TRACKS[payload.trackId] ? payload.trackId : "amateur";
+        var countryId = findCountry(payload.countryId).id;
 
-        for (i = 0; i < state.roster.length; i += 1) {
-          candidate = state.roster[i];
-
-          if (!candidate || candidate.isPlayer) {
-            continue;
-          }
-
-          if (candidate.countryId === state.player.countryId && candidate.trackId === state.player.trackId) {
-            sameCountry.push(candidate);
-          }
-        }
-
-        sameCountry.sort(function (left, right) {
-          return Math.abs(rating(left.stats) - rating(state.player.stats)) - Math.abs(rating(right.stats) - rating(state.player.stats));
-        });
-
-        opponent = sameCountry[index];
-
-        if (!opponent) {
-          opponent = makeFighter(state.player.countryId, state.player.trackId, 9000 + index + state.week * 10, rating(state.player.stats) + index * 4);
-          state.roster.push(opponent);
-        }
-
-        return opponent;
-      }
-
-      function refreshOffers() {
-        var labels = {
-          street: ["Дворовый бой", "Районный вызов", "Бой на местной площадке"],
-          amateur: ["Любительский бой", "Бой городского уровня", "Матч отбора"],
-          pro: ["Профессиональный андеркард", "Контрактный бой", "Главный бой вечера"]
+        state = {
+          version: APP_VERSION,
+          week: 1,
+          selectedTab: "fights",
+          player: {
+            id: "player",
+            name: payload.name || "Новый боксёр",
+            countryId: countryId,
+            trackId: trackId,
+            stats: createStats(trackId, 35),
+            record: {
+              wins: 0,
+              losses: 0,
+              draws: 0,
+              kos: 0
+            }
+          },
+          roster: [],
+          people: [],
+          offers: [],
+          feed: "Карьера началась. Ты вошёл в мир бокса.",
+          createdAt: new Date().toISOString()
         };
-        var i;
-        var opponent;
 
-        state.offers = [];
-
-        for (i = 0; i < 3; i += 1) {
-          opponent = buildOfferOpponent(i);
-
-          state.offers.push({
-            id: uid("offer"),
-            label: labels[state.player.trackId][i],
-            opponentId: opponent.id,
-            countryId: state.player.countryId,
-            trackId: state.player.trackId,
-            rounds: state.player.trackId === "pro" ? 8 : (state.player.trackId === "amateur" ? 3 : 4)
-          });
-        }
+        state.roster = createRoster(state.player);
+        state.people = createPeople(countryId);
+        refreshOffers();
+        saveState();
+        render();
       }
 
-      function getFighter(fighterId) {
-        var i;
-
-        for (i = 0; i < state.roster.length; i += 1) {
-          if (state.roster[i].id === fighterId) {
-            return state.roster[i];
-          }
+      function setTrack(trackId) {
+        if (!TRACKS[trackId]) {
+          return;
         }
 
-        return null;
+        state.player.trackId = trackId;
+        state.feed = "Путь изменён: " + TRACKS[trackId].label + ".";
+        syncPlayerInRoster();
+        refreshOffers();
+        saveState();
+        render();
+      }
+
+      function setCountry(countryId) {
+        state.player.countryId = findCountry(countryId).id;
+        state.people = createPeople(state.player.countryId);
+        state.feed = "Страна изменена: " + findCountry(countryId).label + ".";
+        syncPlayerInRoster();
+        refreshOffers();
+        saveState();
+        render();
+      }
+
+      function trainWeek() {
+        var statKeys = ["power", "technique", "speed", "stamina", "defense"];
+        var chosen = pick(statKeys);
+        var cap = TRACKS[state.player.trackId].maxStat;
+
+        state.player.stats[chosen] = clamp(state.player.stats[chosen] + 1, 1, cap);
+        state.week += 1;
+        state.feed = "Тренировочная неделя завершена. Улучшен навык: " + statLabel(chosen) + ".";
+        syncPlayerInRoster();
+        refreshOffers();
+        saveState();
+        render();
+      }
+
+      function nextWeek() {
+        state.week += 1;
+        state.feed = "Неделя " + state.week + ". Список боёв обновлён.";
+        syncPlayerInRoster();
+        refreshOffers();
+        saveState();
+        render();
       }
 
       function resolveFight(offerId) {
         var offer = null;
         var opponent;
+        var i;
         var playerScore;
         var opponentScore;
         var winChance;
         var roll;
         var result;
         var method;
-        var i;
 
         for (i = 0; i < state.offers.length; i += 1) {
           if (state.offers[i].id === offerId) {
@@ -702,24 +852,24 @@
           return;
         }
 
-        opponent = getFighter(offer.opponentId);
+        opponent = getFighterById(offer.opponentId);
 
         if (!opponent) {
           return;
         }
 
-        playerScore = rating(state.player.stats) + state.player.record.wins * 0.7;
-        opponentScore = rating(opponent.stats) + opponent.record.wins * 0.7;
+        playerScore = statAverage(state.player.stats) + state.player.record.wins * 0.7;
+        opponentScore = statAverage(opponent.stats) + opponent.record.wins * 0.7;
         winChance = clamp(50 + Math.round((playerScore - opponentScore) * 2.2), 12, 88);
         roll = randomInt(1, 100);
 
         if (Math.abs(playerScore - opponentScore) <= 2 && randomInt(1, 100) <= 8) {
-          result = "draw";
+          result = "Ничья";
           method = "решение судей";
           state.player.record.draws += 1;
           opponent.record.draws += 1;
         } else if (roll <= winChance) {
-          result = "win";
+          result = "Победа";
           method = randomInt(1, 100) <= 22 ? "KO/TKO" : "решение судей";
           state.player.record.wins += 1;
           opponent.record.losses += 1;
@@ -728,7 +878,7 @@
             state.player.record.kos += 1;
           }
         } else {
-          result = "loss";
+          result = "Поражение";
           method = randomInt(1, 100) <= 18 ? "KO/TKO" : "решение судей";
           state.player.record.losses += 1;
           opponent.record.wins += 1;
@@ -738,287 +888,335 @@
           }
         }
 
-        state.lastResult = "Неделя " + state.week + ": " + state.player.name + " vs " + opponent.name + " — " + resultLabel(result) + ", " + method + ".";
+        state.feed = "Неделя " + state.week + ": " + state.player.name + " vs " + opponent.name + " — " + result + ", " + method + ".";
         state.week += 1;
-
+        syncPlayerInRoster();
         refreshOffers();
-        syncPlayerIntoRoster();
         saveState();
         render();
       }
 
-      function resultLabel(result) {
-        if (result === "win") {
-          return "победа";
+      function resetCareer() {
+        localStorage.removeItem(SAVE_KEY);
+        state = null;
+        render();
+      }
+
+      function saveState() {
+        try {
+          if (!state) {
+            localStorage.removeItem(SAVE_KEY);
+            return;
+          }
+          localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        } catch (error) {
+          console.error(error);
         }
+      }
 
-        if (result === "loss") {
-          return "поражение";
+      function loadState() {
+        var raw;
+        try {
+          raw = localStorage.getItem(SAVE_KEY);
+          if (!raw) {
+            return null;
+          }
+          return JSON.parse(raw);
+        } catch (error) {
+          console.error(error);
+          return null;
         }
-
-        return "ничья";
       }
 
-      function trainWeek() {
-        var keys = ["power", "technique", "speed", "stamina", "defense"];
-        var key = pick(keys);
-        var cap = TRACKS[state.player.trackId].maxStat;
-
-        state.player.stats[key] = clamp(state.player.stats[key] + 1, 1, cap);
-        state.week += 1;
-        state.lastResult = "Неделя проведена в зале. Улучшен навык: " + statLabel(key) + ".";
-        refreshOffers();
-        syncPlayerIntoRoster();
-        saveState();
-        render();
-      }
-
-      function passWeek() {
-        state.week += 1;
-        state.lastResult = "Неделя пропущена. Бои обновлены.";
-        refreshOffers();
-        syncPlayerIntoRoster();
-        saveState();
-        render();
-      }
-
-      function setTrack(trackId) {
-        if (!TRACKS[trackId]) {
-          return;
-        }
-
-        state.player.trackId = trackId;
-        state.lastResult = "Путь изменён: " + TRACKS[trackId].label + ".";
-        refreshOffers();
-        syncPlayerIntoRoster();
-        saveState();
-        render();
-      }
-
-      function setCountry(countryId) {
-        if (!getCountry(countryId)) {
-          return;
-        }
-
-        state.player.countryId = countryId;
-        state.people = makePeople(countryId);
-        state.lastResult = "Страна изменена: " + getCountry(countryId).label + ".";
-        refreshOffers();
-        syncPlayerIntoRoster();
-        saveState();
-        render();
-      }
-
-      function statLabel(key) {
-        var labels = {
-          power: "Сила",
-          technique: "Техника",
-          speed: "Скорость",
-          stamina: "Выносливость",
-          defense: "Защита"
-        };
-
-        return labels[key] || key;
-      }
-
-      function renderStart() {
+      function renderStartScreen() {
         var countryOptions = COUNTRIES.map(function (country) {
-          return "<option value='" + escapeHtml(country.id) + "'>" + escapeHtml(country.label) + "</option>";
+          return "<option value=\"" + safeText(country.id) + "\">" + safeText(country.label) + "</option>";
         }).join("");
 
-        document.getElementById("app").innerHTML =
-          "<section class='start'>" +
-            "<div class='panel start-card'>" +
-              "<div class='brand'>" +
-                "<h1>Fight Simulator</h1>" +
-                "<span>Чистое ядро: быстрое создание карьеры, 3 боя в каждой стране, минимум систем.</span>" +
+        app.innerHTML =
+          "<section class=\"start-screen\">" +
+            "<div class=\"start-card\">" +
+              "<div class=\"start-hero\">" +
+                "<div class=\"brand-wrap\">" +
+                  "<div class=\"brand-mark\">FS</div>" +
+                  "<div class=\"brand-text\">" +
+                    "<h1>Fight Simulator</h1>" +
+                    "<p>Чистая базовая версия. Быстрый старт, 3 боя в любой стране, простая карьера и боксёрская атмосфера без перегруженных систем.</p>" +
+                  "</div>" +
+                "</div>" +
+                "<div class=\"boxing-line\"></div>" +
               "</div>" +
-              "<div class='grid two' style='margin-top:18px'>" +
-                "<label class='stack'>" +
-                  "<span class='label'>Имя бойца</span>" +
-                  "<input id='startName' value='Влад' maxlength='32'>" +
-                "</label>" +
-                "<label class='stack'>" +
-                  "<span class='label'>Страна</span>" +
-                  "<select id='startCountry'>" + countryOptions + "</select>" +
-                "</label>" +
-                "<label class='stack'>" +
-                  "<span class='label'>Стартовый путь</span>" +
-                  "<select id='startTrack'>" +
-                    "<option value='amateur' selected>Любители</option>" +
-                    "<option value='street'>Улица</option>" +
-                    "<option value='pro'>Профи</option>" +
-                  "</select>" +
-                "</label>" +
+              "<div class=\"start-body\">" +
+                "<div class=\"grid two\">" +
+                  "<label class=\"stack\">" +
+                    "<span class=\"label\">Имя бойца</span>" +
+                    "<input id=\"careerName\" type=\"text\" value=\"Влад\" maxlength=\"32\">" +
+                  "</label>" +
+                  "<label class=\"stack\">" +
+                    "<span class=\"label\">Страна</span>" +
+                    "<select id=\"careerCountry\">" + countryOptions + "</select>" +
+                  "</label>" +
+                  "<label class=\"stack\">" +
+                    "<span class=\"label\">Стартовый путь</span>" +
+                    "<select id=\"careerTrack\">" +
+                      "<option value=\"amateur\" selected>Любители</option>" +
+                      "<option value=\"street\">Улица</option>" +
+                      "<option value=\"pro\">Профи</option>" +
+                    "</select>" +
+                  "</label>" +
+                "</div>" +
+                "<div class=\"row\" style=\"margin-top:18px\">" +
+                  "<button id=\"startCareerBtn\" class=\"primary\" type=\"button\">Начать карьеру</button>" +
+                "</div>" +
+                "<div class=\"footer-note\">В этой версии нет славы, отношений, травм, жилья, турниров, спаррингов и истории мира. Только базовая карьера и бои.</div>" +
               "</div>" +
-              "<div class='row' style='margin-top:18px'>" +
-                "<button class='primary' data-action='create-career'>Начать карьеру</button>" +
-              "</div>" +
-              "<div class='footer-note'>В этой версии нет славы, токсичности, отношений, травм, жилья, турниров, спаррингов, истории и архивов. Только базовая карьера и бои.</div>" +
             "</div>" +
           "</section>";
-      }
 
-      function renderHeader() {
-        var country = getCountry(state.player.countryId);
-
-        return "<div class='topbar'>" +
-          "<div class='brand'>" +
-            "<h1>Fight Simulator</h1>" +
-            "<span>Неделя " + state.week + " · " + escapeHtml(country.label) + " · " + escapeHtml(TRACKS[state.player.trackId].label) + "</span>" +
-          "</div>" +
-          "<div class='row'>" +
-            "<button class='ghost' data-action='pass-week'>Следующая неделя</button>" +
-            "<button class='danger' data-action='reset-career'>Сбросить</button>" +
-          "</div>" +
-        "</div>";
+        document.getElementById("startCareerBtn").addEventListener("click", function () {
+          createCareer({
+            name: document.getElementById("careerName").value.trim(),
+            countryId: document.getElementById("careerCountry").value,
+            trackId: document.getElementById("careerTrack").value
+          });
+        });
       }
 
       function renderSidebar() {
         var player = state.player;
         var countryOptions = COUNTRIES.map(function (country) {
-          return "<option value='" + escapeHtml(country.id) + "'" + (country.id === player.countryId ? " selected" : "") + ">" + escapeHtml(country.label) + "</option>";
-        }).join("");
-        var trackOptions = Object.keys(TRACKS).map(function (trackId) {
-          return "<option value='" + escapeHtml(trackId) + "'" + (trackId === player.trackId ? " selected" : "") + ">" + escapeHtml(TRACKS[trackId].label) + "</option>";
+          return "<option value=\"" + safeText(country.id) + "\"" + (country.id === player.countryId ? " selected" : "") + ">" + safeText(country.label) + "</option>";
         }).join("");
 
-        return "<aside class='panel stack'>" +
-          "<h2>" + escapeHtml(player.name) + "</h2>" +
-          "<div class='grid two'>" +
-            "<div class='card'>" +
-              "<div class='label'>Рекорд</div>" +
-              "<div class='value'>" + escapeHtml(recordText(player.record)) + "</div>" +
+        var trackOptions = Object.keys(TRACKS).map(function (trackId) {
+          return "<option value=\"" + safeText(trackId) + "\"" + (trackId === player.trackId ? " selected" : "") + ">" + safeText(TRACKS[trackId].label) + "</option>";
+        }).join("");
+
+        return "" +
+          "<aside class=\"panel stack\">" +
+            "<div>" +
+              "<div class=\"label\">Боец</div>" +
+              "<h2>" + safeText(player.name) + "</h2>" +
+              "<div class=\"muted small\">" + safeText(findCountry(player.countryId).label) + " · " + safeText(TRACKS[player.trackId].label) + "</div>" +
             "</div>" +
-            "<div class='card'>" +
-              "<div class='label'>Рейтинг</div>" +
-              "<div class='value'>" + rating(player.stats) + "</div>" +
+            "<div class=\"cards\">" +
+              "<div class=\"mini-card\">" +
+                "<div class=\"label\">Неделя</div>" +
+                "<div class=\"value\">" + state.week + "</div>" +
+              "</div>" +
+              "<div class=\"mini-card\">" +
+                "<div class=\"label\">Рейтинг</div>" +
+                "<div class=\"value\">" + statAverage(player.stats) + "</div>" +
+              "</div>" +
+              "<div class=\"mini-card\">" +
+                "<div class=\"label\">Рекорд</div>" +
+                "<div class=\"value\" style=\"font-size:18px\">" + safeText(recordText(player.record)) + "</div>" +
+              "</div>" +
+              "<div class=\"mini-card\">" +
+                "<div class=\"label\">Путь</div>" +
+                "<div class=\"value\" style=\"font-size:18px\">" + safeText(TRACKS[player.trackId].short) + "</div>" +
+              "</div>" +
             "</div>" +
-          "</div>" +
-          "<div class='card'>" +
-            "<div class='label'>Навыки</div>" +
-            "<div class='small'>Сила: " + player.stats.power + "</div>" +
-            "<div class='small'>Техника: " + player.stats.technique + "</div>" +
-            "<div class='small'>Скорость: " + player.stats.speed + "</div>" +
-            "<div class='small'>Выносливость: " + player.stats.stamina + "</div>" +
-            "<div class='small'>Защита: " + player.stats.defense + "</div>" +
-          "</div>" +
-          "<label class='stack'>" +
-            "<span class='label'>Страна</span>" +
-            "<select data-action='set-country'>" + countryOptions + "</select>" +
-          "</label>" +
-          "<label class='stack'>" +
-            "<span class='label'>Путь</span>" +
-            "<select data-action='set-track'>" + trackOptions + "</select>" +
-          "</label>" +
-          "<button class='primary' data-action='train-week'>Тренировка</button>" +
-        "</aside>";
+            "<div class=\"content-card\">" +
+              "<div class=\"label\">Навыки</div>" +
+              "<div class=\"small\">Сила: " + player.stats.power + "</div>" +
+              "<div class=\"small\">Техника: " + player.stats.technique + "</div>" +
+              "<div class=\"small\">Скорость: " + player.stats.speed + "</div>" +
+              "<div class=\"small\">Выносливость: " + player.stats.stamina + "</div>" +
+              "<div class=\"small\">Защита: " + player.stats.defense + "</div>" +
+            "</div>" +
+            "<label class=\"stack\">" +
+              "<span class=\"label\">Страна</span>" +
+              "<select id=\"countrySelect\">" + countryOptions + "</select>" +
+            "</label>" +
+            "<label class=\"stack\">" +
+              "<span class=\"label\">Путь</span>" +
+              "<select id=\"trackSelect\">" + trackOptions + "</select>" +
+            "</label>" +
+            "<div class=\"row\">" +
+              "<button id=\"trainBtn\" class=\"primary\" type=\"button\">Тренировка</button>" +
+              "<button id=\"nextWeekBtn\" class=\"secondary\" type=\"button\">Следующая неделя</button>" +
+            "</div>" +
+          "</aside>";
       }
 
       function renderTabs() {
         var tabs = [
-          ["offers", "Бои"],
-          ["people", "Люди"],
-          ["rankings", "Рейтинг"]
+          { id: "fights", label: "Бои" },
+          { id: "people", label: "Люди" },
+          { id: "ranking", label: "Рейтинг" }
         ];
 
-        return "<div class='tabs'>" + tabs.map(function (tab) {
-          return "<button class='" + (state.selectedTab === tab[0] ? "active" : "") + "' data-tab='" + tab[0] + "'>" + tab[1] + "</button>";
+        return "<div class=\"tabs\">" + tabs.map(function (tab) {
+          return "<button type=\"button\" class=\"" + (state.selectedTab === tab.id ? "active" : "") + "\" data-tab=\"" + safeText(tab.id) + "\">" + safeText(tab.label) + "</button>";
         }).join("") + "</div>";
       }
 
-      function renderOffers() {
-        return "<div class='stack'>" +
-          state.offers.map(function (offer) {
-            var opponent = getFighter(offer.opponentId);
+      function renderFightTab() {
+        var html = "<div class=\"offer-list\">";
+        var i;
+        var offer;
+        var opponent;
 
-            return "<div class='card strong offer'>" +
+        for (i = 0; i < state.offers.length; i += 1) {
+          offer = state.offers[i];
+          opponent = getFighterById(offer.opponentId);
+
+          html +=
+            "<div class=\"offer\">" +
               "<div>" +
-                "<div class='offer-title'>" + escapeHtml(offer.label) + "</div>" +
-                "<div class='muted'>Соперник: " + escapeHtml(opponent ? opponent.name : "Неизвестный боец") + " · рейтинг " + (opponent ? rating(opponent.stats) : "?") + "</div>" +
-                "<div class='row' style='margin-top:8px'>" +
-                  "<span class='pill'>" + escapeHtml(TRACKS[offer.trackId].label) + "</span>" +
-                  "<span class='pill'>" + offer.rounds + " раунда</span>" +
+                "<div class=\"offer-title\">" + safeText(offer.label) + "</div>" +
+                "<div class=\"muted\">Соперник: " + safeText(opponent ? opponent.name : "Неизвестный боец") + "</div>" +
+                "<div class=\"muted small\">Рекорд: " + safeText(opponent ? recordText(opponent.record) : "—") + "</div>" +
+                "<div class=\"pill-row\">" +
+                  "<span class=\"pill red\">" + safeText(TRACKS[state.player.trackId].label) + "</span>" +
+                  "<span class=\"pill\">" + offer.rounds + " раунда</span>" +
+                  "<span class=\"pill gold\">Гонорар $" + offer.purse + "</span>" +
+                  "<span class=\"pill\">Рейтинг " + (opponent ? statAverage(opponent.stats) : "?") + "</span>" +
                 "</div>" +
               "</div>" +
-              "<button class='primary' data-fight='" + escapeHtml(offer.id) + "'>Провести бой</button>" +
+              "<button type=\"button\" class=\"primary\" data-fight=\"" + safeText(offer.id) + "\">Провести бой</button>" +
             "</div>";
-          }).join("") +
-        "</div>";
-      }
-
-      function renderPeople() {
-        return "<div class='card strong'>" +
-          "<h3>Знакомые люди</h3>" +
-          "<div class='muted small'>Пока только отображение. Без отношений, шкал и взаимодействий.</div>" +
-          "<div style='margin-top:10px'>" +
-            state.people.map(function (person) {
-              return "<div class='person'>" +
-                "<div>" +
-                  "<strong>" + escapeHtml(person.name) + "</strong>" +
-                  "<div class='muted small'>" + escapeHtml(person.note) + "</div>" +
-                "</div>" +
-                "<span class='pill'>" + escapeHtml(ROLE_LABELS[person.role] || person.role) + "</span>" +
-              "</div>";
-            }).join("") +
-          "</div>" +
-        "</div>";
-      }
-
-      function renderRankings() {
-        var list = state.roster.filter(function (fighter) {
-          return fighter.countryId === state.player.countryId && fighter.trackId === state.player.trackId;
-        }).sort(function (left, right) {
-          return rating(right.stats) - rating(left.stats);
-        }).slice(0, 12);
-
-        return "<div class='card strong'>" +
-          "<h3>Рейтинг страны</h3>" +
-          "<div class='muted small'>Упрощённый рейтинг текущей страны и текущего пути.</div>" +
-          "<div style='margin-top:10px'>" +
-            list.map(function (fighter, index) {
-              return "<div class='person'>" +
-                "<div>" +
-                  "<strong>#" + (index + 1) + " " + escapeHtml(fighter.name) + (fighter.isPlayer ? " <span class='warn'>ты</span>" : "") + "</strong>" +
-                  "<div class='muted small'>" + escapeHtml(recordText(fighter.record)) + "</div>" +
-                "</div>" +
-                "<span class='pill'>Рейтинг " + rating(fighter.stats) + "</span>" +
-              "</div>";
-            }).join("") +
-          "</div>" +
-        "</div>";
-      }
-
-      function renderMain() {
-        var content;
-
-        if (state.selectedTab === "people") {
-          content = renderPeople();
-        } else if (state.selectedTab === "rankings") {
-          content = renderRankings();
-        } else {
-          content = renderOffers();
         }
 
-        return "<section class='panel'>" +
-          renderTabs() +
-          "<div class='result' style='margin-bottom:14px'>" + escapeHtml(state.lastResult || "Готово.") + "</div>" +
-          content +
-        "</section>";
+        html += "</div>";
+        return html;
       }
 
-      function renderGame() {
-        document.getElementById("app").innerHTML =
-          renderHeader() +
-          "<div class='layout'>" +
-            renderSidebar() +
-            renderMain() +
+      function renderPeopleTab() {
+        return "" +
+          "<div class=\"content-card\">" +
+            "<h3>Знакомые люди</h3>" +
+            "<div class=\"muted small\" style=\"margin-bottom:12px\">Пока здесь только отображение. Без взаимодействий и шкал.</div>" +
+            "<div class=\"people-list\">" +
+              state.people.map(function (person) {
+                return "" +
+                  "<div class=\"person-row\">" +
+                    "<div>" +
+                      "<div class=\"person-name\">" + safeText(person.name) + "</div>" +
+                      "<div class=\"muted small\">" + safeText(person.note) + "</div>" +
+                    "</div>" +
+                    "<span class=\"pill\">" + safeText(PEOPLE_ROLES[person.role] || person.role) + "</span>" +
+                  "</div>";
+              }).join("") +
+            "</div>" +
           "</div>";
       }
 
+      function renderRankingTab() {
+        var ranking = state.roster
+          .filter(function (fighter) {
+            return fighter.countryId === state.player.countryId && fighter.trackId === state.player.trackId;
+          })
+          .sort(function (left, right) {
+            return statAverage(right.stats) - statAverage(left.stats);
+          })
+          .slice(0, 12);
+
+        return "" +
+          "<div class=\"content-card\">" +
+            "<h3>Рейтинг страны</h3>" +
+            "<div class=\"muted small\" style=\"margin-bottom:12px\">Упрощённый рейтинг текущей страны и текущего пути.</div>" +
+            "<div class=\"ranking-list\">" +
+              ranking.map(function (fighter, index) {
+                return "" +
+                  "<div class=\"ranking-row\">" +
+                    "<div>" +
+                      "<div class=\"ranking-name\">#" + (index + 1) + " " + safeText(fighter.name) + (fighter.isPlayer ? " <span class=\"accent\">ты</span>" : "") + "</div>" +
+                      "<div class=\"muted small\">" + safeText(recordText(fighter.record)) + "</div>" +
+                    "</div>" +
+                    "<span class=\"pill gold\">Рейтинг " + statAverage(fighter.stats) + "</span>" +
+                  "</div>";
+              }).join("") +
+            "</div>" +
+          "</div>";
+      }
+
+      function renderMainPanel() {
+        var content = "";
+
+        if (state.selectedTab === "people") {
+          content = renderPeopleTab();
+        } else if (state.selectedTab === "ranking") {
+          content = renderRankingTab();
+        } else {
+          content = renderFightTab();
+        }
+
+        return "" +
+          "<section class=\"panel\">" +
+            renderTabs() +
+            "<div class=\"feed\">" + safeText(state.feed || "Готово.") + "</div>" +
+            "<div style=\"margin-top:14px\">" + content + "</div>" +
+          "</section>";
+      }
+
+      function renderDashboard() {
+        app.innerHTML =
+          "<header class=\"topbar\">" +
+            "<div class=\"brand-wrap\">" +
+              "<div class=\"brand-mark\">FS</div>" +
+              "<div class=\"brand-text\">" +
+                "<h1>Fight Simulator</h1>" +
+                "<p>Неделя " + state.week + " · " + safeText(findCountry(state.player.countryId).label) + " · " + safeText(TRACKS[state.player.trackId].label) + "</p>" +
+              "</div>" +
+            "</div>" +
+            "<div class=\"toolbar\">" +
+              "<button id=\"toolbarNextWeek\" class=\"secondary\" type=\"button\">Следующая неделя</button>" +
+              "<button id=\"toolbarReset\" class=\"danger\" type=\"button\">Сбросить карьеру</button>" +
+            "</div>" +
+          "</header>" +
+          "<div class=\"layout\">" +
+            renderSidebar() +
+            renderMainPanel() +
+          "</div>";
+
+        bindDashboardEvents();
+      }
+
+      function bindDashboardEvents() {
+        document.getElementById("trackSelect").addEventListener("change", function (event) {
+          setTrack(event.target.value);
+        });
+
+        document.getElementById("countrySelect").addEventListener("change", function (event) {
+          setCountry(event.target.value);
+        });
+
+        document.getElementById("trainBtn").addEventListener("click", function () {
+          trainWeek();
+        });
+
+        document.getElementById("nextWeekBtn").addEventListener("click", function () {
+          nextWeek();
+        });
+
+        document.getElementById("toolbarNextWeek").addEventListener("click", function () {
+          nextWeek();
+        });
+
+        document.getElementById("toolbarReset").addEventListener("click", function () {
+          resetCareer();
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (button) {
+          button.addEventListener("click", function () {
+            state.selectedTab = button.getAttribute("data-tab");
+            saveState();
+            render();
+          });
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll("[data-fight]"), function (button) {
+          button.addEventListener("click", function () {
+            resolveFight(button.getAttribute("data-fight"));
+          });
+        });
+      }
+
       function render() {
-        if (!state) {
-          renderStart();
+        if (!state || !state.player) {
+          renderStartScreen();
           return;
         }
 
@@ -1027,50 +1225,8 @@
           saveState();
         }
 
-        renderGame();
+        renderDashboard();
       }
-
-      document.addEventListener("click", function (event) {
-        var target = event.target.closest("button");
-
-        if (!target) {
-          return;
-        }
-
-        if (target.dataset.action === "create-career") {
-          createCareer({
-            name: document.getElementById("startName").value.trim(),
-            countryId: document.getElementById("startCountry").value,
-            trackId: document.getElementById("startTrack").value
-          });
-        } else if (target.dataset.action === "reset-career") {
-          resetCareer();
-        } else if (target.dataset.action === "train-week") {
-          trainWeek();
-        } else if (target.dataset.action === "pass-week") {
-          passWeek();
-        } else if (target.dataset.tab) {
-          state.selectedTab = target.dataset.tab;
-          saveState();
-          render();
-        } else if (target.dataset.fight) {
-          resolveFight(target.dataset.fight);
-        }
-      });
-
-      document.addEventListener("change", function (event) {
-        var target = event.target;
-
-        if (!target || !target.dataset) {
-          return;
-        }
-
-        if (target.dataset.action === "set-country") {
-          setCountry(target.value);
-        } else if (target.dataset.action === "set-track") {
-          setTrack(target.value);
-        }
-      });
 
       render();
     }());
