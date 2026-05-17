@@ -273,10 +273,67 @@
     state.feed = "Тренировочная неделя завершена. Улучшен навык: " + U.getStatLabel(chosen) + ".";
   }
 
+
+  function getFighterAwards(state, fighter) {
+    var result = [];
+    var medals;
+    var i;
+
+    if (!fighter) {
+      return result;
+    }
+
+    if (fighter.awards instanceof Array) {
+      result = result.concat(fighter.awards);
+    }
+
+    if (fighter.isPlayer && state.amateurPath && state.amateurPath.medals instanceof Array) {
+      medals = state.amateurPath.medals;
+      for (i = 0; i < medals.length; i += 1) {
+        result.push({
+          week: medals[i].week,
+          label: medals[i].awardLabel || medals[i].label,
+          source: "amateur"
+        });
+      }
+    }
+
+    return result;
+  }
+
+  function addFighterAward(state, fighter, awardLabel, source) {
+    if (!fighter || !awardLabel) {
+      return;
+    }
+
+    fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
+
+    if (!fighter.awards.some(function (award) { return award.label === awardLabel; })) {
+      fighter.awards.unshift({
+        id: U.uid("award"),
+        week: state.week,
+        label: awardLabel,
+        source: source || "career"
+      });
+    }
+
+    if (fighter.awards.length > 24) {
+      fighter.awards.length = 24;
+    }
+  }
+
   function ranking(state, countryId, trackId, weightClassId) {
     return state.roster
       .filter(function (fighter) {
-        return fighter.countryId === countryId &&
+        var countryOk;
+
+        if (trackId === "pro") {
+          countryOk = countryId === "world" || !countryId || countryId === fighter.countryId;
+        } else {
+          countryOk = countryId === "world" || !countryId || fighter.countryId === countryId;
+        }
+
+        return countryOk &&
           fighter.trackId === trackId &&
           (!weightClassId || fighter.weightClassId === weightClassId);
       })
@@ -320,6 +377,7 @@
       state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];
       state.roster[i].careerLog = state.roster[i].careerLog instanceof Array ? state.roster[i].careerLog : [];
       state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
+      state.roster[i].awards = state.roster[i].awards instanceof Array ? state.roster[i].awards : [];
       updateDerivedFighterFields(state.roster[i]);
     }
 
@@ -438,6 +496,8 @@
     updateAllDerived: updateAllDerived,
     rankForFighter: rankForFighter,
     ranking: ranking,
+    addFighterAward: addFighterAward,
+    getFighterAwards: getFighterAwards,
     repairState: repairState,
     playerRank: playerRank,
     pathProgress: pathProgress

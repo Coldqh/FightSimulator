@@ -1,25 +1,24 @@
 # Roadmap
 
-## 1.3.0 Amateur Ladder Pack
+## 1.3.1 Ratings & Tournaments Hotfix
 
-- Amateur module.
-- Tournament ladder.
-- Competition offers.
-- Medals and points.
-- Better amateur path screen.
-- Safer matchmaking against champions.
+- Fix tournament accept fight.
+- Remove amateur champions.
+- Add amateur awards.
+- Replace amateur tournament ladder.
+- Make pro ranking global.
 
 ## 1.3.x
 
-- Tune tournament difficulty.
-- Add tournament brackets.
+- Add real tournament brackets.
+- Add medal tiers: gold/silver/bronze.
 - Add national team qualification rules.
-- Add amateur season calendar.
+- Add tournament history page.
 
 ## 1.4 Street Path
 
 - District rankings.
-- Street status fights.
+- Status fights.
 - Risk/reward choices.
 - Street-to-amateur transition events.
 
@@ -27,5 +26,6 @@
 
 - Promoters.
 - Contracts.
-- Regional belts.
-- Better title eligibility.
+- Global top-15 rankings.
+- Mandatory challengers.
+- Regional belts separate from world title.

@@ -191,7 +191,7 @@
       var playerTier = careerTier(player);
       var isChampion = tier.id === "champion";
       return !fighter.isPlayer &&
-        fighter.countryId === player.countryId &&
+        (player.trackId === "pro" || fighter.countryId === player.countryId) &&
         fighter.trackId === player.trackId &&
         fighter.weightClassId === player.weightClassId &&
         (!isChampion || difficultyId === "hard" && playerTier.level >= 4);

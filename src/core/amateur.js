@@ -78,13 +78,34 @@
 
   function findCompetitionOpponent(state, comp) {
     var p = State.player(state);
+    var playerCountry = U.findCountry(p.countryId);
     var difficulty = U.findDifficulty(comp.difficultyId);
-    var target = U.statAverage(p.stats) + difficulty.offset + Math.max(0, Math.round(comp.minRating / 12));
+    var target = Math.max(comp.minOpponentRating || 1, U.statAverage(p.stats) + difficulty.offset + Math.max(0, Math.round(comp.minRating / 14)));
     var candidates = state.roster.filter(function (fighter) {
-      return !fighter.isPlayer &&
-        fighter.trackId === "amateur" &&
-        fighter.countryId === p.countryId &&
-        fighter.weightClassId === p.weightClassId;
+      var country = U.findCountry(fighter.countryId);
+      var scopeOk = false;
+
+      if (fighter.isPlayer || fighter.trackId !== "amateur" || fighter.weightClassId !== p.weightClassId) {
+        return false;
+      }
+
+      if (comp.scope === "country") {
+        scopeOk = fighter.countryId === p.countryId;
+      } else if (comp.scope === "continent") {
+        scopeOk = country.continentId === playerCountry.continentId;
+      } else {
+        scopeOk = true;
+      }
+
+      if (!scopeOk) {
+        return false;
+      }
+
+      if ((comp.scope === "world" || comp.scope === "world_elite") && U.statAverage(fighter.stats) < (comp.minOpponentRating || 70)) {
+        return false;
+      }
+
+      return true;
     });
 
     candidates.sort(function (left, right) {
@@ -92,6 +113,28 @@
     });
 
     return candidates[0] || null;
+  }
+
+  function chooseCompetitionCountry(state, comp) {
+    var p = State.player(state);
+    var playerCountry = U.findCountry(p.countryId);
+    var pool;
+
+    if (comp.scope === "continent") {
+      pool = Data.countries.filter(function (country) {
+        return country.continentId === playerCountry.continentId;
+      });
+    } else if (comp.scope === "world" || comp.scope === "world_elite") {
+      pool = Data.countries.slice();
+    } else {
+      pool = [playerCountry];
+    }
+
+    if (!pool.length) {
+      return playerCountry;
+    }
+
+    return pool[U.randomInt(0, pool.length - 1)];
   }
 
   function createCompetitionOffer(state, compId) {
@@ -109,7 +152,8 @@
     opponent = findCompetitionOpponent(state, comp);
 
     if (!opponent) {
-      opponent = State.createFighter(p.countryId, "amateur", 16000 + state.week * 31, U.statAverage(p.stats) + U.findDifficulty(comp.difficultyId).offset, {
+      var opponentCountry = chooseCompetitionCountry(state, comp);
+      opponent = State.createFighter(opponentCountry.id, "amateur", 16000 + state.week * 31, Math.max(comp.minOpponentRating || 1, U.statAverage(p.stats) + U.findDifficulty(comp.difficultyId).offset), {
         weightClassId: p.weightClassId,
         gymId: p.gymId
       });
@@ -162,6 +206,7 @@
         week: state.week,
         competitionId: comp.id,
         label: comp.label,
+        awardLabel: comp.awardLabel,
         result: result
       });
 
@@ -169,8 +214,12 @@
         state.amateurPath.medals.length = 20;
       }
 
+      if (State.addFighterAward) {
+        State.addFighterAward(state, p, comp.awardLabel, "amateur");
+      }
+
       if (p && p.careerLog) {
-        p.careerLog.unshift({ week: state.week, text: "Победа в турнире: " + comp.label + "." });
+        p.careerLog.unshift({ week: state.week, text: "Победа в турнире: " + comp.label + " · " + comp.awardLabel + "." });
       }
 
       if (window.FS.World) {

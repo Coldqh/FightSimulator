@@ -4,14 +4,14 @@ Static modular boxing sim.
 
 ## Current version
 
-`amateur-ladder-pack-1.3.0`
+`ratings-tournaments-hotfix-1.3.1`
 
 ## Patch focus
 
-- New `src/core/amateur.js` module.
-- Amateur tournament ladder.
-- City/regional/national/international competitions.
-- Amateur points and medals.
-- Competition fight offers.
-- Better normal matchmaking: champions are not picked casually for safe/even offers.
-- Patch notes modal.
+- Fixed tournament Accept Fight button.
+- Amateur rankings no longer show champions.
+- Amateur progress uses ranks and awards.
+- Amateur tournaments: city, oblast, region, country, continent, world, Olympiad.
+- Continental tournaments use boxers from the player's continent group.
+- World Championship and Olympiad use elite amateurs from all countries.
+- Professional rankings are global with one world champion per weight class.

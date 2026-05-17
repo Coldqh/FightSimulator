@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "amateur-ladder-pack-1.3.0",
+    appVersion: "ratings-tournaments-hotfix-1.3.1",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -61,6 +61,8 @@
     countries: [
       {
         id: "russia",
+        continentId: "eurasia",
+        continentLabel: "Евразия",
         label: "Россия",
         city: "Москва",
         firstNames: ["Влад", "Дмитрий", "Артем", "Илья", "Максим", "Никита", "Кирилл", "Егор", "Павел", "Роман", "Алексей", "Сергей", "Олег", "Данил", "Тимур", "Руслан", "Матвей", "Глеб"],
@@ -69,6 +71,8 @@
       },
       {
         id: "mexico",
+        continentId: "americas",
+        continentLabel: "Америка",
         label: "Мексика",
         city: "Мехико",
         firstNames: ["Diego", "Mateo", "Santiago", "Emilio", "Carlos", "Luis", "Javier", "Miguel", "Rafael", "Andres", "Hector", "Nico", "Marco", "Tomas", "Angel", "Gael", "Oscar", "Julio"],
@@ -77,6 +81,8 @@
       },
       {
         id: "japan",
+        continentId: "eurasia",
+        continentLabel: "Евразия",
         label: "Япония",
         city: "Токио",
         firstNames: ["Haruto", "Ren", "Sota", "Yuto", "Daiki", "Kaito", "Riku", "Takumi", "Shin", "Hayate", "Akira", "Toma", "Itsuki", "Ryusei", "Kenta", "Naoki", "Yuma", "Hiro"],
@@ -85,6 +91,8 @@
       },
       {
         id: "usa",
+        continentId: "americas",
+        continentLabel: "Америка",
         label: "США",
         city: "Нью-Йорк",
         firstNames: ["Marcus", "Andre", "Tyler", "Darnell", "Chris", "Evan", "Jordan", "Malik", "Isaiah", "Caleb", "Brandon", "Derek", "Victor", "Shawn", "Miles", "Cole"],
@@ -93,6 +101,8 @@
       },
       {
         id: "cuba",
+        continentId: "americas",
+        continentLabel: "Америка",
         label: "Куба",
         city: "Гавана",
         firstNames: ["Yordan", "Luis", "Ramon", "Ernesto", "Jorge", "Ariel", "Yoel", "Daniel", "Osvaldo", "Rafael", "Lazaro", "Ivan", "Omar", "Felix"],
@@ -101,6 +111,8 @@
       },
       {
         id: "kazakhstan",
+        continentId: "eurasia",
+        continentLabel: "Евразия",
         label: "Казахстан",
         city: "Алматы",
         firstNames: ["Арман", "Ержан", "Дамир", "Алихан", "Нурлан", "Бекзат", "Тимур", "Руслан", "Самат", "Азамат", "Данияр", "Ислам", "Ерасыл", "Марат"],
@@ -149,11 +161,13 @@
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     amateurCompetitions: [
-      { id: "city_open", label: "Городской открытый турнир", minRating: 1, rewardRating: 1, difficultyId: "safe", weekCooldown: 2 },
-      { id: "regional_cup", label: "Региональный кубок", minRating: 42, rewardRating: 2, difficultyId: "even", weekCooldown: 3 },
-      { id: "national_trials", label: "Отбор на чемпионат страны", minRating: 58, rewardRating: 3, difficultyId: "hard", weekCooldown: 4 },
-      { id: "national_final", label: "Финал чемпионата страны", minRating: 68, rewardRating: 4, difficultyId: "hard", weekCooldown: 5 },
-      { id: "international_meet", label: "Международная встреча", minRating: 76, rewardRating: 5, difficultyId: "hard", weekCooldown: 6 }
+      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 1, rewardRating: 1, difficultyId: "safe", weekCooldown: 2, scope: "country", minOpponentRating: 1 },
+      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 34, rewardRating: 2, difficultyId: "safe", weekCooldown: 3, scope: "country", minOpponentRating: 30 },
+      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 46, rewardRating: 3, difficultyId: "even", weekCooldown: 4, scope: "country", minOpponentRating: 42 },
+      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 58, rewardRating: 4, difficultyId: "hard", weekCooldown: 5, scope: "country", minOpponentRating: 54 },
+      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 70, rewardRating: 5, difficultyId: "hard", weekCooldown: 6, scope: "continent", minOpponentRating: 62 },
+      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 78, rewardRating: 6, difficultyId: "hard", weekCooldown: 8, scope: "world", minOpponentRating: 72 },
+      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 84, rewardRating: 8, difficultyId: "hard", weekCooldown: 12, scope: "world_elite", minOpponentRating: 78 }
     ],
 
     careerStages: {

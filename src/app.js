@@ -70,7 +70,11 @@
 
     State.repairState(state);
 
-    if (!state.offers || state.offers.length !== 3) {
+    var normalOfferCount = (state.offers || []).filter(function (offer) {
+      return !offer.isCompetition;
+    }).length;
+
+    if (!state.offers || normalOfferCount !== 3) {
       World.refreshOffers(state);
       Storage.save(state);
     }

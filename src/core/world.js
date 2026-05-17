@@ -264,8 +264,12 @@
   }
 
   function refreshOffers(state) {
+    var competitionOffers = (state.offers || []).filter(function (offer) {
+      return offer.isCompetition;
+    });
+
     if (window.FS.Matchmaking && window.FS.Matchmaking.buildPlayerOffers) {
-      state.offers = window.FS.Matchmaking.buildPlayerOffers(state);
+      state.offers = window.FS.Matchmaking.buildPlayerOffers(state).concat(competitionOffers);
       return;
     }
 
@@ -279,14 +283,13 @@
     var i;
     var opponent;
     var difficulty;
-
-    state.offers = [];
+    var normalOffers = [];
 
     for (i = 0; i < 3; i += 1) {
       difficulty = Data.offerDifficulties[i] || Data.offerDifficulties[1];
       opponent = buildOfferOpponent(state, i);
 
-      state.offers.push({
+      normalOffers.push({
         id: U.uid("offer"),
         label: labelsByTrack[p.trackId][i],
         difficultyId: difficulty.id,
@@ -297,6 +300,8 @@
         risk: Math.max(1, U.statAverage(opponent.stats) - U.statAverage(p.stats) + 50)
       });
     }
+
+    state.offers = normalOffers.concat(competitionOffers);
   }
 
   function advanceWeek(state, action) {
@@ -345,6 +350,9 @@
     buildNationalTeams(state);
     if (window.FS.Titles) {
       window.FS.Titles.ensureTitles(state);
+      if (window.FS.Titles.removeAmateurTitles) {
+        window.FS.Titles.removeAmateurTitles(state);
+      }
       if (window.FS.Titles.normalizeFighterTitles) {
         window.FS.Titles.normalizeFighterTitles(state);
       }

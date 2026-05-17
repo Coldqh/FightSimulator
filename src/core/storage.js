@@ -74,6 +74,7 @@
     fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
     fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
+    fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
     fighter.lastMoveWeek = Number(fighter.lastMoveWeek) || 1;
     fighter.lastFightWeek = Number(fighter.lastFightWeek) || 0;
   }
