@@ -1,40 +1,37 @@
 # Roadmap
 
-## 1.1.0 Foundation Pack
+## 1.2.0 Realism & Matchmaking Pack
 
-- Career settings tab.
-- Save repair/export/import.
-- Improved fight preview and round logs.
-- Better win chance model.
-- Path progress UI.
-- Champion challenge from ranking.
-- More robust state repair.
+- Matchmaking module.
+- Realistic record normalization.
+- Opponent classes.
+- Career stages.
+- Smarter offers.
+- World diagnostics.
 
-## 1.1.x bugfix
+## 1.2.x Bugfix
 
-- Balance fight chance.
-- Check old saves.
-- Improve club card layout.
-- Tune title challenge eligibility.
+- Tune chance formula.
+- Tune generated records.
+- Fix edge cases in old saves.
+- Polish diagnostics.
 
-## 1.2
+## 1.3 Amateur Ladder
 
-- Realistic records and matchmaking pass.
-- Better distinction between official and street records.
-- Better amateur rank progression.
-
-## 1.3
-
-- Amateur competitions.
-- City/regional/national ladder.
+- City championship.
+- Regional championship.
+- National championship.
 - National team goals.
 
-## 1.4
+## 1.4 Street Path
 
-- Street path systems.
-- Street rankings and risk.
+- District rankings.
+- Status fights.
+- Street-to-amateur transition events.
 
-## 1.5
+## 1.5 Pro Path
 
-- Pro contracts/promoters.
-- Regional titles and title defenses.
+- Promoters.
+- Contracts.
+- Regional belts.
+- Better title eligibility.

@@ -264,6 +264,11 @@
   }
 
   function refreshOffers(state) {
+    if (window.FS.Matchmaking && window.FS.Matchmaking.buildPlayerOffers) {
+      state.offers = window.FS.Matchmaking.buildPlayerOffers(state);
+      return;
+    }
+
     var p = State.player(state);
     var labelsByTrack = {
       amateur: ["Любительский бой", "Бой городского уровня", "Матч отбора"],
@@ -325,6 +330,9 @@
 
   function bootstrapWorld(state) {
     State.updateAllDerived(state);
+    if (window.FS.Matchmaking && window.FS.Matchmaking.normalizeRosterRecords) {
+      window.FS.Matchmaking.normalizeRosterRecords(state);
+    }
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
       if (window.FS.Clubs.chooseTrackedClubmate) {

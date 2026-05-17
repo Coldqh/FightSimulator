@@ -23,7 +23,7 @@
 
   function createRecord(seed) {
     var tier = Math.abs(seed) % 7;
-    var wins = U.randomInt(0, 6) + tier * 2;
+    var wins = U.randomInt(0, 5) + tier * 2;
     var losses = U.randomInt(0, 4);
     var draws = U.randomInt(0, 1);
 
@@ -31,7 +31,7 @@
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, 8)))
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * 0.55))))
     };
   }
 
@@ -353,6 +353,8 @@
     var score;
     var nextRank;
     var i;
+    var tier;
+    var stage;
 
     if (!target) {
       return {
@@ -362,6 +364,8 @@
     }
 
     score = U.statAverage(target.stats);
+    tier = window.FS.Matchmaking ? window.FS.Matchmaking.careerTier(target) : { label: "Боец" };
+    stage = window.FS.Matchmaking ? window.FS.Matchmaking.careerStage(target) : { label: "Базовый уровень" };
 
     if (target.trackId === "amateur") {
       rank = rankForFighter(target);
@@ -378,6 +382,8 @@
         title: "Любительский путь",
         badge: rank.label,
         lines: [
+          "Ступень: " + stage.label,
+          "Класс бойца: " + tier.label,
           "Текущий разряд: " + rank.label,
           nextRank ? ("Следующий разряд: " + nextRank.label + " с рейтинга " + nextRank.minRating) : "Следующий разряд: максимум текущей шкалы",
           "Позиция в дивизионе: #" + (playerRank(state, target.countryId, target.trackId, target.weightClassId) || "—")
@@ -388,19 +394,22 @@
     if (target.trackId === "street") {
       return {
         title: "Уличный путь",
-        badge: "Рейтинг " + (target.streetRating || score),
+        badge: tier.label,
         lines: [
+          "Ступень: " + stage.label,
+          "Класс бойца: " + tier.label,
           "Уличный рейтинг: " + (target.streetRating || score),
-          "Сильная сторона: быстрый рост через частые бои",
-          "Переход в любители доступен при хорошем уровне"
+          "Позиция в дивизионе: #" + (playerRank(state, target.countryId, target.trackId, target.weightClassId) || "—")
         ]
       };
     }
 
     return {
       title: "Профессиональный путь",
-      badge: "Профи " + (target.proRating || score),
+      badge: tier.label,
       lines: [
+        "Ступень: " + stage.label,
+        "Класс бойца: " + tier.label,
         "Профи-рейтинг: " + (target.proRating || score),
         "Позиция в дивизионе: #" + (playerRank(state, target.countryId, target.trackId, target.weightClassId) || "—"),
         "Титульный вызов открывается около топ-3"

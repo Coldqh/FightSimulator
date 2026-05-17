@@ -108,6 +108,12 @@
     } else if (button.dataset.action === "repair-save") {
       rebuildWorld("Сохранение проверено и починено.");
       saveAndRender();
+    } else if (button.dataset.action === "world-audit") {
+      state.modal = {
+        type: "worldAudit",
+        report: window.FS.Matchmaking ? window.FS.Matchmaking.auditWorld(state) : { fighters: state.roster.length, clubs: state.clubs.length, titles: Object.keys(state.titles || {}).length, offers: state.offers.length, repairedRecords: 0, missingGym: 0 }
+      };
+      saveAndRender();
     } else if (button.dataset.action === "export-save") {
       state.modal = {
         type: "saveExport",

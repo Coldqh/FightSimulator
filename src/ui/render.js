@@ -181,7 +181,7 @@
 
       return "<div class=\"offer\"><div><div class=\"offer-title\">" + U.escapeHtml(offer.label) + "</div>" +
         "<div class=\"muted\">Соперник: <button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button></div>" +
-        "<div class=\"pills\"><span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span><span class=\"pill\">" + offer.rounds + " раунда</span><span class=\"pill gold\">$" + offer.purse + "</span><span class=\"pill\">" + U.escapeHtml(difficulty.label) + "</span><span class=\"pill blue\">Шанс " + preview.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(preview.expectation) + "</span></div></div>" +
+        "<div class=\"pills\"><span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span><span class=\"pill\">" + offer.rounds + " раунда</span><span class=\"pill gold\">$" + offer.purse + "</span><span class=\"pill\">" + U.escapeHtml(difficulty.label) + "</span><span class=\"pill\">" + U.escapeHtml(offer.opponentTier || preview.opponentTier || "Боец") + "</span><span class=\"pill blue\">Шанс " + preview.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(preview.expectation) + "</span></div></div>" +
         "<button class=\"primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Открыть бой</button></div>";
     }).join("") + "</div>";
   }
@@ -344,7 +344,7 @@
         "<label style=\"display:block;margin-top:12px\"><div class=\"label\">Тактика по умолчанию</div><select data-action=\"set-tactic\">" + tacticOptions + "</select></label>" +
       "</div>" +
       "<div class=\"content-card\"><h3>Сохранение</h3>" +
-        "<div class=\"row\"><button data-action=\"repair-save\">Починить сохранение</button><button data-action=\"export-save\">Экспорт</button><button data-action=\"import-save\">Импорт</button></div>" +
+        "<div class=\"row\"><button data-action=\"repair-save\">Починить сохранение</button><button data-action=\"world-audit\">Диагностика мира</button><button data-action=\"export-save\">Экспорт</button><button data-action=\"import-save\">Импорт</button></div>" +
         "<div class=\"footer-note\">Версия: " + U.escapeHtml(Data.appVersion) + "</div>" +
       "</div>" +
     "</div>";
@@ -395,6 +395,10 @@
     if (modal.type === "club") {
       club = window.FS.Clubs.findClub(state, modal.clubId);
       return club ? renderClubModal(state, club) : "";
+    }
+
+    if (modal.type === "worldAudit") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Диагностика мира</h2></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Бойцы</div><div class=\"value\">" + modal.report.fighters + "</div></div><div class=\"stat-card\"><div class=\"label\">Клубы</div><div class=\"value\">" + modal.report.clubs + "</div></div><div class=\"stat-card\"><div class=\"label\">Титулы</div><div class=\"value\">" + modal.report.titles + "</div></div><div class=\"stat-card\"><div class=\"label\">Офферы</div><div class=\"value\">" + modal.report.offers + "</div></div></div><div class=\"footer-note\">Рекорды для ремонта: " + modal.report.repairedRecords + ". Без клуба: " + modal.report.missingGym + ".</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "saveExport") {

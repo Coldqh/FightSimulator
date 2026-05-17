@@ -1,4 +1,4 @@
-# Test Checklist 1.1.0
+# Test Checklist 1.2.0
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,13 +7,11 @@ start index.html
 ```
 
 Manual:
-1. Version is visible.
-2. Settings tab exists.
-3. Country/path/weight/tactic changes work from Settings.
-4. Fight preview shows chance and expectation.
-5. Fight result shows round log and landed punches.
-6. Export opens JSON modal.
-7. Import accepts exported JSON.
-8. Repair save works.
-9. Champion is shown with crown in ranking.
-10. If eligible, champion challenge opens from ranking.
+1. Version says realism-matchmaking-pack-1.2.0.
+2. Fight offers show class/tier.
+3. Fight chance changes depending on opponent.
+4. Records look sane.
+5. Settings -> Diagnostics opens modal.
+6. Export/import still works.
+7. Ranking crown still works.
+8. World/amateur path still shows player's country.

@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "foundation-pack-1.1.0",
+    appVersion: "realism-matchmaking-pack-1.2.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -147,6 +147,27 @@
     ],
 
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
+
+    careerStages: {
+      amateur: [
+        { id: "local", label: "Городской уровень", minRating: 1 },
+        { id: "regional", label: "Региональный уровень", minRating: 42 },
+        { id: "national", label: "Национальный уровень", minRating: 58 },
+        { id: "international", label: "Международный уровень", minRating: 74 }
+      ],
+      street: [
+        { id: "yard", label: "Дворовый уровень", minRating: 1 },
+        { id: "district", label: "Районный уровень", minRating: 45 },
+        { id: "city", label: "Городская улица", minRating: 70 },
+        { id: "king", label: "Претендент улицы", minRating: 95 }
+      ],
+      pro: [
+        { id: "debut", label: "Дебютант профи", minRating: 1 },
+        { id: "prospect", label: "Проспект", minRating: 48 },
+        { id: "contender", label: "Контендер", minRating: 72 },
+        { id: "champion_level", label: "Чемпионский уровень", minRating: 95 }
+      ]
+    },
 
     defaultFilters: {
       tab: "dashboard",

@@ -1,13 +1,13 @@
 {
-  "version": "foundation-pack-1.1.0",
-  "mode": "foundation-pack",
+  "version": "realism-matchmaking-pack-1.2.0",
+  "mode": "realism-matchmaking-pack",
   "patches": [
-    "career settings screen",
-    "save export import repair",
-    "path progress",
-    "better fight preview and round log",
-    "ranking champion challenge",
-    "more detailed fight stats",
-    "state repair on render"
+    "new Matchmaking module",
+    "realistic record normalization",
+    "opponent tiers and stages",
+    "smarter fight offers",
+    "career stage progress",
+    "world diagnostics",
+    "better offer labels"
   ]
 }

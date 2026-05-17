@@ -88,7 +88,9 @@
       opponentRating: U.statAverage(opponent.stats),
       playerRecord: U.recordText(p.record),
       opponentRecord: U.recordText(opponent.record),
-      weightClassLabel: U.formatWeightClass(p.weightClassId)
+      weightClassLabel: U.formatWeightClass(p.weightClassId),
+      opponentTier: window.FS.Matchmaking ? window.FS.Matchmaking.careerTier(opponent).label : "Боец",
+      opponentStage: window.FS.Matchmaking ? window.FS.Matchmaking.careerStage(opponent).label : "Базовый уровень"
     };
   }
 
