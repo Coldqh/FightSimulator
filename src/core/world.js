@@ -89,80 +89,127 @@
   }
 
   function simulateNpcTraining(state) {
-    var count = Math.min(26, Math.max(8, Math.floor(state.roster.length / 40)));
-    var i;
-    var fighter;
+    var count = Math.min(140, Math.max(40, Math.floor(state.roster.length / 110)));
+    var i, fighter, key, cap;
     var keys = ["power", "technique", "speed", "stamina", "defense"];
-    var key;
-    var cap;
-
     for (i = 0; i < count; i += 1) {
       fighter = state.roster[U.randomInt(0, state.roster.length - 1)];
-      if (!fighter || fighter.isPlayer) {
-        continue;
-      }
+      if (!fighter || fighter.isPlayer) { continue; }
       key = U.pick(keys);
       cap = U.findTrack(fighter.trackId).maxStat;
-      if (U.randomInt(1, 100) <= 55) {
+      if (U.randomInt(1, 100) <= 45) {
         fighter.stats[key] = U.clamp(fighter.stats[key] + 1, 1, cap);
         State.updateDerivedFighterFields(fighter);
       }
     }
   }
 
-  function simulateNpcFights(state) {
-    var fighters = state.roster.filter(function (fighter) {
-      return !fighter.isPlayer && state.week - (fighter.lastFightWeek || 0) >= 2;
+  function contractDelay(fighter) {
+    var titles = fighter.titles ? fighter.titles.length : 0;
+    var rating = U.statAverage(fighter.stats);
+    if (titles > 0) { return U.randomInt(10, 15); }
+    if (rating >= 155 || fighter.record.wins >= 22) { return U.randomInt(7, 11); }
+    if (rating >= 120 || fighter.record.wins >= 10) { return U.randomInt(4, 8); }
+    return U.randomInt(2, 5);
+  }
+
+  function findProContractOpponent(state, fighter) {
+    var pool = state.roster.filter(function (item) {
+      return !item.isPlayer && item.id !== fighter.id && item.trackId === "pro" && item.weightClassId === fighter.weightClassId && state.week - (item.lastFightWeek || 0) >= 2;
     });
-    var used = {};
+    if (!pool.length) { return null; }
+    pool.sort(function (left, right) {
+      return Math.abs(U.scoreFighter(left) - U.scoreFighter(fighter)) - Math.abs(U.scoreFighter(right) - U.scoreFighter(fighter));
+    });
+    return pool[U.randomInt(0, Math.min(6, pool.length - 1))] || pool[0];
+  }
+
+  function scheduleProContract(state, fighter) {
+    var opponent = findProContractOpponent(state, fighter);
+    if (!opponent) { return false; }
+    fighter.contractOpponentId = opponent.id;
+    fighter.nextFightWeek = state.week + contractDelay(fighter);
+    fighter.contractLabel = "Контракт на бой через " + (fighter.nextFightWeek - state.week) + " нед.";
+    return true;
+  }
+
+  function processProContracts(state) {
+    var pros = state.roster.filter(function (fighter) { return !fighter.isPlayer && fighter.trackId === "pro"; });
     var report = [];
-    var count = Math.min(120, Math.max(35, Math.floor(fighters.length / 90)));
+    var i, fighter, opponent, result;
+    var scheduled = 0;
+    for (i = 0; i < pros.length; i += 1) {
+      fighter = pros[i];
+      if (!fighter.nextFightWeek || !fighter.contractOpponentId) {
+        if (scheduled < 80 && U.randomInt(1, 100) <= 12) { if (scheduleProContract(state, fighter)) { scheduled += 1; } }
+        continue;
+      }
+      if (fighter.nextFightWeek <= state.week) {
+        opponent = U.getFighterById(state, fighter.contractOpponentId);
+        if (opponent && opponent.trackId === "pro") {
+          result = resolveNpcFight(state, fighter, opponent);
+          report.push(result.text);
+          if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser); }
+        }
+        fighter.contractOpponentId = "";
+        fighter.nextFightWeek = 0;
+        fighter.contractLabel = "";
+        scheduleProContract(state, fighter);
+      }
+    }
+    return report;
+  }
+
+  function simulateNpcFights(state) {
+    var report = [];
+    var due = state.roster.filter(function (fighter) {
+      return !fighter.isPlayer && fighter.trackId !== "pro" && state.week - (fighter.lastFightWeek || 0) >= 3;
+    });
+    var buckets = {};
+    var key;
     var i;
+    var bucket;
     var a;
     var b;
     var result;
+    var maxPairs = 0;
 
-    for (i = 0; i < count; i += 1) {
-      a = fighters[U.randomInt(0, fighters.length - 1)];
-      if (!a || used[a.id]) {
-        continue;
-      }
-      b = findCloseOpponent(state, a);
-      if (!b || used[b.id]) {
-        continue;
-      }
+    for (i = 0; i < due.length; i += 1) {
+      key = due[i].trackId + "|" + due[i].countryId + "|" + (due[i].trackId === "street" ? "open" : due[i].weightClassId);
+      if (!buckets[key]) { buckets[key] = []; }
+      buckets[key].push(due[i]);
+    }
 
-      used[a.id] = true;
-      used[b.id] = true;
-      result = resolveNpcFight(state, a, b);
-      report.push(result.text);
-
-      if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
-        window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser);
-      }
-
-      if (report.length <= 5) {
-        createNews(state, "fight", result.text, { type: "npc_fight" });
+    for (key in buckets) {
+      if (!Object.prototype.hasOwnProperty.call(buckets, key)) { continue; }
+      bucket = buckets[key];
+      maxPairs = Math.min(Math.floor(bucket.length / 2), 220);
+      for (i = 0; i < maxPairs; i += 1) {
+        a = bucket[i * 2];
+        b = bucket[i * 2 + 1];
+        if (!a || !b) { continue; }
+        result = resolveNpcFight(state, a, b);
+        if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
+          window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser);
+        }
+        if (report.length < 8) { report.push(result.text); }
       }
     }
 
-    if (window.FS.Titles && window.FS.Titles.updateTitles) {
-      window.FS.Titles.updateTitles(state);
-    }
+    report = report.concat(processProContracts(state).slice(0, 8 - report.length));
 
+    if (window.FS.Titles && window.FS.Titles.updateTitles) { window.FS.Titles.updateTitles(state); }
     return report;
   }
 
   function canMoveToTrack(fighter, targetTrackId) {
-    if (fighter.trackId === targetTrackId) {
-      return false;
-    }
-    if (fighter.trackId === "pro" && targetTrackId === "amateur") {
-      return false;
-    }
-    if (fighter.proClosed && targetTrackId === "pro") {
-      return false;
-    }
+    var rating = U.statAverage(fighter.stats);
+    if (fighter.trackId === targetTrackId) { return false; }
+    if (targetTrackId === "amateur" && rating > 100) { return false; }
+    if (targetTrackId === "street" && rating > 150) { return false; }
+    if (targetTrackId === "pro" && rating < 90) { return false; }
+    if (fighter.trackId === "pro" && targetTrackId === "amateur") { return false; }
+    if (fighter.proClosed && targetTrackId === "pro") { return false; }
     return true;
   }
 
@@ -313,6 +360,7 @@
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
     simulateTransitions(state);
+    if (window.FS.Clubs && window.FS.Clubs.maybeMoveNpcClubs) { window.FS.Clubs.maybeMoveNpcClubs(state); }
     buildNationalTeams(state);
     if (window.FS.Titles) {
       window.FS.Titles.updateTitles(state);

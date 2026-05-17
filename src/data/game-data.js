@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "career-world-rework-1.4.1",
+    appVersion: "tournament-mobile-club-rework-1.4.2",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -142,12 +142,12 @@
     ],
 
     amateurRankRosterCounts: {
-      adult_3: 500,
-      adult_2: 300,
-      adult_1: 150,
-      kms: 60,
-      ms: 30,
-      msmk: 15
+      adult_3: 1000,
+      adult_2: 600,
+      adult_1: 300,
+      kms: 120,
+      ms: 60,
+      msmk: 30
     },
 
     beltBodies: [
@@ -174,13 +174,13 @@
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     amateurCompetitions: [
-      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 24, rewardRating: 20, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "safe", weekCooldown: 2, scope: "country", minOpponentRating: 0 },
-      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 42, rewardRating: 35, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "safe", weekCooldown: 3, scope: "country", minOpponentRating: 18 },
-      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 58, rewardRating: 55, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "even", weekCooldown: 4, scope: "country", minOpponentRating: 32 },
-      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 50, maxRating: 74, rewardRating: 80, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 6, scope: "country", minOpponentRating: 48 },
-      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 65, maxRating: 89, rewardRating: 120, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 8, scope: "continent", minOpponentRating: 62 },
-      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 80, maxRating: 100, rewardRating: 170, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 10, scope: "world", minOpponentRating: 76 },
-      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 88, maxRating: 100, rewardRating: 240, rounds: ["1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 16, scope: "world_elite", minOpponentRating: 84 }
+      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 24, rewardRating: 60, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "safe", weekCooldown: 4, scope: "country", minOpponentRating: 0 },
+      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 42, rewardRating: 100, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "safe", weekCooldown: 6, scope: "country", minOpponentRating: 20 },
+      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 58, rewardRating: 150, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "even", weekCooldown: 8, scope: "country", minOpponentRating: 35 },
+      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 50, maxRating: 74, rewardRating: 230, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 12, scope: "country", minOpponentRating: 50 },
+      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 65, maxRating: 89, rewardRating: 340, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 16, scope: "continent", minOpponentRating: 65 },
+      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 80, maxRating: 100, rewardRating: 500, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 20, scope: "world", minOpponentRating: 80 },
+      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 88, maxRating: 100, rewardRating: 750, rounds: ["1/128", "1/64", "1/32", "1/16", "1/8", "Четвертьфинал", "Полуфинал", "Финал"], difficultyId: "hard", weekCooldown: 32, scope: "world_elite", minOpponentRating: 88 }
     ],
 
     careerStages: {

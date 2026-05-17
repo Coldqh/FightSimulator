@@ -144,6 +144,10 @@
       careerLog: opts.careerLog || [],
       storyFlags: opts.storyFlags || [],
       trainingPoints: opts.trainingPoints || 0,
+      money: Number(opts.money) || 0,
+      nextFightWeek: opts.nextFightWeek || 0,
+      contractOpponentId: opts.contractOpponentId || "",
+      contractLabel: opts.contractLabel || "",
       lastMoveWeek: 1,
       lastFightWeek: 0,
       seed: seed
@@ -170,10 +174,10 @@
     /* Профи: 100 в каждом весе, OVR 90-200 */
     for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
       weightClassId = Data.weightClasses[weightIndex].id;
-      for (fighterIndex = 0; fighterIndex < 100; fighterIndex += 1) {
+      for (fighterIndex = 0; fighterIndex < 200; fighterIndex += 1) {
         countryId = Data.countries[fighterIndex % Data.countries.length].id;
-        seed = 100000 + weightIndex * 1000 + fighterIndex;
-        base = U.clamp(90 + Math.round(fighterIndex * 1.12), 90, 200);
+        seed = 100000 + weightIndex * 2000 + fighterIndex;
+        base = U.clamp(90 + Math.round(fighterIndex * 0.56), 90, 200);
         roster.push(createFighter(countryId, "pro", seed, base, {
           weightClassId: weightClassId,
           age: U.randomInt(19, 39)
@@ -243,6 +247,7 @@
       record: emptyRecord(),
       trackRecords: { amateur: emptyRecord(), street: emptyRecord(), pro: emptyRecord() },
       trainingPoints: 0,
+      money: 0,
       careerLog: [{ week: 1, text: "Начало карьеры." }]
     });
 
@@ -323,7 +328,21 @@
   function setPlayerTrack(state, trackId) {
     var p = player(state);
     var target = U.findTrack(trackId);
+    var rating = p ? U.statAverage(p.stats) : 0;
     if (!p || !target) {
+      return false;
+    }
+
+    if (target.id === "amateur" && rating > 100) {
+      state.feed = "OVR выше 100: в любители перейти нельзя.";
+      return false;
+    }
+    if (target.id === "street" && rating > 150) {
+      state.feed = "OVR выше 150: на улицу перейти нельзя.";
+      return false;
+    }
+    if (target.id === "pro" && rating < 90) {
+      state.feed = "Для профи нужен OVR 90+.";
       return false;
     }
 
@@ -428,14 +447,18 @@
     var p = player(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var cap;
+    var club;
+    var mod = 1;
 
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
     if (!statKey) {
-      p.trainingPoints += 5;
-      p.careerLog.unshift({ week: state.week, text: "Тренировочная неделя: +5 очков прокачки." });
-      state.feed = "Тренировочная неделя завершена. Получено 5 очков прокачки.";
+      club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+      mod = club ? (Number(club.trainingModifier) || 1) : 1;
+      p.trainingPoints += Math.max(1, Math.round(5 * mod));
+      p.careerLog.unshift({ week: state.week, text: "Тренировочная неделя: +" + Math.max(1, Math.round(5 * mod)) + " очков прокачки." });
+      state.feed = "Тренировочная неделя завершена. Получено " + Math.max(1, Math.round(5 * mod)) + " очков прокачки.";
       return;
     }
 
@@ -547,6 +570,10 @@
       state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
       state.roster[i].awards = state.roster[i].awards instanceof Array ? state.roster[i].awards : [];
       state.roster[i].trainingPoints = Number(state.roster[i].trainingPoints) || 0;
+      state.roster[i].money = Number(state.roster[i].money) || 0;
+      state.roster[i].nextFightWeek = Number(state.roster[i].nextFightWeek) || 0;
+      state.roster[i].contractOpponentId = state.roster[i].contractOpponentId || "";
+      state.roster[i].contractLabel = state.roster[i].contractLabel || "";
       ensureTrackRecords(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }

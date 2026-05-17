@@ -230,7 +230,11 @@
 
     applyFightResult(state, p, opponent, result, method);
 
-    p.trainingPoints = (Number(p.trainingPoints) || 0) + (result === "Победа" ? 4 : (result === "Ничья" ? 2 : 1));
+    var pointMod = 1;
+    var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+    if (club) { pointMod = Number(club.trainingModifier) || 1; }
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + Math.max(1, Math.round((result === "Победа" ? 4 : (result === "Ничья" ? 2 : 1)) * pointMod));
+    p.money = (Number(p.money) || 0) + (Number(offer.purse) || 0);
 
     if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
       window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id);

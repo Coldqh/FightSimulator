@@ -80,6 +80,10 @@
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
     fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
     fighter.trainingPoints = Number(fighter.trainingPoints) || 0;
+    fighter.money = Number(fighter.money) || 0;
+    fighter.nextFightWeek = Number(fighter.nextFightWeek) || 0;
+    fighter.contractOpponentId = fighter.contractOpponentId || "";
+    fighter.contractLabel = fighter.contractLabel || "";
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
     fighter.lastMoveWeek = Number(fighter.lastMoveWeek) || 1;
     fighter.lastFightWeek = Number(fighter.lastFightWeek) || 0;
@@ -99,6 +103,8 @@
     state.rankingTrackId = state.rankingTrackId || "amateur";
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
+    if (!state.world) { state.world = {}; }
+    state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
     state.modal = null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];

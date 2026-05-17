@@ -138,14 +138,8 @@
       state.selectedTab = button.dataset.tab;
       saveAndRender();
     } else if (button.dataset.amateurCompetition) {
-      if (window.FS.Amateur) {
-        var competitionOffer = window.FS.Amateur.createCompetitionOffer(state, button.dataset.amateurCompetition);
-        if (competitionOffer) {
-          preview = Fight.buildFightPreview(state, competitionOffer.id);
-          if (preview) {
-            state.modal = preview;
-          }
-        }
+      if (window.FS.Amateur && window.FS.Amateur.runTournament) {
+        state.modal = window.FS.Amateur.runTournament(state, button.dataset.amateurCompetition);
       }
       saveAndRender();
     } else if (button.dataset.previewFight) {
@@ -171,6 +165,13 @@
         window.FS.Clubs.movePlayerToClub(state, button.dataset.joinClub);
         World.refreshOffers(state);
       }
+      state.selectedTab = "myclub";
+      saveAndRender();
+    } else if (button.dataset.action === "leave-club") {
+      if (window.FS.Clubs && window.FS.Clubs.leavePlayerClub) { window.FS.Clubs.leavePlayerClub(state); }
+      saveAndRender();
+    } else if (button.dataset.clubLevelFilter) {
+      state.clubLevelFilter = parseInt(button.dataset.clubLevelFilter, 10) || 0;
       saveAndRender();
     } else if (button.dataset.club) {
       state.modal = {
