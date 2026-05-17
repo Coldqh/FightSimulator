@@ -441,6 +441,7 @@
       window.FS.Stories.simulateStories(state);
     }
     refreshOffers(state);
+    if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
 
     U.pushLimited(state.world.weekReports, {
       id: U.uid("week"),

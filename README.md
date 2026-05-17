@@ -1,11 +1,13 @@
 # Fight Simulator
 
-Version: `turn-based-fight-1.8.0`
+Version: `interactive-ring-fight-1.8.1`
 
 ## Patch focus
 
-- Returned the fight engine to turn-by-turn simulation.
-- Fighters act one after another.
-- Hits, misses, HP loss and stoppages are calculated from existing stats.
-- No game plans, aggression, tempo, clinch, first-number logic or extra tactical layer.
-- Fight and tournament results now use the same turn-by-turn engine.
+- Interactive 5×5 ring fight window.
+- Player-controlled movement, punches, block, counter.
+- HP, stamina, knockdown count to 10.
+- Skip fight resolves by winChance.
+- Fight purse depends on OVR and opponent strength, not just difficulty.
+- Money can go negative; debt must be cleared within 3 months.
+- Fatigue 100 locks every action except rest.

@@ -1,4 +1,4 @@
-# Test Checklist 1.8.0
+# Test Checklist 1.8.1
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -8,8 +8,16 @@ start index.html
 
 Manual checks:
 
-1. Open a fight preview and accept the fight.
-2. The result log should show turn-by-turn actions: hits, misses, damage and HP.
-3. Tournament fights should show the same style of log.
-4. There should be no tactical/game-plan UI.
-5. No aggression/tempo/clinch/first-number mechanics should appear.
+1. Accept a fight: a separate ring window opens.
+2. There is no exit button inside the active fight.
+3. Ring is 5×5.
+4. Player and opponent are circles on the ring.
+5. Movement buttons move the player.
+6. Straight head/body work from distance 1–2.
+7. Hook and uppercut work only close.
+8. Block and counter buttons work.
+9. HP and stamina change during the fight.
+10. Knockdown starts a count to 10.
+11. Skip fight resolves by winChance.
+12. Fatigue 100 allows only rest.
+13. Negative balance starts a 3-month debt timer.

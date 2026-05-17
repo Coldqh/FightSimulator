@@ -486,6 +486,8 @@
     p.financeLog = p.financeLog instanceof Array ? p.financeLog : [];
     p.monthlyExpenseLog = p.monthlyExpenseLog instanceof Array ? p.monthlyExpenseLog : [];
     p.lastExpenseWeek = Number(p.lastExpenseWeek) || 1;
+    p.debtStartWeek = Number(p.debtStartWeek) || 0;
+    p.debtDeadlineWeek = Number(p.debtDeadlineWeek) || 0;
     return p;
   }
 
@@ -501,6 +503,7 @@
     if (!p || value <= 0) { return false; }
     p.money += value;
     pushFinanceLog(p, state, reason || "Доход", value);
+    updateDebtStatus(state, "income");
     return true;
   }
 
@@ -508,12 +511,9 @@
     var p = ensurePlayerSystems(state);
     var value = Math.round(Number(amount) || 0);
     if (!p || value <= 0) { return true; }
-    if (p.money < value) {
-      state.feed = "Не хватает денег: нужно $" + value + ".";
-      return false;
-    }
     p.money -= value;
     pushFinanceLog(p, state, reason || "Расход", -value);
+    updateDebtStatus(state, "spend");
     return true;
   }
 
@@ -525,6 +525,66 @@
       p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/100." });
     }
     return p.fatigue;
+  }
+
+  function isLockedByFatigue(state) {
+    var p = ensurePlayerSystems(state);
+    return !!(p && p.fatigue >= 100);
+  }
+
+  function fatigueLockedModal(state) {
+    var p = ensurePlayerSystems(state);
+    state.modal = { type: "fatigueLock", fatigue: p ? p.fatigue : 100 };
+    state.feed = "Усталость 100/100. Можно только отдыхать.";
+    return false;
+  }
+
+  function debtWeeksLeft(state) {
+    var p = ensurePlayerSystems(state);
+    if (!p || !p.debtStartWeek || p.money >= 0) { return 0; }
+    return Math.max(0, (p.debtDeadlineWeek || (p.debtStartWeek + 12)) - state.week);
+  }
+
+  function updateDebtStatus(state, reason) {
+    var p = ensurePlayerSystems(state);
+    var weeksLeft;
+    if (!p) { return; }
+    if (p.money < 0 && !p.debtStartWeek) {
+      p.debtStartWeek = state.week;
+      p.debtDeadlineWeek = state.week + 12;
+      state.modal = {
+        type: "debtNotice",
+        title: "Баланс ушёл в минус",
+        text: "У тебя есть 3 месяца, чтобы выйти в плюс. Если долг останется после срока — игра закончится.",
+        money: p.money,
+        weeksLeft: 12
+      };
+      return;
+    }
+    if (p.money >= 0 && p.debtStartWeek) {
+      p.debtStartWeek = 0;
+      p.debtDeadlineWeek = 0;
+      state.modal = {
+        type: "debtNotice",
+        title: "Долг закрыт",
+        text: "Баланс снова в плюсе. Таймер банкротства снят.",
+        money: p.money,
+        weeksLeft: 0
+      };
+      return;
+    }
+    if (p.money < 0 && p.debtStartWeek) {
+      weeksLeft = debtWeeksLeft(state);
+      if (weeksLeft <= 0) {
+        state.gameOver = true;
+        state.modal = {
+          type: "gameOver",
+          title: "Игра окончена",
+          text: "Ты не вышел из минуса за 3 месяца. Карьера сорвалась из-за долгов.",
+          money: p.money
+        };
+      }
+    }
   }
 
   function equipmentSummary(state) {
@@ -573,17 +633,16 @@
     p.lastExpenseWeek = state.week;
     p.monthlyExpenseLog.unshift({ week: state.week, total: parts.total, parts: parts });
     if (p.monthlyExpenseLog.length > 24) { p.monthlyExpenseLog.length = 24; }
-    if (p.money >= parts.total) {
-      p.money -= parts.total;
-      pushFinanceLog(p, state, "Ежемесячные расходы", -parts.total);
+    p.money -= parts.total;
+    pushFinanceLog(p, state, "Ежемесячные расходы", -parts.total);
+    if (p.money >= 0) {
       adjustFatigue(state, -4, "Нормальный месяц оплачен");
       state.feed = "Ежемесячные расходы: -$" + parts.total + ".";
-      return true;
+    } else {
+      adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.monthlyStressNoMoney : 16, "Деньги ушли в минус");
+      state.feed = "Деньги ушли в минус. Есть 3 месяца, чтобы выйти в плюс.";
     }
-    pushFinanceLog(p, state, "Не хватило на месячные расходы", -p.money);
-    p.money = 0;
-    adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.monthlyStressNoMoney : 16, "Денег не хватило на месяц");
-    state.feed = "Денег не хватило на месячные расходы. Усталость выросла.";
+    updateDebtStatus(state, "monthly");
     return true;
   }
 
@@ -612,6 +671,7 @@
     var reduction = Data.economy && Data.economy.fatigue ? Data.economy.fatigue.restWeek : 18;
     adjustFatigue(state, -reduction, "Неделя восстановления");
     state.feed = "Неделя восстановления: усталость снижена.";
+    updateDebtStatus(state, "rest");
     return true;
   }
 
@@ -629,6 +689,12 @@
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
+    if (p.fatigue >= 100) {
+      state.feed = "Усталость 100/100. Можно только отдыхать.";
+      state.modal = { type: "fatigueLock", fatigue: p.fatigue };
+      return;
+    }
+
     if (!statKey) {
       club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
       eq = equipmentSummary(state);
@@ -640,6 +706,7 @@
       adjustFatigue(state, fatigueGain, "Тренировочная неделя");
       p.careerLog.unshift({ week: state.week, text: "Тренировка: +" + points + " очков прокачки, усталость " + p.fatigue + "/100." });
       state.feed = "Тренировка: +" + points + " очков. Усталость " + p.fatigue + "/100.";
+      updateDebtStatus(state, "training");
       return;
     }
 
@@ -772,6 +839,8 @@
       state.roster[i].financeLog = state.roster[i].financeLog instanceof Array ? state.roster[i].financeLog : [];
       state.roster[i].monthlyExpenseLog = state.roster[i].monthlyExpenseLog instanceof Array ? state.roster[i].monthlyExpenseLog : [];
       state.roster[i].lastExpenseWeek = Number(state.roster[i].lastExpenseWeek) || 1;
+      state.roster[i].debtStartWeek = Number(state.roster[i].debtStartWeek) || 0;
+      state.roster[i].debtDeadlineWeek = Number(state.roster[i].debtDeadlineWeek) || 0;
       state.roster[i].nextFightWeek = Number(state.roster[i].nextFightWeek) || 0;
       state.roster[i].contractOpponentId = state.roster[i].contractOpponentId || "";
       state.roster[i].contractLabel = state.roster[i].contractLabel || "";
@@ -905,6 +974,10 @@
     equipmentSummary: equipmentSummary,
     buyEquipment: buyEquipment,
     buyMedicalService: buyMedicalService,
-    restPlayer: restPlayer
+    restPlayer: restPlayer,
+    isLockedByFatigue: isLockedByFatigue,
+    fatigueLockedModal: fatigueLockedModal,
+    debtWeeksLeft: debtWeeksLeft,
+    updateDebtStatus: updateDebtStatus
   };
 }());

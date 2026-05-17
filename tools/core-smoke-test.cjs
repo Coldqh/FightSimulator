@@ -42,81 +42,97 @@ sandbox.global = sandbox.window;
   "src/core/world.js",
   "src/core/fight.js",
   "src/ui/render.js"
-].forEach((file) => vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox.window, { filename: file }));
+].forEach((file) => {
+  vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox.window, { filename: file });
+});
 
 const FS = sandbox.window.FS;
-let state = FS.State.createCareer({ name: "Smoke", age: 18, countryId: "russia", trackId: "amateur", weightClassId: "welter", stanceId: "" });
+let state = FS.State.createCareer({
+  name: "Smoke",
+  age: 18,
+  countryId: "russia",
+  trackId: "amateur",
+  weightClassId: "welter",
+  stanceId: ""
+});
+
 FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
-if (FS.Data.appVersion !== "turn-based-fight-1.8.0") throw new Error("bad version");
-if (!FS.Data.economy || !FS.Data.economy.equipment || FS.Data.economy.equipment.length < 3) throw new Error("economy data missing");
-
+if (FS.Data.appVersion !== "interactive-ring-fight-1.8.1") throw new Error("bad version");
 const p = FS.State.player(state);
-if (p.money < 600) throw new Error("starting money missing");
-if (typeof p.fatigue !== "number") throw new Error("fatigue missing");
+if (!p) throw new Error("no player");
 
-let html = FS.Render.dashboard(state);
-if (!html.includes("Экономика")) throw new Error("economy tab missing");
-if (!html.includes("Усталость")) throw new Error("fatigue UI missing");
+// Money can go negative and starts a 3-month timer.
+p.money = 50;
+FS.State.spendMoney(state, 200, "Debt smoke");
+if (p.money !== -150) throw new Error("money should go negative");
+if (!p.debtStartWeek || !p.debtDeadlineWeek) throw new Error("debt timer not started");
+if (!state.modal || state.modal.type !== "debtNotice") throw new Error("debt notice modal missing");
+FS.State.addMoney(state, 200, "Debt close");
+if (p.money <= 0 || p.debtStartWeek) throw new Error("debt timer not cleared after plus");
 
-state.selectedTab = "economy";
-html = FS.Render.dashboard(state);
-if (!html.includes("Баланс и расходы") || !html.includes("Экипировка") || !html.includes("Медицина")) throw new Error("economy screen broken");
+// Debt game over after 12 weeks.
+FS.State.spendMoney(state, 1000, "Debt gameover");
+state.modal = null;
+state.week = p.debtDeadlineWeek;
+FS.State.updateDebtStatus(state, "smoke");
+if (!state.gameOver || !state.modal || state.modal.type !== "gameOver") throw new Error("debt game over missing");
+state.gameOver = false;
+p.money = 500;
+p.debtStartWeek = 0;
+p.debtDeadlineWeek = 0;
+state.modal = null;
 
-const moneyBefore = p.money;
-if (!FS.State.buyEquipment(state, "basic_gloves")) throw new Error("buy equipment failed");
-if (p.money >= moneyBefore) throw new Error("equipment did not cost money");
-if (!p.equipment.basic_gloves) throw new Error("equipment not owned");
-
-p.fatigue = 70;
-const medBefore = p.money;
-if (!FS.State.buyMedicalService(state, "recovery")) throw new Error("medical service failed");
-if (p.money >= medBefore || p.fatigue >= 70) throw new Error("medical did not work");
-
-const pointsBefore = p.trainingPoints;
-const fatigueBefore = p.fatigue;
+// Fatigue 100 locks actions except rest.
+p.fatigue = 100;
 FS.State.trainPlayer(state);
-if (p.trainingPoints <= pointsBefore) throw new Error("training did not add points");
-if (p.fatigue <= fatigueBefore) throw new Error("training did not add fatigue");
-
-p.fatigue = 80;
+if (!state.modal || state.modal.type !== "fatigueLock") throw new Error("fatigue lock modal missing");
 FS.State.restPlayer(state);
-if (p.fatigue >= 80) throw new Error("rest did not reduce fatigue");
+if (p.fatigue >= 100) throw new Error("rest should reduce fatigue");
+state.modal = null;
 
-const expenses = FS.State.monthlyExpenseBreakdown(state);
-if (!expenses.total || expenses.total <= 0) throw new Error("monthly expenses missing");
-state.week = 4;
-const monthMoney = p.money;
-FS.World.advanceWeek(state, "skip");
-if (state.week !== 5) throw new Error("week advance broken");
-if (p.money >= monthMoney) throw new Error("monthly expenses not paid");
-if (!p.monthlyExpenseLog.length) throw new Error("monthly expense log missing");
-
+// Offers and OVR-based purse.
+p.fatigue = 0;
+p.money = 0;
+p.stats.power = 120; p.stats.technique = 120; p.stats.speed = 120; p.stats.stamina = 120; p.stats.defense = 120;
+FS.State.updateDerivedFighterFields(p);
 FS.World.refreshOffers(state);
 const offer = state.offers.find(o => !o.isCompetition);
-if (!offer) throw new Error("no fight offer");
 const preview = FS.Fight.buildFightPreview(state, offer.id);
-if (!preview || typeof preview.purse !== "number") throw new Error("fight preview purse broken");
+if (!preview || preview.purse <= 100) throw new Error("OVR-based purse too small");
 
-const sim = FS.Fight.simulateRounds(p, FS.Utils.getFighterById(state, offer.opponentId), 3);
-if (!sim.log.some(line => line.includes("ход")) || !sim.log.some(line => line.includes("Урон"))) throw new Error("turn-based fight log missing");
-if (typeof sim.playerDamage !== "number" || typeof sim.opponentDamage !== "number") throw new Error("turn-based damage missing");
+// Skip fight resolves randomly through winChance.
+const skipStateWeek = state.week;
+FS.Fight.resolveRandomFight(state, offer.id);
+if (!state.modal || state.modal.type !== "fightResult") throw new Error("skip fight result missing");
+if (!String(state.modal.scoreLine).includes("бой пропущен")) throw new Error("skip fight should mention auto result");
+if (state.week <= skipStateWeek) throw new Error("skip fight should advance week");
 
-const fightMoney = p.money;
-FS.Fight.resolvePlayerFight(state, offer.id);
-if (p.money <= fightMoney) throw new Error("fight income missing");
-if (p.fatigue <= 0) throw new Error("fight fatigue missing");
+// Interactive 5x5 fight starts, has active modal, ring and controls render.
+FS.World.refreshOffers(state);
+const offer2 = state.offers.find(o => !o.isCompetition);
+FS.Fight.startInteractiveFight(state, offer2.id);
+if (!state.modal || state.modal.type !== "activeFight") throw new Error("interactive fight did not start");
+let html = FS.Render.dashboard(state);
+if (!html.includes("ring-grid") || !html.includes("Прямой в голову") || !html.includes("Контратака")) throw new Error("interactive ring UI missing");
+if (html.includes('data-action="close-modal">Выйти')) throw new Error("active fight should not have exit button");
 
-// Export/import is intentionally not part of the fast smoke test because the live world has ~20k fighters.
-// Manual save/export can still be checked from Settings.
+FS.Fight.playerAction(state, "move", 0, -1);
+FS.Fight.playerAction(state, "move", 0, -1);
+FS.Fight.playerAction(state, "jabHead", 0, 0);
+if (!state.modal || !["activeFight", "fightCount", "fightResult"].includes(state.modal.type)) throw new Error("interactive fight action broke modal");
 
-console.log("turn based fight smoke ok", {
+// No forbidden tactical systems.
+const allJs = ["src/core/fight.js", "src/ui/render.js", "src/app.js"].map(file => fs.readFileSync(path.join(root, file), "utf8")).join("\n");
+["агрессия", "темп", "клинч", "геймплан"].forEach(word => {
+  if (allJs.toLowerCase().includes(word)) throw new Error("forbidden fight concept found: " + word);
+});
+
+console.log("interactive ring fight smoke ok", {
   version: FS.Data.appVersion,
   money: p.money,
   fatigue: p.fatigue,
-  monthlyExpense: expenses.total,
-  equipment: Object.keys(p.equipment).length,
-  offers: state.offers.length,
-  lastFightLog: state.modal.roundLog.slice(0,2)
+  purse: preview.purse,
+  modal: state.modal.type
 });

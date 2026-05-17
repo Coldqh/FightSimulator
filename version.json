@@ -1,5 +1,5 @@
 {
-  "version": "turn-based-fight-1.8.0",
-  "mode": "turn-based-fight",
-  "base": "economy-expenses-pack-1.6.2"
+  "version": "interactive-ring-fight-1.8.1",
+  "mode": "interactive-ring-fight",
+  "base": "turn-based-fight-1.8.0"
 }

@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "turn-based-fight-1.8.0",
+    appVersion: "interactive-ring-fight-1.8.1",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

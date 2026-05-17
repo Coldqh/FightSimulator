@@ -543,7 +543,66 @@
         "</div><div class=\"modal-actions\"><button data-tournament-participants-page=\"" + Math.max(0, safePage - 1) + "\"" + (safePage <= 0 ? " disabled" : "") + ">Назад</button><button data-tournament-participants-page=\"" + Math.min(totalPages - 1, safePage + 1) + "\"" + (safePage >= totalPages - 1 ? " disabled" : "") + ">Вперёд</button><button class=\"primary\" data-back-to-tournament=\"1\">Назад к турниру</button></div></div></div>";
     }
 
+
+
+    function statBar(label, value, max) {
+      var pct = max ? Math.max(0, Math.min(100, Math.round(value / max * 100))) : 0;
+      return "<div class=\"fight-meter\"><span>" + U.escapeHtml(label) + "</span><div><i style=\"width:" + pct + "%\"></i></div><strong>" + value + "/" + max + "</strong></div>";
+    }
+
+    function renderRing(modal) {
+      var cells = [];
+      var size = modal.ringSize || 5;
+      var x;
+      var y;
+      var cls;
+      var text;
+      for (y = 0; y < size; y += 1) {
+        for (x = 0; x < size; x += 1) {
+          cls = "ring-cell";
+          text = "";
+          if (modal.player.pos.x === x && modal.player.pos.y === y) { cls += " player-cell"; text = "Ты"; }
+          if (modal.opponent.pos.x === x && modal.opponent.pos.y === y) { cls += " opponent-cell"; text = "NPC"; }
+          cells.push("<div class=\"" + cls + "\">" + text + "</div>");
+        }
+      }
+      return "<div class=\"ring-grid\">" + cells.join("") + "</div>";
+    }
+
+    function renderFightControls() {
+      return "<div class=\"fight-controls\">" +
+        "<div class=\"move-pad\"><button data-fight-move=\"0,-1\">↑</button><button data-fight-move=\"-1,0\">←</button><button data-fight-move=\"1,0\">→</button><button data-fight-move=\"0,1\">↓</button></div>" +
+        "<button data-fight-action=\"jabHead\">Прямой в голову</button>" +
+        "<button data-fight-action=\"jabBody\">Прямой в корпус</button>" +
+        "<button data-fight-action=\"hook\">Хук</button>" +
+        "<button data-fight-action=\"uppercut\">Апперкот</button>" +
+        "<button data-fight-action=\"block\">Блок</button>" +
+        "<button data-fight-action=\"counter\">Контратака</button>" +
+      "</div>";
+    }
+
     if (!modal) { return ""; }
+
+    if (modal.type === "gameOver") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Игра окончена") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "Карьера завершена.") + "</div><div class=\"pill red\">Баланс $" + (modal.money || 0) + "</div></div><div class=\"modal-actions\"><button class=\"danger\" data-action=\"reset-career\">Начать заново</button></div></div></div>";
+    }
+
+    if (modal.type === "debtNotice") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Деньги") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "") + "</div><div class=\"pills\"><span class=\"pill gold\">Баланс $" + modal.money + "</span>" + (modal.weeksLeft ? "<span class=\"pill red\">Осталось " + modal.weeksLeft + " нед.</span>" : "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Понял</button></div></div></div>";
+    }
+
+    if (modal.type === "fatigueLock") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость 100/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться, покупать услуги или двигать карьеру. Доступен только отдых.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
+    }
+
+    if (modal.type === "activeFight") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal fight-modal\"><div class=\"modal-head\"><h2>Бой на ринге</h2><div class=\"muted small\">Раунд " + modal.round + "/" + modal.roundsTotal + " · ход " + modal.turn + " · выйти нельзя до завершения боя</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing(modal) + renderFightControls() + "</div><div class=\"fight-side\"><h3>Ты</h3>" + statBar("HP", modal.player.hp, modal.player.maxHp) + statBar("Стамина", modal.player.stamina, modal.player.maxStamina) + "<h3>" + U.escapeHtml(modal.opponentName) + "</h3>" + statBar("HP", modal.opponent.hp, modal.opponent.maxHp) + statBar("Стамина", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"pills\"><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div></div></div>";
+    }
+
+    if (modal.type === "fightCount") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal fight-modal\"><div class=\"modal-head\"><h2>Нокдаун</h2><div class=\"muted small\">Счёт: " + modal.count + "/10</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing({ ringSize: 5, player: modal.player, opponent: modal.opponent }) + "<div class=\"big-result loss\">" + (modal.side === "player" ? "Ты на настиле" : "Соперник на настиле") + "</div></div><div class=\"fight-side\">" + statBar("HP", modal.player.hp, modal.player.maxHp) + statBar("Стамина", modal.player.stamina, modal.player.maxStamina) + statBar("HP соперника", modal.opponent.hp, modal.opponent.maxHp) + statBar("Стамина соперника", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div><div class=\"modal-actions\"><button class=\"primary\" data-fight-count=\"1\">Продолжить счёт</button></div></div></div>";
+    }
+
 
     if (modal.type === "fighter") {
       fighter = U.getFighterById(state, modal.fighterId);
@@ -612,7 +671,7 @@
     }
 
     if (modal.type === "fightPreview") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.difficultyLabel) + "</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Принять бой</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.difficultyLabel) + "</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
     }
 
     if (modal.type === "fightResult") {

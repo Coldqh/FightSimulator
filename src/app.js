@@ -107,6 +107,18 @@
     applyMobileCollapse();
   }
 
+
+  function isFatigueLockedAction(button) {
+    if (!state || !State.isLockedByFatigue || !State.isLockedByFatigue(state)) { return false; }
+    if (button.dataset.action === "rest-week" || button.dataset.action === "reset-career" || button.dataset.action === "close-modal" || button.dataset.action === "export-save" || button.dataset.action === "patch-notes") { return false; }
+    if (button.dataset.mobileToggle || button.dataset.tab || button.dataset.rankingPage || button.dataset.teamPage || button.dataset.tournamentParticipantsPage || button.dataset.backToTournament) { return false; }
+    return true;
+  }
+
+  function isFightLockedModal() {
+    return state && state.modal && (state.modal.type === "activeFight" || state.modal.type === "fightCount");
+  }
+
   document.addEventListener("click", function (event) {
     var button = event.target.closest("button");
     var preview;
@@ -124,7 +136,33 @@
       return;
     }
 
-    if (button.dataset.action === "reset-career") {
+    if (state.gameOver && button.dataset.action !== "reset-career" && button.dataset.action !== "export-save" && button.dataset.action !== "close-modal") {
+      state.modal = state.modal || { type: "gameOver", title: "Игра окончена", text: "Карьера завершена.", money: State.player(state) ? State.player(state).money : 0 };
+      saveAndRender();
+      return;
+    }
+
+    if (isFightLockedModal() && !button.dataset.fightAction && !button.dataset.fightMove && !button.dataset.fightCount) {
+      return;
+    }
+
+    if (isFatigueLockedAction(button)) {
+      if (State.fatigueLockedModal) { State.fatigueLockedModal(state); }
+      saveAndRender();
+      return;
+    }
+
+    if (button.dataset.fightAction) {
+      Fight.playerAction(state, button.dataset.fightAction, 0, 0);
+      saveAndRender();
+    } else if (button.dataset.fightMove) {
+      var parts = button.dataset.fightMove.split(",");
+      Fight.playerAction(state, "move", parseInt(parts[0], 10) || 0, parseInt(parts[1], 10) || 0);
+      saveAndRender();
+    } else if (button.dataset.fightCount) {
+      Fight.handleCount(state);
+      saveAndRender();
+    } else if (button.dataset.action === "reset-career") {
       resetCareer();
     } else if (button.dataset.action === "next-week") {
       state.feed = "Неделя " + (state.week + 1) + ". Мир сделал недельный ход.";
@@ -232,7 +270,10 @@
         saveAndRender();
       }
     } else if (button.dataset.acceptFight) {
-      Fight.resolvePlayerFight(state, button.dataset.acceptFight);
+      Fight.startInteractiveFight(state, button.dataset.acceptFight);
+      saveAndRender();
+    } else if (button.dataset.skipFight) {
+      Fight.resolveRandomFight(state, button.dataset.skipFight);
       saveAndRender();
     } else if (button.dataset.titleChallenge) {
       preview = Fight.buildTitleChallengePreview(state, button.dataset.titleChallenge);

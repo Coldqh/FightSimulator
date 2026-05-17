@@ -86,6 +86,8 @@
     fighter.financeLog = fighter.financeLog instanceof Array ? fighter.financeLog : [];
     fighter.monthlyExpenseLog = fighter.monthlyExpenseLog instanceof Array ? fighter.monthlyExpenseLog : [];
     fighter.lastExpenseWeek = Number(fighter.lastExpenseWeek) || 1;
+    fighter.debtStartWeek = Number(fighter.debtStartWeek) || 0;
+    fighter.debtDeadlineWeek = Number(fighter.debtDeadlineWeek) || 0;
     fighter.nextFightWeek = Number(fighter.nextFightWeek) || 0;
     fighter.contractOpponentId = fighter.contractOpponentId || "";
     fighter.contractLabel = fighter.contractLabel || "";
