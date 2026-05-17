@@ -162,6 +162,38 @@
     } else if (button.dataset.tab) {
       state.selectedTab = button.dataset.tab;
       saveAndRender();
+    } else if (button.dataset.teamList) {
+      state.modal = {
+        type: "teamList",
+        countryId: button.dataset.teamCountry,
+        listType: button.dataset.teamList,
+        page: 0
+      };
+      saveAndRender();
+    } else if (button.dataset.teamPage) {
+      if (state.modal && state.modal.type === "teamList") {
+        state.modal.page = Math.max(0, parseInt(button.dataset.teamPage, 10) || 0);
+      }
+      saveAndRender();
+    } else if (button.dataset.tournamentParticipants) {
+      if (state.modal) {
+        state.modal = {
+          type: "tournamentParticipants",
+          sourceModal: state.modal,
+          page: 0
+        };
+      }
+      saveAndRender();
+    } else if (button.dataset.tournamentParticipantsPage) {
+      if (state.modal && state.modal.type === "tournamentParticipants") {
+        state.modal.page = Math.max(0, parseInt(button.dataset.tournamentParticipantsPage, 10) || 0);
+      }
+      saveAndRender();
+    } else if (button.dataset.backToTournament) {
+      if (state.modal && state.modal.sourceModal) {
+        state.modal = state.modal.sourceModal;
+      }
+      saveAndRender();
     } else if (button.dataset.amateurCompetition) {
       if (window.FS.Amateur && window.FS.Amateur.startTournament) {
         state.modal = window.FS.Amateur.startTournament(state, button.dataset.amateurCompetition);

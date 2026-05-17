@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "tournament-national-team-fix-1.4.5",
+    appVersion: "stable-core-1.5.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

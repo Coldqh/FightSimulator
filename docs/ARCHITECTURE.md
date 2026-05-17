@@ -1,33 +1,33 @@
-# Architecture
+# Fight Simulator Architecture — 1.5 Stable Core
 
-## Loading order
+## Runtime
 
-1. src/data/game-data.js
-2. src/core/utils.js
-3. src/core/storage.js
-4. src/core/state.js
-5. src/core/clubs.js
-6. src/core/titles.js
-7. src/core/stories.js
-8. src/core/world.js
-9. src/core/fight.js
-10. src/ui/render.js
-11. src/app.js
+Static browser app:
+- `index.html`
+- `src/data/game-data.js`
+- `src/core/*.js`
+- `src/ui/render.js`
+- `src/app.js`
+- `src/styles.css`
 
-## Rule
+No build step is required.
 
-No monolith. No runtime imports from old experimental files.
+## Core modules
 
-## Modules
+- `state.js`: career state, records by path, date, ranking helpers.
+- `world.js`: weekly world simulation, national teams, NPC activity.
+- `fight.js`: fight preview/result simulation.
+- `amateur.js`: amateur tournament bracket flow and awards.
+- `clubs.js`: club generation, trainers, roster binding.
+- `titles.js`: pro/street title ownership.
+- `matchmaking.js`: player fight offers and NPC opponent selection.
+- `storage.js`: save repair/export/import.
+- `render.js`: UI rendering only.
+- `app.js`: event routing only.
 
-- data: constants.
-- utils: pure helpers.
-- storage: save/load/migration.
-- state: state mutations.
-- clubs: gyms and club roster.
-- titles: champion ownership and challenge eligibility.
-- stories: NPC/player stories.
-- world: weekly simulation.
-- fight: previews/results.
-- render: HTML.
-- app: DOM events.
+## 1.5 cleanup decisions
+
+- Large lists are no longer rendered inside main screens.
+- Tournament state is kept inside tournament modals.
+- Team and tournament participant lists use paged modals.
+- The duplicate pre-quarterfinal stage was removed because quarterfinal is the 8-fighter stage.

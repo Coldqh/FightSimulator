@@ -138,10 +138,9 @@
       { size: 64, label: "1/64" },
       { size: 32, label: "1/32" },
       { size: 16, label: "1/16" },
-      { size: 8, label: "1/8" },
-      { size: 4, label: "Четвертьфинал" },
-      { size: 2, label: "Полуфинал" },
-      { size: 1, label: "Финал" }
+      { size: 8, label: "Четвертьфинал" },
+      { size: 4, label: "Полуфинал" },
+      { size: 2, label: "Финал" }
     ];
     var start = all.findIndex(function (stage) { return size >= stage.size; });
     if (start < 0) { start = all.length - 1; }
@@ -259,14 +258,55 @@
 
   function semifinalLoserOpponent(state, session) {
     var ids = session.activeIds || [];
-    var candidates = [];
-    var i;
-    for (i = 0; i < ids.length; i += 1) {
-      if (ids[i] !== "player" && ids[i] !== session.opponentId) {
-        candidates.push(ids[i]);
+    var playerPairStart = -1;
+    var otherA = "";
+    var otherB = "";
+    var a;
+    var b;
+    var winnerId;
+    var loserId;
+
+    for (var i = 0; i < ids.length; i += 2) {
+      if (ids[i] === "player" || ids[i + 1] === "player") {
+        playerPairStart = i;
+        break;
       }
     }
-    return candidates[0] || "";
+
+    for (var j = 0; j < ids.length; j += 2) {
+      if (j !== playerPairStart) {
+        otherA = ids[j];
+        otherB = ids[j + 1];
+        break;
+      }
+    }
+
+    a = U.getFighterById(state, otherA);
+    b = U.getFighterById(state, otherB);
+
+    if (!a && !b) {
+      return "";
+    }
+    if (!a) {
+      return otherB;
+    }
+    if (!b) {
+      return otherA;
+    }
+
+    winnerId = simulateNpcTournamentFight(state, otherA, otherB);
+    loserId = winnerId === otherA ? otherB : otherA;
+
+    session.fights.push({
+      round: "Полуфинал",
+      opponentId: otherB,
+      opponentName: a.name + " vs " + b.name,
+      opponentRating: Math.max(U.statAverage(a.stats), U.statAverage(b.stats)),
+      winChance: chanceFor(a, b),
+      result: "NPC: " + (winnerId === otherA ? a.name : b.name) + " победил"
+    });
+
+    return loserId;
   }
 
   function buildFightModal(state, session, blockedReason) {
@@ -335,15 +375,25 @@
     return buildFightModal(state, session, "");
   }
 
+  function tournamentMoneyReward(comp, place) {
+    var base = Math.max(80, comp.rewardRating * 8);
+    if (place === "1 место") { return base; }
+    if (place === "2 место") { return Math.round(base * 0.55); }
+    if (place === "3 место") { return Math.round(base * 0.32); }
+    return 0;
+  }
+
   function awardPlacement(state, comp, place, result) {
     var p = State.player(state);
     var awardLabel = comp.awardLabel + " · " + place;
+    var moneyReward = tournamentMoneyReward(comp, place);
     var already = state.amateurPath.medals.some(function (medal) {
       return medal.competitionId === comp.id && medal.place === place && medal.week === state.week;
     });
 
     if (already) { return; }
 
+    p.money = (Number(p.money) || 0) + moneyReward;
     state.amateurPath.completed[comp.id] = true;
     state.amateurPath.points += comp.rewardRating;
     state.amateurPath.medals.unshift({
@@ -353,7 +403,8 @@
       label: comp.label,
       awardLabel: awardLabel,
       place: place,
-      result: result
+      result: result,
+      moneyReward: moneyReward
     });
 
     if (state.amateurPath.medals.length > 30) {
@@ -509,7 +560,7 @@
       label: comp.label,
       result: place ? "Турнир завершён" : "Вылет",
       place: place,
-      reward: place && place !== "4 место" ? comp.rewardRating : 0,
+      reward: place && place !== "4 место" ? tournamentMoneyReward(comp, place) : 0,
       cooldown: comp.weekCooldown,
       fights: session.fights,
       blocked: false,

@@ -1,4 +1,4 @@
-# Test Checklist 1.4.5
+# Test Checklist 1.5.0
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,12 +7,12 @@ start index.html
 ```
 
 Manual:
-1. 18-year-old amateurs should not spawn with absurd 150+ fight records.
-2. Header should display info as pills.
-3. Trainer profile says “Рекорд тренера”.
-4. Tournament fight shows a fight result first.
-5. Continue in tournament moves to next fight or final screen.
-6. Tournament participant list shows active fighters only.
-7. Tournament award appears once.
-8. National team shows ranks.
-9. Training tab shows current stat values.
+1. Top panel shows money.
+2. National team tab shows buttons, not full lists.
+3. Team composition opens in separate modal.
+4. Reserve list opens in separate paged modal.
+5. Tournament window has an Participants button.
+6. Participants list opens in separate paged modal.
+7. Tournament stages do not contain the duplicate pre-quarterfinal stage.
+8. Third-place fight should not repeat the semifinal opponent.
+9. Tournament reward increases money.

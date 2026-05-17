@@ -1,25 +1,15 @@
-# Roadmap
+# Roadmap after 1.5
 
-## 1.4.3 World Life / Clubs / Tournament Hotfix
+## Next safe feature areas
 
-- Unique club names without numeric suffixes.
-- Step-by-step tournament modal.
-- People tab starts empty and fills through club/coach context.
-- Coach profiles, club records and coach life events.
-- Retirements/memorial state for fighters.
-- Calendar display: year, month, week.
-- Club links in fighter cards.
-- Offer refresh button.
-- Ranking/history cleanup.
+1. Professional contracts and promoters.
+2. Proper title challenge scheduling.
+3. Club economy and training specializations.
+4. Full tournament bracket tree visualization.
+5. Rivalries and named story arcs.
 
-## 1.4.x
+## Do not do before this
 
-- Full tournament bracket visualization.
-- Deeper memorial/archive screen for retired fighters.
-- Better coach personality and club identity.
-
-## 1.5
-
-- Professional contract screen.
-- Title challenge negotiations.
-- Sponsorship and money sinks.
+- Do not add more large UI blocks directly into tabs.
+- Do not mix tournament state with normal fight offers.
+- Do not reintroduce one huge monolithic `index.html` game logic.

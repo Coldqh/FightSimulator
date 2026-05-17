@@ -1,14 +1,13 @@
 # Fight Simulator
 
-Version: `tournament-national-team-fix-1.4.5`
+Version: `stable-core-1.5.0`
 
-## Patch focus
+## Stable Core
 
-- Age-capped initial records.
-- Header info displayed as compact pills.
-- Tournament fights now show full fight-result windows.
-- Tournament bracket uses real active participants.
-- Tournament awards no longer duplicate.
-- National team qualification is tied to 1–3 place at national championship.
-- Main national team is 12 fighters; reserve is 48 fighters.
-- Training tab shows current stat values.
+- Tournament bracket fixed: no duplicated pre-quarterfinal + quarterfinal stage.
+- Tournament participant list moved to a separate paged modal.
+- National team lists moved to separate paged modals.
+- Player balance is visible in the top panel.
+- Tournament rewards pay money and no longer duplicate awards.
+- Third-place match uses the loser of the other semifinal.
+- Main UI is lighter and ready for new feature work.

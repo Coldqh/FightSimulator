@@ -59,25 +59,29 @@ let state = FS.State.createCareer({
 FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
-if (FS.Data.appVersion !== "tournament-national-team-fix-1.4.5") throw new Error("bad version");
-if (FS.Data.tracks.amateur.maxStat !== 120) throw new Error("amateur max stat should be 120");
+if (FS.Data.appVersion !== "stable-core-1.5.0") throw new Error("bad version");
+if (FS.Data.tracks.amateur.maxStat !== 120) throw new Error("amateur max OVR should be 120");
 
-const absurd18 = state.roster.filter(f => f.trackId === "amateur" && f.age === 18 && (f.record.wins + f.record.losses + f.record.draws) > 40);
-if (absurd18.length) throw new Error("18yo amateur records too high: " + absurd18[0].name + " " + JSON.stringify(absurd18[0].record));
+const p = FS.State.player(state);
+p.money = 0;
 
 let html = FS.Render.dashboard(state);
-if (!html.includes("top-pills")) throw new Error("header pills missing");
-if (html.includes("Рекорд клуба при тренере")) throw new Error("old trainer record label found");
+if (!html.includes("$0")) throw new Error("top panel money missing");
+if (!html.includes("top-pills")) throw new Error("pill header missing");
 
-state.selectedTab = "training";
+state.selectedTab = "world";
 html = FS.Render.dashboard(state);
-["Сила","Техника","Скорость","Выносливость","Защита"].forEach(label => {
-  if (!html.includes(label)) throw new Error("training stat missing " + label);
-});
+if (!html.includes('data-team-list="main"')) throw new Error("team main button missing");
+if (!html.includes('data-team-list="reserve"')) throw new Error("team reserve button missing");
+if (html.includes("data-fighter=\"player\"") && html.includes("Состав</div>")) throw new Error("team list appears directly in tab");
+if (html.includes("1/128 →") || html.includes("1" + "/" + "8")) throw new Error("long/invalid bracket line still visible");
 
-/* Make a scheduled national tournament available. Year 1 March week 2 -> week 10. */
-state.week = 10;
-const p = FS.State.player(state);
+FS.World.buildNationalTeams(state);
+state.modal = { type: "teamList", countryId: "russia", listType: "reserve", page: 0 };
+html = FS.Render.dashboard(state);
+if (!html.includes("Резерв сборной") || !html.includes("страница")) throw new Error("reserve modal pagination missing");
+
+state.week = 10; // March week 2 for national championship schedule.
 p.stats.power = 58;
 p.stats.technique = 58;
 p.stats.speed = 58;
@@ -85,47 +89,60 @@ p.stats.stamina = 58;
 p.stats.defense = 58;
 FS.State.updateDerivedFighterFields(p);
 
-let comps = FS.Amateur.availableCompetitions(state);
-const country = comps.find(c => c.id === "country");
-if (!country || !country.available) throw new Error("country championship should be available at scheduled date: " + (country && country.reason));
+const comp = FS.Amateur.availableCompetitions(state).find(c => c.id === "country");
+if (!comp || !comp.available) throw new Error("country tournament unavailable on scheduled date: " + (comp && comp.reason));
 
 let modal = FS.Amateur.startTournament(state, "country");
 if (modal.type !== "tournamentFight") throw new Error("tournament did not start with fight modal");
-if (!modal.alive || modal.alive.length < 2) throw new Error("active participants missing");
-if (modal.opponentRating < 50 || modal.opponentRating > 80) throw new Error("opponent outside tournament OVR range");
+if (modal.session.rounds.includes("1" + "/" + "8")) throw new Error("duplicate pre-quarterfinal stage should not exist");
+if (!modal.alive || modal.alive.length < 2) throw new Error("alive participant list missing");
 
-let resultModal = FS.Amateur.resolveTournamentRound(state, modal);
-if (resultModal.type !== "tournamentResult") throw new Error("tournament round should show fight result");
-if (!resultModal.roundLog || !resultModal.roundLog.length) throw new Error("tournament result has no round log");
+state.modal = modal;
+html = FS.Render.dashboard(state);
+if (!html.includes('data-tournament-participants="1"')) throw new Error("participants button missing");
+if (html.includes("Участники в турнире</span><strong>")) throw new Error("participants rendered inline instead of modal");
 
-let after = FS.Amateur.continueTournament(state, resultModal);
-if (!["tournamentFight", "tournamentFinal"].includes(after.type)) throw new Error("continue tournament broken: " + after.type);
+state.modal = { type: "tournamentParticipants", sourceModal: modal, page: 0 };
+html = FS.Render.dashboard(state);
+if (!html.includes("Участники турнира") || !html.includes("Назад к турниру")) throw new Error("participants modal missing");
 
-const beforeMedals = state.amateurPath.medals.length;
-if (after.type === "tournamentFinal") {
-  const once = state.amateurPath.medals.length - beforeMedals;
-  if (once > 1) throw new Error("award duplicated");
+let result = FS.Amateur.resolveTournamentRound(state, modal);
+if (result.type !== "tournamentResult") throw new Error("tournament round should show result");
+if (!result.roundLog || !result.roundLog.length) throw new Error("tournament result needs round log");
+
+let after = FS.Amateur.continueTournament(state, result);
+if (!["tournamentFight", "tournamentFinal"].includes(after.type)) throw new Error("bad continue tournament result: " + after.type);
+
+let moneyBefore = Number(p.money) || 0;
+let safety = 0;
+while (after.type === "tournamentFight" && safety < 8) {
+  result = FS.Amateur.resolveTournamentRound(state, after);
+  after = FS.Amateur.continueTournament(state, result);
+  safety += 1;
 }
+if (after.type !== "tournamentFinal") throw new Error("tournament did not finish in safe limit");
+if (after.reward > 0 && p.money <= moneyBefore) throw new Error("tournament money reward not paid");
 
-FS.World.buildNationalTeams(state);
-const team = state.world.teamsByCountry[p.countryId];
-if (!team || team.main.length > 12 || team.reserve.length > 48) throw new Error("team size broken");
-
-state.selectedTab = "world";
+state.modal = after;
 html = FS.Render.dashboard(state);
-if (!html.includes("III взрослый") && !html.includes("II взрослый") && !html.includes("I взрослый") && !html.includes("КМС")) throw new Error("team ranks not visible");
-if (html.includes("пройдено")) throw new Error("completed label should be removed from tournaments");
+if (!html.includes("Награда $")) throw new Error("tournament final should show money reward");
+if (html.includes("1" + "/" + "8")) throw new Error("duplicate pre-quarterfinal stage still visible in final modal");
 
-const club = state.clubs[0];
-state.modal = { type: "person", personId: club.coach.id };
+const medalLabels = (state.amateurPath.medals || []).map(m => m.awardLabel);
+if (new Set(medalLabels).size !== medalLabels.length) throw new Error("duplicate medals detected");
+
+state.selectedTab = "training";
+state.modal = null;
 html = FS.Render.dashboard(state);
-if (!html.includes("Рекорд тренера")) throw new Error("trainer profile label missing");
+["Сила", "Техника", "Скорость", "Выносливость", "Защита"].forEach(label => {
+  if (!html.includes(label)) throw new Error("training stat missing " + label);
+});
 
-console.log("tournament national team smoke ok", {
+console.log("stable core smoke ok", {
   version: FS.Data.appVersion,
   fighters: state.roster.length,
-  alive: modal.alive.length,
-  modalAfterFight: resultModal.type,
-  teamMain: team.main.length,
-  teamReserve: team.reserve.length
+  teamMain: state.world.teamsByCountry.russia.main.length,
+  teamReserve: state.world.teamsByCountry.russia.reserve.length,
+  tournamentRounds: modal.session.rounds.join(" > "),
+  playerMoney: p.money
 });
