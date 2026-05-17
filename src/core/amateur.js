@@ -75,9 +75,14 @@
 
   function tournamentRoundsForSize(size) {
     var all = [
-      { size: 128, label: "1/128" }, { size: 64, label: "1/64" }, { size: 32, label: "1/32" },
-      { size: 16, label: "1/16" }, { size: 8, label: "1/8" }, { size: 4, label: "Четвертьфинал" },
-      { size: 2, label: "Полуфинал" }, { size: 1, label: "Финал" }
+      { size: 128, label: "1/128" },
+      { size: 64, label: "1/64" },
+      { size: 32, label: "1/32" },
+      { size: 16, label: "1/16" },
+      { size: 8, label: "1/8" },
+      { size: 4, label: "Четвертьфинал" },
+      { size: 2, label: "Полуфинал" },
+      { size: 1, label: "Финал" }
     ];
     var start = all.findIndex(function (stage) { return size >= stage.size; });
     if (start < 0) { start = all.length - 1; }

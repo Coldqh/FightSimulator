@@ -6,19 +6,23 @@
   var U = window.FS.Utils;
   var Data = window.FS.Data;
 
-  var cityMap = {
-    russia: ["Москва", "Санкт-Петербург", "Ярославль", "Казань", "Екатеринбург", "Новосибирск", "Ростов", "Самара", "Пермь", "Краснодар"],
-    mexico: ["Mexico City", "Guadalajara", "Monterrey", "Tijuana", "Puebla", "Cancun", "Toluca", "Leon", "Merida", "Chihuahua"],
-    japan: ["Tokyo", "Osaka", "Nagoya", "Yokohama", "Sapporo", "Kobe", "Kyoto", "Fukuoka", "Sendai", "Hiroshima"],
-    usa: ["New York", "Las Vegas", "Los Angeles", "Philadelphia", "Detroit", "Chicago", "Houston", "Miami", "Dallas", "Oakland"],
-    cuba: ["Havana", "Santiago", "Camaguey", "Holguin", "Santa Clara", "Matanzas", "Cienfuegos", "Pinar del Rio", "Bayamo", "Guantanamo"],
-    kazakhstan: ["Алматы", "Астана", "Шымкент", "Караганда", "Актобе", "Тараз", "Павлодар", "Семей", "Костанай", "Атырау"]
+  var citiesByCountry = {
+    russia: ["Москва","Санкт-Петербург","Ярославль","Казань","Екатеринбург","Новосибирск","Ростов-на-Дону","Самара","Пермь","Краснодар","Нижний Новгород","Уфа","Челябинск","Омск","Воронеж","Волгоград","Саратов","Тюмень","Иркутск","Владивосток"],
+    mexico: ["Ciudad de México","Guadalajara","Monterrey","Tijuana","Puebla","Cancún","Toluca","León","Mérida","Chihuahua","Culiacán","Hermosillo","Querétaro","Morelia","Torreón","Acapulco","Veracruz","Oaxaca","Tepic","Aguascalientes"],
+    japan: ["Tokyo","Osaka","Nagoya","Yokohama","Sapporo","Kobe","Kyoto","Fukuoka","Sendai","Hiroshima","Saitama","Chiba","Kawasaki","Naha","Kumamoto","Niigata","Shizuoka","Kanazawa","Okayama","Kagoshima"],
+    usa: ["New York","Las Vegas","Los Angeles","Philadelphia","Detroit","Chicago","Houston","Miami","Dallas","Oakland","Brooklyn","Cleveland","Atlanta","Boston","Phoenix","San Diego","San Antonio","St. Louis","Newark","Baltimore"],
+    cuba: ["Havana","Santiago de Cuba","Camagüey","Holguín","Santa Clara","Matanzas","Cienfuegos","Pinar del Río","Bayamo","Guantánamo","Varadero","Ciego de Ávila","Las Tunas","Sancti Spíritus","Manzanillo","Artemisa","Trinidad","Baracoa","Mayabeque","Isla de la Juventud"],
+    kazakhstan: ["Алматы","Астана","Шымкент","Караганда","Актобе","Тараз","Павлодар","Семей","Костанай","Атырау","Усть-Каменогорск","Кызылорда","Петропавловск","Актау","Темиртау","Туркестан","Кокшетау","Уральск","Талдыкорган","Экибастуз"]
   };
 
-  var styleWords = ["Ring", "Boxing", "Gloves", "Academy", "Fight Lab", "Corner", "Combat", "Punch", "Elite", "Union", "School", "Arena", "Champion", "Iron", "Storm", "Olympic"];
-  var suffixWords = ["Gym", "Club", "Team", "Center", "House", "Dojo", "Camp", "Squad", "Project", "Base", "Factory", "Studio"];
-  var ruStyle = ["Ринг", "Бокс", "Перчатка", "Академия", "Школа", "Угол", "Арена", "Олимп", "Шторм", "Сталь", "Чемпион", "Север", "Восток", "Лига", "Удар", "Феникс"];
-  var ruSuffix = ["Клуб", "Зал", "Команда", "Центр", "База", "Школа", "Академия", "Дом бокса", "Лига", "Секция"];
+  var namesByCountry = {
+    russia: ["Rocky Road","Alchakov Boxing","Академия Бокса","Красный Угол","Стальной Ринг","Северный Ринг","Олимпиец","Динамо Бокс","Спартак Ринг","Торпедо Бокс","Кузница Бокса","Первая Перчатка","Ринг База","Школа Чемпионов","Боевые Перчатки","Ринг Олимп","Авангард Бокс","Сокол Ринг","Витязь Бокс","Патриот Ринг","Ударная Секция","Зал На Ринге","Профи Бокс","Открытый Ринг","Лига Бокса","Фабрика Чемпионов","Северная Перчатка","Красная Перчатка","Школа Нокаута","Бокс Арена","Ринг Юность","Олимпийская Перчатка","Ринг Мастер","Бокс Резерв","Тренерский Ринг","Городской Ринг","Федерация Бокса","Клуб Единоборств","Бокс Центр","Секция Ринга"],
+    mexico: ["Jaguar Boxing","One More Round","Gimnasio Lupita","Cleto Reyes Boxing","Maracaná Box","Espartanos Boxing","Aguilar Boxing Academy","Azteca Boxing","Guerreros del Ring","Ring Reyes","La Esquina Roja","Puños de Oro","Escuela de Campeones","Barrio Boxing","Noble Art Gym","Round Final","La Campana","El Rincón del Box","Boxeo Olímpico","Toro Boxing","Casta de Campeones","Arena de Box","Furia Mexicana","Gimnasio Campeón","Sangre Azteca","Héroes del Ring","La Guardia Boxing","Golpe Fino","Puño Bravo","Club de Boxeo Norte","Centro de Box","La Manada Boxing","Reyes del Ring","Boxeo Popular","Peleadores Unidos","Cinturón Verde","El Último Round","Guantes Rojos","Boxeo Real","Distrito Boxing"],
+    japan: ["Teiken Gym","Ohashi Gym","Watanabe Gym","Kadoebi Boxing","Misako Gym","Shinjuku Boxing","Korakuen Ring","Samurai Boxing","Rising Sun Gym","Nippon Boxing","Fighting Harada Gym","Yokohama Hikari","Osaka Ring","Tokyo Punch","Kobe Glove","Kyoto Boxing","Fukuoka Fight Club","Sapporo Ring","Nagoya Boxing Lab","Sendai Glove","Hiroshima Boxing","Naha Ring","Phoenix Japan","Dragon Ring","Bushido Boxing","Aoki Gym","Sakura Boxing","Kansai Ring","Kanto Boxing","Higashi Gym","West Japan Boxing","East Ring","Kokugikan Boxing","Noble Art Japan","Shin Boxing","Yamato Ring","Golden Glove Japan","Ring Craft","Champion Road","K.O. Japan"],
+    usa: ["Gleason's Gym","Kronk Gym","Wild Card Boxing","Mayweather Boxing","Church Street Boxing","Trinity Boxing","Mendez Boxing","EverybodyFights","Title Boxing","Overthrow Boxing","Rumble Boxing","Main Street Boxing","Fifth Street Gym","Duke City Boxing","Kingsway Boxing","Front Street Gym","Westside Boxing","Eastside Boxing","Southpaw Gym","Golden Gloves Academy","Brewster Wheeler Boxing","Motor City Boxing","Brooklyn Boxing","Philly Fight Club","Vegas Ring","LA Boxing Lab","Chicago Fight House","Houston Boxing","Miami Punch","Dallas Ring","Oakland Boxing","Ironbound Boxing","Champion Factory","Knockout Club","The Corner Gym","Sweet Science Center","Round One Gym","No Excuses Boxing","Legacy Boxing","House of Boxing"],
+    cuba: ["Gimnasio José Álamo","Escuela Teófilo Stevenson","Félix Savón Boxing","Cuba Boxeo","La Finca del Box","Havana Ring","Santiago Boxeo","Caribe Boxing","Escuela de Campeones","Guantes Cubanos","Rafael Trejo Boxing","Gimnasio Giraldo Córdova","Playa Boxing","Varadero Ring","Oriente Boxing","Guerreros del Caribe","Escuela Nacional","Ring de la Habana","Puños del Malecón","Boxeo Popular","Camagüey Ring","Holguín Box","Santa Clara Boxing","Matanzas Ring","Cienfuegos Boxeo","Pinar del Río Boxing","Bayamo Ring","Guantánamo Boxing","Cuba Olímpica","Ring Caribe","Arena Cubana","Boxeo Técnico","La Esquina Azul","Tradición Cubana","Los Industriales Boxing","Tiburones del Ring","Sierra Maestra Boxing","Escuela del Golpe","Noble Arte Cuba","Campamento Ring"],
+    kazakhstan: ["Astana Boxing Club","Dominant Boxing Club","Astana Arlans","Rocky Boxing Club","Bronx Boxing Club","Bekzat Boxing","MD Boxing","Rauan Boxing School","7Rays Boxing","Qazaq Boxing","Arlan Ring","Nomad Boxing","Алматы Бокс","Астана Ринг","Шымкент Перчатка","Караганда Бокс","Достык Boxing","Барыс Ринг","Жас Батыр","Олимп Резерв","Степной Ринг","Жетысу Boxing","Туран Бокс","Алатау Ринг","Ертіс Boxing","Каспий Бокс","Сарыарка Ring","Ұлы Дала Boxing","Абылай Boxing","Темір Ринг","Арена Батыр","Көк Ту Boxing","Намыс Ринг","Школа Арлана","Kazakh Gloves","Бокс Орталығы","Ұлттық Ринг","Бекзат Академия","Алтын Перчатка","Елорда Boxing"]
+  };
 
   function levelBand(level) {
     var bands = {
@@ -35,13 +39,12 @@
   function emptyRecord() { return { wins: 0, losses: 0, draws: 0 }; }
 
   function clubLabel(country, index) {
-    var cities = cityMap[country.id] || [country.city || country.label];
+    var cities = citiesByCountry[country.id] || [country.city || country.label];
+    var names = namesByCountry[country.id] || namesByCountry.usa;
     var city = cities[index % cities.length];
-    var style = country.id === "russia" || country.id === "kazakhstan" ? ruStyle[(index * 7) % ruStyle.length] : styleWords[(index * 7) % styleWords.length];
-    var suffix = country.id === "russia" || country.id === "kazakhstan" ? ruSuffix[(index * 11) % ruSuffix.length] : suffixWords[(index * 11) % suffixWords.length];
-    var variant = Math.floor(index / cities.length);
-    var extra = variant > 0 ? " " + (country.id === "russia" || country.id === "kazakhstan" ? ruStyle[(variant * 5 + index) % ruStyle.length] : styleWords[(variant * 5 + index) % styleWords.length]) : "";
-    return city + " " + style + extra + " " + suffix;
+    var name = names[index % names.length];
+    var district = Math.floor(index / names.length);
+    return district ? (city + " " + name + " " + (district + 1)) : (city + " " + name);
   }
 
   function createCoach(country, clubId, seed) {
@@ -58,9 +61,9 @@
   }
 
   function ensureClubs(state) {
-    var i, j, country, level, band, club, existingById = {}, usedNames = {};
+    var i, j, country, level, band, club, existingById = {}, usedNames = {}, name;
     if (!(state.clubs instanceof Array)) { state.clubs = []; }
-    for (i = 0; i < state.clubs.length; i += 1) { existingById[state.clubs[i].id] = state.clubs[i]; usedNames[state.clubs[i].name] = true; }
+    for (i = 0; i < state.clubs.length; i += 1) { existingById[state.clubs[i].id] = state.clubs[i]; }
 
     for (i = 0; i < Data.countries.length; i += 1) {
       country = Data.countries[i];
@@ -68,9 +71,10 @@
         level = 1 + Math.min(5, Math.floor(j / 14));
         band = levelBand(level);
         club = existingById["club_" + country.id + "_" + j] || { id: "club_" + country.id + "_" + j };
-        club.name = club.name && club.name.indexOf("#") === -1 ? club.name : clubLabel(country, j);
-        while (usedNames[club.name] && !existingById[club.id]) { club.name = clubLabel(country, j + Object.keys(usedNames).length); }
-        usedNames[club.name] = true;
+        name = clubLabel(country, j);
+        while (usedNames[name]) { name = clubLabel(country, j + Object.keys(usedNames).length + 1); }
+        usedNames[name] = true;
+        club.name = name;
         club.countryId = country.id;
         club.level = level;
         club.minOvr = band.min;
@@ -99,29 +103,45 @@
     }).sort(function (a, b) { return b.level - a.level || b.trainingModifier - a.trainingModifier || a.name.localeCompare(b.name); });
   }
 
+  function pickLeastFilled(clubs, rating) {
+    var eligible = clubs.filter(function (club) { return rating >= club.minOvr && rating <= club.maxOvr; });
+    if (!eligible.length) { eligible = clubs.slice(); }
+    eligible.sort(function (a, b) {
+      return (a.rosterIds.length - b.rosterIds.length) || (Math.abs((a.minOvr + a.maxOvr) / 2 - rating) - Math.abs((b.minOvr + b.maxOvr) / 2 - rating));
+    });
+    return eligible[0] || null;
+  }
+
   function assignFightersToClubs(state) {
-    var i, club, fighter, eligible, fallback, emptyClubs, donor;
+    var i, country, countryClubs, countryFighters, club, fighter, rating;
+
     for (i = 0; i < state.clubs.length; i += 1) { state.clubs[i].rosterIds = []; }
-    for (i = 0; i < state.roster.length; i += 1) {
-      fighter = state.roster[i];
-      if (fighter.retired) { continue; }
-      if (!fighter.gymId && !fighter.isPlayer) {
-        eligible = eligibleClubsForFighter(state, fighter, null);
-        fallback = (state.clubs || []).filter(function (c) { return c.countryId === fighter.countryId; });
-        club = eligible.length ? eligible[Math.abs((fighter.seed || i) + i) % eligible.length] : fallback[Math.abs((fighter.seed || i) + i) % Math.max(1, fallback.length)];
-        if (club) { fighter.gymId = club.id; }
+
+    for (var c = 0; c < Data.countries.length; c += 1) {
+      country = Data.countries[c];
+      countryClubs = (state.clubs || []).filter(function (item) { return item.countryId === country.id; });
+      countryFighters = (state.roster || []).filter(function (item) {
+        return !item.isPlayer && !item.retired && item.countryId === country.id;
+      }).sort(function (a, b) { return U.statAverage(a.stats) - U.statAverage(b.stats); });
+
+      /* Сначала равномерно заполняем клубы, чтобы не было залов с одним человеком. */
+      for (i = 0; i < countryFighters.length; i += 1) {
+        fighter = countryFighters[i];
+        rating = U.statAverage(fighter.stats);
+        club = pickLeastFilled(countryClubs, rating);
+        if (club) {
+          fighter.gymId = club.id;
+          club.rosterIds.push(fighter.id);
+        }
       }
-      club = findClub(state, fighter.gymId);
-      if (club && club.rosterIds.indexOf(fighter.id) === -1) { club.rosterIds.push(fighter.id); }
     }
 
-    /* Подстраховка: пустых NPC-клубов быть не должно. */
-    emptyClubs = state.clubs.filter(function (c) { return c.rosterIds.length === 0; });
-    for (i = 0; i < emptyClubs.length; i += 1) {
-      club = emptyClubs[i];
-      donor = state.roster.find(function (f) { return !f.isPlayer && !f.retired && f.countryId === club.countryId && U.statAverage(f.stats) >= club.minOvr && U.statAverage(f.stats) <= club.maxOvr; }) ||
-        state.roster.find(function (f) { return !f.isPlayer && !f.retired && f.countryId === club.countryId; });
-      if (donor) { donor.gymId = club.id; club.rosterIds.push(donor.id); }
+    /* Игрок остаётся без клуба до ручного выбора, но если уже выбран — добавляем в roster. */
+    for (i = 0; i < state.roster.length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.retired || !fighter.gymId) { continue; }
+      club = findClub(state, fighter.gymId);
+      if (club && club.rosterIds.indexOf(fighter.id) === -1) { club.rosterIds.push(fighter.id); }
     }
   }
 
@@ -252,6 +272,7 @@
     findCoach: findCoach,
     syncPeopleForPlayerClub: syncPeopleForPlayerClub,
     recordClubFight: recordClubFight,
-    simulateCoachLife: simulateCoachLife
+    simulateCoachLife: simulateCoachLife,
+    clubLabel: clubLabel
   };
 }());

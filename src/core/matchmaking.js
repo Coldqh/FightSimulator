@@ -165,6 +165,7 @@
     var internationalAmateur = player.trackId === "amateur" && ["kms", "ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
     var candidates;
     var selected;
+    var offset;
     window.FS.__currentStateWeek = state.week;
     candidates = state.roster.filter(function (fighter) {
       var tier = careerTier(fighter);
@@ -179,9 +180,13 @@
         (!isChampion || difficultyId === "hard" && playerTier.level >= 4);
     });
     candidates.sort(function (left, right) { return candidatePenalty(player, left, targetScore) - candidatePenalty(player, right, targetScore); });
-    selected = candidates[slotIndex] || candidates[0] || null;
+    offset = candidates.length ? ((Number(state.offerRefreshSalt) || 0) * 7 + slotIndex * 3) % candidates.length : 0;
+    selected = candidates[offset] || candidates[slotIndex] || candidates[0] || null;
     if (!selected) {
-      selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex, U.statAverage(player.stats) + U.findDifficulty(difficultyId).offset, { weightClassId: player.trackId === "street" ? "" : player.weightClassId, gymId: player.gymId });
+      selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex + (state.offerRefreshSalt || 0) * 1000, U.statAverage(player.stats) + U.findDifficulty(difficultyId).offset, {
+        weightClassId: player.trackId === "street" ? "" : player.weightClassId,
+        gymId: player.gymId
+      });
       normalizeRecordForFighter(selected);
       state.roster.push(selected);
       if (window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }

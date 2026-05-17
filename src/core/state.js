@@ -118,7 +118,7 @@
     var country = U.findCountry(countryId);
     var opts = options || {};
     var weightClassId = trackId === "street" ? "" : (opts.weightClassId || Data.weightClasses[Math.abs(seed) % Data.weightClasses.length].id);
-    var stanceId = opts.stanceId || Data.stances[Math.abs(seed + 1) % Data.stances.length].id;
+    var stanceId = opts.stanceId || "";
     var age = typeof opts.age === "number" ? opts.age : U.clamp(18 + (Math.abs(seed) % 18), 18, 42);
     var stats = opts.stats || U.createStats(trackId, baseValue);
     var rankId = opts.rankId || "";
@@ -236,14 +236,13 @@
     var trackId = U.findTrack(payload.trackId).id;
     var countryId = U.findCountry(payload.countryId).id;
     var weightClassId = U.findWeightClass(payload.weightClassId).id;
-    var stanceId = U.findStance(payload.stanceId).id;
     var player = createFighter(countryId, trackId, 777, trackId === "pro" ? 90 : 35, {
       id: "player",
       name: payload.name || "Новый боксёр",
       isPlayer: true,
       known: true,
       weightClassId: trackId === "street" ? "" : weightClassId,
-      stanceId: stanceId,
+      stanceId: "",
       age: payload.age || 18,
       record: emptyRecord(),
       trackRecords: { amateur: emptyRecord(), street: emptyRecord(), pro: emptyRecord() },
@@ -265,11 +264,12 @@
       roster: [],
       people: [],
       offers: [],
+      offerRefreshSalt: 0,
       trackedFighterIds: [],
       clubs: [],
       titles: {},
       amateurPath: { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 },
-      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [] },
+      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [] },
       feed: "Карьера началась. Мир загружен, ближайшие соперники подобраны.",
       createdAt: new Date().toISOString()
     };
@@ -545,6 +545,7 @@
     state.version = Data.appVersion;
     state.week = Math.max(1, Number(state.week) || 1);
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
+    state.offerRefreshSalt = Number(state.offerRefreshSalt) || 0;
     state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
     state.amateurPath = state.amateurPath && typeof state.amateurPath === "object" ? state.amateurPath : { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 };
     state.amateurPath.completed = state.amateurPath.completed || {};

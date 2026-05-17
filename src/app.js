@@ -30,7 +30,7 @@
       countryId: document.getElementById("careerCountry").value,
       trackId: document.getElementById("careerTrack").value,
       weightClassId: document.getElementById("careerWeightClass").value,
-      stanceId: document.getElementById("careerStance").value
+      stanceId: ""
     });
 
     World.bootstrapWorld(state);
@@ -62,6 +62,30 @@
     saveAndRender();
   }
 
+  function applyMobileCollapse() {
+    if (!window.matchMedia || !window.matchMedia("(max-width: 720px)").matches) {
+      return;
+    }
+
+    Array.prototype.slice.call(document.querySelectorAll(".content-card")).forEach(function (card, index) {
+      var title = card.querySelector("h3");
+      var button;
+      if (!title || card.classList.contains("no-mobile-collapse") || card.querySelector("[data-mobile-toggle]")) {
+        return;
+      }
+      card.classList.add("mobile-collapsed");
+      button = document.createElement("button");
+      button.className = "small-btn mobile-toggle";
+      button.dataset.mobileToggle = "1";
+      button.textContent = "Показать";
+      title.appendChild(button);
+      if (index < 2) {
+        card.classList.remove("mobile-collapsed");
+        button.textContent = "Скрыть";
+      }
+    });
+  }
+
   function render() {
     if (!state || !State.player(state)) {
       app.innerHTML = Render.start();
@@ -80,6 +104,7 @@
     }
 
     app.innerHTML = Render.dashboard(state);
+    applyMobileCollapse();
   }
 
   document.addEventListener("click", function (event) {
@@ -148,6 +173,7 @@
       }
       saveAndRender();
     } else if (button.dataset.action === "refresh-offers") {
+      state.offerRefreshSalt = (Number(state.offerRefreshSalt) || 0) + 1;
       World.refreshOffers(state);
       state.feed = "Соперники обновлены.";
       saveAndRender();

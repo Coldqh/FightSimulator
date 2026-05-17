@@ -1,9 +1,11 @@
 # Fight Simulator
 
-Version: `world-life-club-hotfix-1.4.3`
+Version: `mobile-club-tournament-fix-1.4.4`
 
-- Unique club names.
-- Step-by-step tournament window.
-- People/coaches profiles.
-- NPC retirement and better opponent rotation.
-- Club links in fighter cards.
+- Better club name generation with country/city style.
+- Clubs distribute NPC fighters evenly.
+- Trainers are clickable profiles.
+- Tournament OVR ranges updated.
+- Amateur max OVR is 120.
+- Compact mobile top bar and collapsible mobile cards.
+- Refresh opponents now rotates the opponent pool.
