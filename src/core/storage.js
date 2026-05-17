@@ -29,9 +29,9 @@
 
   function repairRecord(record) {
     var safe = record && typeof record === "object" ? record : {};
-    var wins = clamp(Number(safe.wins) || 0, 0, 80);
-    var losses = clamp(Number(safe.losses) || 0, 0, 80);
-    var draws = clamp(Number(safe.draws) || 0, 0, 20);
+    var wins = clamp(Number(safe.wins) || 0, 0, 220);
+    var losses = clamp(Number(safe.losses) || 0, 0, 220);
+    var draws = clamp(Number(safe.draws) || 0, 0, 40);
     var kos = clamp(Number(safe.kos) || 0, 0, wins);
 
     return {
@@ -74,6 +74,7 @@
     fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
     fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
+    fighter.trainingPoints = Number(fighter.trainingPoints) || 0;
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
     fighter.lastMoveWeek = Number(fighter.lastMoveWeek) || 1;
     fighter.lastFightWeek = Number(fighter.lastFightWeek) || 0;
@@ -92,7 +93,6 @@
     state.rankingCountryId = state.rankingCountryId || "russia";
     state.rankingTrackId = state.rankingTrackId || "amateur";
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
-    state.selectedTacticId = state.selectedTacticId || "balanced";
     state.modal = null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];

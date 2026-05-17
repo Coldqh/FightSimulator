@@ -64,7 +64,7 @@
       if (!countryClubs.length) {
         continue;
       }
-      if (!fighter.gymId) {
+      if (!fighter.gymId && !fighter.isPlayer) {
         clubIndex = Math.abs((fighter.seed || i) + i) % countryClubs.length;
         fighter.gymId = countryClubs[clubIndex].id;
       }

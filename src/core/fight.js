@@ -27,11 +27,10 @@
     return null;
   }
 
-  function estimateWinChance(player, opponent, tacticId) {
-    var tactic = U.findTactic(tacticId || "balanced");
-    var playerScore = U.statAverage(player.stats) + tactic.power * 0.32 + tactic.defense * 0.25 + tactic.stamina * 0.16 + Math.min((player.record.wins || 0) * 0.22, 10) - Math.min((player.record.losses || 0) * 0.16, 7);
-    var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.22, 10) - Math.min((opponent.record.losses || 0) * 0.16, 7);
-    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.6), 10, 90);
+  function estimateWinChance(player, opponent) {
+    var playerScore = U.statAverage(player.stats) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
+    var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
+    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.55), 10, 90);
   }
 
   function fightExpectation(winChance) {
@@ -55,7 +54,6 @@
     var p = State.player(state);
     var opponent;
     var difficulty;
-    var tacticId;
     var chance;
 
     if (!offer || !p) {
@@ -68,16 +66,13 @@
     }
 
     difficulty = U.findDifficulty(offer.difficultyId);
-    tacticId = state.selectedTacticId || "balanced";
-    chance = estimateWinChance(p, opponent, tacticId);
+    chance = estimateWinChance(p, opponent);
 
     return {
       type: "fightPreview",
       offerId: offer.id,
       label: offer.label,
       difficultyLabel: difficulty.label,
-      tacticId: tacticId,
-      tacticLabel: U.findTactic(tacticId).label,
       expectation: fightExpectation(chance),
       opponentId: opponent.id,
       opponentName: opponent.name,
@@ -101,8 +96,7 @@
     return winner === "player" ? { player: 10, opponent: 9 } : { player: 9, opponent: 10 };
   }
 
-  function simulateRounds(player, opponent, rounds, tacticId) {
-    var tactic = U.findTactic(tacticId || "balanced");
+  function simulateRounds(player, opponent, rounds) {
     var log = [];
     var playerRounds = 0;
     var opponentRounds = 0;
@@ -128,17 +122,17 @@
       playerLanded += pLanded;
       opponentLanded += oLanded;
 
-      pRound = U.scoreFighter(player) + tactic.power * 0.7 + tactic.defense * 0.35 + U.randomInt(-8, 8) + Math.round(playerEnergy / 12) + Math.round(pLanded / 3);
+      pRound = U.scoreFighter(player) + U.randomInt(-8, 8) + Math.round(playerEnergy / 12) + Math.round(pLanded / 3);
       oRound = U.scoreFighter(opponent) + U.randomInt(-8, 8) + Math.round(opponentEnergy / 12) + Math.round(oLanded / 3);
 
-      playerEnergy = U.clamp(playerEnergy - U.randomInt(5, 11) + tactic.stamina, 0, 100);
+      playerEnergy = U.clamp(playerEnergy - U.randomInt(5, 11), 0, 100);
       opponentEnergy = U.clamp(opponentEnergy - U.randomInt(6, 11), 0, 100);
 
-      if (!knockdown && U.randomInt(1, 100) <= U.clamp(4 + Math.round((player.stats.power + tactic.ko - opponent.stats.defense) / 10), 2, 22)) {
+      if (!knockdown && U.randomInt(1, 100) <= U.clamp(4 + Math.round((player.stats.power - opponent.stats.defense) / 10), 2, 22)) {
         kdBy = "player";
         knockdown = { round: i, by: "player" };
         pRound += 10;
-      } else if (!knockdown && U.randomInt(1, 100) <= U.clamp(3 + Math.round((opponent.stats.power - player.stats.defense - tactic.defense) / 10), 1, 18)) {
+      } else if (!knockdown && U.randomInt(1, 100) <= U.clamp(3 + Math.round((opponent.stats.power - player.stats.defense) / 10), 1, 18)) {
         kdBy = "opponent";
         knockdown = { round: i, by: "opponent" };
         oRound += 10;
@@ -148,16 +142,9 @@
 
       winner = pRound >= oRound ? "player" : "opponent";
       score = roundScore(winner, !!kdBy);
-
       playerPoints += score.player;
       opponentPoints += score.opponent;
-
-      if (winner === "player") {
-        playerRounds += 1;
-      } else {
-        opponentRounds += 1;
-      }
-
+      if (winner === "player") { playerRounds += 1; } else { opponentRounds += 1; }
       log.push("Раунд " + i + ": " + (winner === "player" ? "твой раунд" : "раунд соперника") + " " + score.player + ":" + score.opponent + ". Точные удары " + pLanded + ":" + oLanded + (kdBy ? ". Нокдаун." : "."));
     }
 
@@ -199,7 +186,6 @@
     var offer = findOffer(state, offerId);
     var p = State.player(state);
     var opponent;
-    var tacticId;
     var winChance;
     var roll;
     var result;
@@ -217,11 +203,10 @@
       return false;
     }
 
-    tacticId = state.selectedTacticId || "balanced";
-    winChance = estimateWinChance(p, opponent, tacticId);
+    winChance = estimateWinChance(p, opponent);
     roll = U.randomInt(1, 100);
-    roundData = simulateRounds(p, opponent, offer.rounds, tacticId);
-    koChance = U.clamp(9 + Math.round((p.stats.power + U.findTactic(tacticId).ko - opponent.stats.defense) * 0.42), 4, 34);
+    roundData = simulateRounds(p, opponent, offer.rounds);
+    koChance = U.clamp(9 + Math.round((p.stats.power - opponent.stats.defense) * 0.42), 4, 34);
 
     if (Math.abs(roundData.playerPoints - roundData.opponentPoints) <= 1 && U.randomInt(1, 100) <= 14) {
       result = "Ничья";
@@ -237,6 +222,12 @@
     scoreLine = method === "KO/TKO" ? "остановка боя" : roundData.playerPoints + ":" + roundData.opponentPoints;
 
     applyFightResult(state, p, opponent, result, method);
+
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + (result === "Победа" ? 4 : (result === "Ничья" ? 2 : 1));
+
+    if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
+      window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id);
+    }
 
     if (offer.isCompetition && window.FS.Amateur && window.FS.Amateur.completeCompetition) {
       window.FS.Amateur.completeCompetition(state, offer, result);
@@ -296,7 +287,7 @@
       return null;
     }
 
-    chance = estimateWinChance(p, champion, state.selectedTacticId || "balanced");
+    chance = estimateWinChance(p, champion);
 
     return {
       type: "titleChallengePreview",

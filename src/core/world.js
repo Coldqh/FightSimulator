@@ -21,9 +21,9 @@
     var pool = state.roster.filter(function (fighter) {
       return fighter.id !== sourceFighter.id &&
         !fighter.isPlayer &&
-        fighter.countryId === sourceFighter.countryId &&
         fighter.trackId === sourceFighter.trackId &&
-        fighter.weightClassId === sourceFighter.weightClassId;
+        (sourceFighter.trackId === "pro" || fighter.countryId === sourceFighter.countryId) &&
+        (sourceFighter.trackId === "street" || fighter.weightClassId === sourceFighter.weightClassId);
     });
 
     pool.sort(function (left, right) {
@@ -293,7 +293,6 @@
         id: U.uid("offer"),
         label: labelsByTrack[p.trackId][i],
         difficultyId: difficulty.id,
-        tacticId: state.selectedTacticId || "balanced",
         opponentId: opponent.id,
         rounds: track.rounds,
         purse: Math.max(0, Math.round((track.basePurse + i * Math.round(track.basePurse * 0.35)) * difficulty.purseMul)),
@@ -309,9 +308,7 @@
     state.week += 1;
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
-      if (window.FS.Clubs.chooseTrackedClubmate) {
-        window.FS.Clubs.chooseTrackedClubmate(state);
-      }
+      
     }
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
@@ -343,9 +340,7 @@
     }
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
-      if (window.FS.Clubs.chooseTrackedClubmate) {
-        window.FS.Clubs.chooseTrackedClubmate(state);
-      }
+      
     }
     buildNationalTeams(state);
     if (window.FS.Titles) {

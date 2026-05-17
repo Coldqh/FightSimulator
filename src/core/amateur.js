@@ -67,6 +67,7 @@
         label: comp.label,
         minRating: comp.minRating,
         rewardRating: comp.rewardRating,
+        rounds: comp.rounds || [],
         difficultyId: comp.difficultyId,
         available: status.available,
         reason: status.reason,
@@ -137,6 +138,14 @@
     return pool[U.randomInt(0, pool.length - 1)];
   }
 
+  function bracketPlacement(comp, wins) {
+    var needed = comp.rounds ? comp.rounds.length : 1;
+    if (wins >= needed) { return "1 место"; }
+    if (wins === needed - 1) { return "2 место"; }
+    if (wins === needed - 2) { return "3 место"; }
+    return "";
+  }
+
   function createCompetitionOffer(state, compId) {
     var comp = getCompetition(compId);
     var status = competitionStatus(state, comp);
@@ -170,12 +179,14 @@
       id: U.uid("amateur_comp"),
       label: comp.label,
       difficultyId: comp.difficultyId,
-      tacticId: state.selectedTacticId || "balanced",
       opponentId: opponent.id,
       rounds: 3,
       purse: 0,
       isCompetition: true,
       competitionId: comp.id,
+      bracketRoundIndex: 0,
+      bracketRoundLabel: comp.rounds && comp.rounds.length ? comp.rounds[0] : "Финал",
+      bracketWins: 0,
       opponentTier: window.FS.Matchmaking ? window.FS.Matchmaking.careerTier(opponent).label : "Любитель",
       opponentStage: window.FS.Matchmaking ? window.FS.Matchmaking.careerStage(opponent).label : "Турнир"
     };
@@ -188,6 +199,8 @@
   function completeCompetition(state, offer, result) {
     var comp;
     var p = State.player(state);
+    var placement;
+    var awardLabel;
 
     if (!offer || !offer.isCompetition) {
       return;
@@ -195,10 +208,20 @@
 
     ensureAmateurState(state);
     comp = getCompetition(offer.competitionId);
-
     state.amateurPath.lastCompetitionWeekById[comp.id] = state.week;
 
     if (result === "Победа") {
+      offer.bracketWins = (offer.bracketWins || 0) + 1;
+      placement = bracketPlacement(comp, offer.bracketWins);
+
+      if (!placement && offer.bracketRoundIndex < comp.rounds.length - 1) {
+        offer.bracketRoundIndex += 1;
+        offer.bracketRoundLabel = comp.rounds[offer.bracketRoundIndex];
+        state.feed = "Турнир продолжается: следующий раунд " + offer.bracketRoundLabel + ".";
+        return;
+      }
+
+      awardLabel = comp.awardLabel + " · " + (placement || "1 место");
       state.amateurPath.completed[comp.id] = true;
       state.amateurPath.points += comp.rewardRating;
       state.amateurPath.medals.unshift({
@@ -206,7 +229,8 @@
         week: state.week,
         competitionId: comp.id,
         label: comp.label,
-        awardLabel: comp.awardLabel,
+        awardLabel: awardLabel,
+        place: placement || "1 место",
         result: result
       });
 
@@ -215,18 +239,36 @@
       }
 
       if (State.addFighterAward) {
-        State.addFighterAward(state, p, comp.awardLabel, "amateur");
+        State.addFighterAward(state, p, awardLabel, "amateur");
       }
 
       if (p && p.careerLog) {
-        p.careerLog.unshift({ week: state.week, text: "Победа в турнире: " + comp.label + " · " + comp.awardLabel + "." });
+        p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + "." });
       }
 
       if (window.FS.World) {
-        window.FS.World.createNews(state, "amateur", p.name + " выиграл турнир: " + comp.label + ".", { type: "amateur_competition" });
+        window.FS.World.createNews(state, "amateur", p.name + " завершил турнир: " + comp.label + " · " + awardLabel + ".", { type: "amateur_competition" });
       }
-    } else if (p && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " — " + result + "." });
+    } else {
+      placement = bracketPlacement(comp, offer.bracketWins || 0);
+      if (placement) {
+        awardLabel = comp.awardLabel + " · " + placement;
+        state.amateurPath.medals.unshift({
+          id: U.uid("medal"),
+          week: state.week,
+          competitionId: comp.id,
+          label: comp.label,
+          awardLabel: awardLabel,
+          place: placement,
+          result: result
+        });
+        if (State.addFighterAward) {
+          State.addFighterAward(state, p, awardLabel, "amateur");
+        }
+      }
+      if (p && p.careerLog) {
+        p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " — " + result + (placement ? " · " + placement : "") + "." });
+      }
     }
   }
 

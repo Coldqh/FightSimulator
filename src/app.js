@@ -223,10 +223,6 @@
       State.setPlayerWeightClass(state, target.value);
       World.refreshOffers(state);
       saveAndRender();
-    } else if (target.dataset.action === "set-tactic") {
-      State.setTactic(state, target.value);
-      World.refreshOffers(state);
-      saveAndRender();
     }
   });
 

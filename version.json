@@ -1,13 +1,15 @@
 {
-  "version": "ratings-tournaments-hotfix-1.3.1",
-  "mode": "ratings-and-tournaments-hotfix",
+  "version": "structural-rework-1.4.0",
+  "mode": "structural-rework",
   "patches": [
-    "fixed tournament accept fight",
-    "amateurs no longer have champions/titles",
-    "amateur awards replace amateur titles",
-    "new amateur tournament ladder: city, oblast, region, country, continent, world, olympiad",
-    "continent/world/Olympiad opponent pools",
-    "pro rankings are global with one world champion per weight",
-    "pro matchmaking can cross countries"
+    "removed tactics",
+    "training points progression",
+    "9 amateur ranks",
+    "large roster generation",
+    "4 pro belts WBC/WBA/WBO/IBF",
+    "belt unification helper",
+    "street has no weight classes",
+    "no starting club",
+    "tournament bracket labels"
   ]
 }

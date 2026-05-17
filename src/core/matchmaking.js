@@ -72,7 +72,6 @@
 
   function normalizeRecordForFighter(fighter) {
     var rating = U.statAverage(fighter.stats);
-    var track = fighter.trackId;
     var wins;
     var losses;
     var draws;
@@ -81,57 +80,31 @@
       return;
     }
 
-    if (fighter.record && fighter.record.wins <= 80 && fighter.record.losses <= 80) {
+    if (fighter.record && fighter.record.wins > 0 && fighter.record.wins <= 220 && fighter.record.losses <= 220) {
       return;
     }
 
-    if (track === "pro") {
-      if (rating >= 86) {
-        wins = U.randomInt(18, 34);
-        losses = U.randomInt(0, 4);
-      } else if (rating >= 68) {
-        wins = U.randomInt(10, 22);
-        losses = U.randomInt(1, 7);
-      } else if (rating >= 48) {
-        wins = U.randomInt(4, 14);
-        losses = U.randomInt(2, 9);
-      } else {
-        wins = U.randomInt(0, 6);
-        losses = U.randomInt(0, 4);
-      }
-    } else if (track === "amateur") {
-      if (rating >= 78) {
-        wins = U.randomInt(24, 55);
-        losses = U.randomInt(3, 14);
-      } else if (rating >= 58) {
-        wins = U.randomInt(12, 32);
-        losses = U.randomInt(4, 16);
-      } else if (rating >= 42) {
-        wins = U.randomInt(5, 18);
-        losses = U.randomInt(2, 12);
-      } else {
-        wins = U.randomInt(0, 8);
-        losses = U.randomInt(0, 6);
-      }
+    if (fighter.trackId === "street") {
+      wins = rating >= 120 ? U.randomInt(80, 190) : rating >= 80 ? U.randomInt(35, 130) : U.randomInt(3, 55);
+      losses = rating >= 120 ? U.randomInt(3, 30) : rating >= 80 ? U.randomInt(8, 55) : U.randomInt(4, 80);
+    } else if (fighter.trackId === "amateur") {
+      if (rating >= 91) { wins = U.randomInt(100, 200); losses = U.randomInt(5, 35); }
+      else if (rating >= 76) { wins = U.randomInt(65, 150); losses = U.randomInt(8, 45); }
+      else if (rating >= 61) { wins = U.randomInt(35, 110); losses = U.randomInt(10, 60); }
+      else if (rating >= 31) { wins = U.randomInt(8, 50); losses = U.randomInt(5, 50); }
+      else { wins = U.randomInt(0, 20); losses = U.randomInt(0, 22); }
     } else {
-      if (rating >= 92) {
-        wins = U.randomInt(16, 35);
-        losses = U.randomInt(0, 8);
-      } else if (rating >= 62) {
-        wins = U.randomInt(7, 22);
-        losses = U.randomInt(2, 12);
-      } else {
-        wins = U.randomInt(0, 9);
-        losses = U.randomInt(0, 8);
-      }
+      if (rating >= 150) { wins = U.randomInt(24, 42); losses = U.randomInt(0, 3); }
+      else if (rating >= 105) { wins = U.randomInt(13, 30); losses = U.randomInt(1, 8); }
+      else { wins = U.randomInt(0, 16); losses = U.randomInt(0, 10); }
     }
 
-    draws = U.randomInt(0, Math.min(3, Math.floor((wins + losses) / 12)));
+    draws = U.randomInt(0, Math.min(8, Math.floor((wins + losses) / 18)));
     fighter.record = {
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * 0.65))))
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * (fighter.trackId === "amateur" ? 0.35 : 0.68)))))
     };
   }
 
@@ -159,7 +132,7 @@
     penalty += Math.abs(U.statAverage(candidate.stats) - U.statAverage(player.stats)) * 1.4;
     penalty += Math.abs(candidateTier.level - playerTier.level) * 7;
 
-    if (candidate.countryId !== player.countryId) {
+    if (player.trackId !== "pro" && candidate.countryId !== player.countryId) {
       penalty += 40;
     }
 
@@ -167,7 +140,7 @@
       penalty += 100;
     }
 
-    if (candidate.weightClassId !== player.weightClassId) {
+    if (player.trackId !== "street" && candidate.weightClassId !== player.weightClassId) {
       penalty += 100;
     }
 
@@ -193,18 +166,9 @@
       return !fighter.isPlayer &&
         (player.trackId === "pro" || fighter.countryId === player.countryId) &&
         fighter.trackId === player.trackId &&
-        fighter.weightClassId === player.weightClassId &&
+        (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
         (!isChampion || difficultyId === "hard" && playerTier.level >= 4);
     });
-
-    if (!candidates.length) {
-      candidates = state.roster.filter(function (fighter) {
-        return !fighter.isPlayer &&
-          fighter.countryId === player.countryId &&
-          fighter.trackId === player.trackId &&
-          fighter.weightClassId === player.weightClassId;
-      });
-    }
 
     candidates.sort(function (left, right) {
       return candidatePenalty(player, left, targetScore) - candidatePenalty(player, right, targetScore);
@@ -214,7 +178,7 @@
 
     if (!selected) {
       selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex, U.statAverage(player.stats) + U.findDifficulty(difficultyId).offset, {
-        weightClassId: player.weightClassId,
+        weightClassId: player.trackId === "street" ? "" : player.weightClassId,
         gymId: player.gymId
       });
       normalizeRecordForFighter(selected);
@@ -266,7 +230,6 @@
         id: U.uid("offer"),
         label: offerLabel(player.trackId, difficulty.id),
         difficultyId: difficulty.id,
-        tacticId: state.selectedTacticId || "balanced",
         opponentId: opponent.id,
         rounds: track.rounds,
         purse: Math.max(0, Math.round((track.basePurse + i * Math.round(track.basePurse * 0.38)) * difficulty.purseMul)),

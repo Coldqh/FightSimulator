@@ -78,13 +78,7 @@
   }
 
   function findTactic(tacticId) {
-    var i;
-    for (i = 0; i < Data.tactics.length; i += 1) {
-      if (Data.tactics[i].id === tacticId) {
-        return Data.tactics[i];
-      }
-    }
-    return Data.tactics[1];
+    return { id: "none", label: "Без тактики", power: 0, stamina: 0, defense: 0, ko: 0 };
   }
 
   function statTotal(stats) {
@@ -97,12 +91,13 @@
 
   function scoreFighter(fighter) {
     var record = fighter.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
-    var wins = clamp(record.wins || 0, 0, 80);
-    var losses = clamp(record.losses || 0, 0, 80);
+    var wins = clamp(record.wins || 0, 0, fighter.trackId === "street" ? 220 : 180);
+    var losses = clamp(record.losses || 0, 0, fighter.trackId === "street" ? 220 : 180);
     var kos = clamp(record.kos || 0, 0, wins);
-    var titleBonus = fighter.titles ? Math.min(fighter.titles.length * 2, 6) : 0;
+    var titleBonus = fighter.titles ? Math.min(fighter.titles.length * 3, 16) : 0;
+    var awardBonus = fighter.awards ? Math.min(fighter.awards.length * 1.2, 8) : 0;
 
-    return statAverage(fighter.stats) + wins * 0.35 - losses * 0.22 + kos * 0.12 + titleBonus;
+    return statAverage(fighter.stats) + wins * 0.20 - losses * 0.16 + kos * 0.08 + titleBonus + awardBonus;
   }
 
   function recordText(record) {

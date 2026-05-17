@@ -12,35 +12,85 @@
     var best = ranks[0];
     var i;
 
+    if (fighter.age >= 18 && rating < 31) {
+      return Data.amateurRanks[3];
+    }
+
     for (i = 0; i < ranks.length; i += 1) {
-      if (rating >= ranks[i].minRating) {
-        best = ranks[i];
+      if (rating >= ranks[i].minRating && (!ranks[i].maxRating || rating <= ranks[i].maxRating)) {
+        if (!ranks[i].minAge || fighter.age >= ranks[i].minAge) {
+          best = ranks[i];
+        }
       }
     }
 
     return best;
   }
 
-  function createRecord(seed) {
-    var tier = Math.abs(seed) % 7;
-    var wins = U.randomInt(0, 5) + tier * 2;
-    var losses = U.randomInt(0, 4);
-    var draws = U.randomInt(0, 1);
+  function recordByTrackAndRating(trackId, rating, rankId) {
+    var wins;
+    var losses;
+    var draws;
 
+    if (trackId === "street") {
+      wins = rating >= 110 ? U.randomInt(70, 170) : rating >= 75 ? U.randomInt(35, 110) : U.randomInt(5, 55);
+      losses = rating >= 110 ? U.randomInt(2, 25) : rating >= 75 ? U.randomInt(8, 45) : U.randomInt(5, 70);
+    } else if (trackId === "amateur") {
+      if (rankId === "msmk" || rating >= 91) {
+        wins = U.randomInt(90, 180); losses = U.randomInt(5, 35);
+      } else if (rankId === "ms" || rating >= 76) {
+        wins = U.randomInt(60, 140); losses = U.randomInt(8, 45);
+      } else if (rankId === "kms" || rating >= 61) {
+        wins = U.randomInt(35, 100); losses = U.randomInt(10, 55);
+      } else if (String(rankId).indexOf("adult") === 0 || rating >= 31) {
+        wins = U.randomInt(8, 45); losses = U.randomInt(5, 45);
+      } else {
+        wins = U.randomInt(0, 18); losses = U.randomInt(0, 20);
+      }
+    } else {
+      if (rating >= 150) {
+        wins = U.randomInt(24, 42); losses = U.randomInt(0, 3);
+      } else if (rating >= 110) {
+        wins = U.randomInt(14, 28); losses = U.randomInt(1, 7);
+      } else if (rating >= 70) {
+        wins = U.randomInt(5, 18); losses = U.randomInt(2, 10);
+      } else {
+        wins = U.randomInt(0, 8); losses = U.randomInt(0, 5);
+      }
+    }
+
+    draws = U.randomInt(0, Math.min(8, Math.floor((wins + losses) / 18)));
     return {
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * 0.55))))
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * (trackId === "amateur" ? 0.35 : 0.68)))))
     };
+  }
+
+  function baseForRank(rankId) {
+    var i;
+    for (i = 0; i < Data.amateurRanks.length; i += 1) {
+      if (Data.amateurRanks[i].id === rankId) {
+        return U.randomInt(Data.amateurRanks[i].minRating, Data.amateurRanks[i].maxRating || 100);
+      }
+    }
+    return 35;
+  }
+
+  function createRecord(seed) {
+    var base = 20 + Math.abs(seed % 55);
+    return recordByTrackAndRating("amateur", base, "");
   }
 
   function createFighter(countryId, trackId, seed, baseValue, options) {
     var country = U.findCountry(countryId);
     var opts = options || {};
-    var weightClassId = opts.weightClassId || Data.weightClasses[Math.abs(seed) % Data.weightClasses.length].id;
+    var weightClassId = trackId === "street" ? "" : (opts.weightClassId || Data.weightClasses[Math.abs(seed) % Data.weightClasses.length].id);
     var stanceId = opts.stanceId || Data.stances[Math.abs(seed + 1) % Data.stances.length].id;
-    var age = typeof opts.age === "number" ? opts.age : U.clamp(17 + (Math.abs(seed) % 18), 16, 39);
+    var age = typeof opts.age === "number" ? opts.age : U.clamp(16 + (Math.abs(seed) % 22), 16, 39);
+    var stats = opts.stats || U.createStats(trackId, baseValue);
+    var rankId = opts.rankId || "";
     var fighter = {
       id: opts.id || U.uid("fighter"),
       name: opts.name || U.createName(country, seed),
@@ -50,15 +100,17 @@
       stanceId: stanceId,
       age: age,
       gymId: opts.gymId || "",
-      stats: opts.stats || U.createStats(trackId, baseValue),
-      record: opts.record || createRecord(seed),
+      stats: stats,
+      record: opts.record || recordByTrackAndRating(trackId, U.statAverage(stats), rankId),
       isPlayer: !!opts.isPlayer,
       known: !!opts.known,
       hasGonePro: trackId === "pro" || !!opts.hasGonePro,
       proClosed: !!opts.proClosed,
       titles: opts.titles || [],
+      awards: opts.awards || [],
       careerLog: opts.careerLog || [],
       storyFlags: opts.storyFlags || [],
+      trainingPoints: opts.trainingPoints || 0,
       lastMoveWeek: 1,
       lastFightWeek: 0,
       seed: seed
@@ -70,30 +122,59 @@
 
   function createRoster(player) {
     var roster = [];
-    var trackIds = Object.keys(Data.tracks);
     var countryIndex;
-    var trackIndex;
     var weightIndex;
+    var rankIndex;
     var fighterIndex;
     var countryId;
-    var trackId;
     var weightClassId;
+    var rank;
     var seed;
     var base;
+    var age;
 
+    /* Профи: минимум 100 боксёров в каждом весе, общий мировой пул */
+    for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
+      weightClassId = Data.weightClasses[weightIndex].id;
+      for (fighterIndex = 0; fighterIndex < 100; fighterIndex += 1) {
+        countryId = Data.countries[fighterIndex % Data.countries.length].id;
+        seed = 100000 + weightIndex * 1000 + fighterIndex;
+        base = 55 + Math.floor(fighterIndex / 3);
+        roster.push(createFighter(countryId, "pro", seed, U.clamp(base, 45, 185), {
+          weightClassId: weightClassId,
+          age: U.randomInt(19, 38)
+        }));
+      }
+    }
+
+    /* Улица: минимум 100 бойцов в каждой стране, без весов */
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       countryId = Data.countries[countryIndex].id;
-      for (trackIndex = 0; trackIndex < trackIds.length; trackIndex += 1) {
-        trackId = trackIds[trackIndex];
-        for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
-          weightClassId = Data.weightClasses[weightIndex].id;
-          for (fighterIndex = 0; fighterIndex < 7; fighterIndex += 1) {
-            seed = countryIndex * 10000 + trackIndex * 1000 + weightIndex * 100 + fighterIndex;
-            base = 24 + fighterIndex * 4 + weightIndex;
-            roster.push(createFighter(countryId, trackId, seed, base, {
-              weightClassId: weightClassId
-            }));
-          }
+      for (fighterIndex = 0; fighterIndex < 100; fighterIndex += 1) {
+        seed = 200000 + countryIndex * 1000 + fighterIndex;
+        base = U.clamp(18 + Math.floor(fighterIndex * 1.25), 10, 145);
+        roster.push(createFighter(countryId, "street", seed, base, {
+          weightClassId: "",
+          age: U.randomInt(16, 42)
+        }));
+      }
+    }
+
+    /* Любители: 50 бойцов на каждый разряд в каждой стране */
+    for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
+      countryId = Data.countries[countryIndex].id;
+      for (rankIndex = 0; rankIndex < Data.amateurRanks.length; rankIndex += 1) {
+        rank = Data.amateurRanks[rankIndex];
+        for (fighterIndex = 0; fighterIndex < 50; fighterIndex += 1) {
+          seed = 300000 + countryIndex * 10000 + rankIndex * 1000 + fighterIndex;
+          base = baseForRank(rank.id);
+          weightClassId = Data.weightClasses[(fighterIndex + rankIndex) % Data.weightClasses.length].id;
+          age = rank.id.indexOf("junior") === 0 ? U.randomInt(15, 17) : U.randomInt(18, 34);
+          roster.push(createFighter(countryId, "amateur", seed, base, {
+            weightClassId: weightClassId,
+            rankId: rank.id,
+            age: age
+          }));
         }
       }
     }
@@ -127,6 +208,7 @@
       stanceId: stanceId,
       age: payload.age || 18,
       record: { wins: 0, losses: 0, draws: 0, kos: 0 },
+      trainingPoints: 0,
       careerLog: [{ week: 1, text: "Начало карьеры." }]
     });
 
@@ -139,7 +221,6 @@
       rankingTrackId: trackId,
       rankingWeightClassId: weightClassId,
       modal: null,
-      selectedTacticId: "balanced",
       roster: [],
       people: createPeople(countryId),
       offers: [],
@@ -233,7 +314,7 @@
   }
 
   function setTactic(state, tacticId) {
-    state.selectedTacticId = U.findTactic(tacticId).id;
+    return false;
   }
 
   function updateDerivedFighterFields(fighter) {
@@ -241,10 +322,11 @@
       fighter.amateurRankId = rankForFighter(fighter).id;
     }
     if (fighter.trackId === "street") {
-      fighter.streetRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2 - fighter.record.losses, 1, 150);
+      fighter.weightClassId = "";
+      fighter.streetRating = U.clamp(U.statAverage(fighter.stats) + Math.round(fighter.record.wins * 0.38) - Math.round(fighter.record.losses * 0.22), 1, 200);
     }
     if (fighter.trackId === "pro") {
-      fighter.proRating = U.clamp(U.statAverage(fighter.stats) + fighter.record.wins * 2, 1, 220);
+      fighter.proRating = U.clamp(U.statAverage(fighter.stats) + Math.round(fighter.record.wins * 0.7), 1, 240);
       fighter.hasGonePro = true;
     }
   }
@@ -259,18 +341,37 @@
   function trainPlayer(state, statKey) {
     var p = player(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
-    var chosen = statKey || U.pick(keys);
+    var chosen = statKey || "";
     var cap;
 
-    if (!p || typeof p.stats[chosen] !== "number") {
+    if (!p) {
+      return;
+    }
+
+    p.trainingPoints = Number(p.trainingPoints) || 0;
+
+    if (!chosen) {
+      p.trainingPoints += 5;
+      p.careerLog.unshift({ week: state.week, text: "Тренировочная неделя: +5 очков прокачки." });
+      state.feed = "Тренировочная неделя завершена. Получено 5 очков прокачки.";
+      return;
+    }
+
+    if (keys.indexOf(chosen) === -1 || typeof p.stats[chosen] !== "number") {
+      return;
+    }
+
+    if (p.trainingPoints <= 0) {
+      state.feed = "Не хватает очков прокачки. Проведи тренировочную неделю или бой.";
       return;
     }
 
     cap = U.findTrack(p.trackId).maxStat;
+    p.trainingPoints -= 1;
     p.stats[chosen] = U.clamp(p.stats[chosen] + 1, 1, cap);
     updateDerivedFighterFields(p);
-    p.careerLog.unshift({ week: state.week, text: "Тренировка: +" + U.getStatLabel(chosen) + "." });
-    state.feed = "Тренировочная неделя завершена. Улучшен навык: " + U.getStatLabel(chosen) + ".";
+    p.careerLog.unshift({ week: state.week, text: "Прокачка за очко: +" + U.getStatLabel(chosen) + "." });
+    state.feed = "Потрачено 1 очко. Улучшен навык: " + U.getStatLabel(chosen) + ".";
   }
 
 
@@ -326,16 +427,20 @@
     return state.roster
       .filter(function (fighter) {
         var countryOk;
+        var weightOk;
 
         if (trackId === "pro") {
-          countryOk = countryId === "world" || !countryId || countryId === fighter.countryId;
+          countryOk = true;
+          weightOk = !weightClassId || fighter.weightClassId === weightClassId;
+        } else if (trackId === "street") {
+          countryOk = countryId === "world" || !countryId || fighter.countryId === countryId;
+          weightOk = true;
         } else {
           countryOk = countryId === "world" || !countryId || fighter.countryId === countryId;
+          weightOk = !weightClassId || fighter.weightClassId === weightClassId;
         }
 
-        return countryOk &&
-          fighter.trackId === trackId &&
-          (!weightClassId || fighter.weightClassId === weightClassId);
+        return countryOk && fighter.trackId === trackId && weightOk;
       })
       .sort(function (left, right) {
         return U.scoreFighter(right) - U.scoreFighter(left);
@@ -353,7 +458,6 @@
 
     state.version = Data.appVersion;
     state.week = Math.max(1, Number(state.week) || 1);
-    state.selectedTacticId = U.findTactic ? U.findTactic(state.selectedTacticId || "balanced").id : (state.selectedTacticId || "balanced");
     state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
     state.amateurPath = state.amateurPath && typeof state.amateurPath === "object" ? state.amateurPath : { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 };
     state.amateurPath.completed = state.amateurPath.completed || {};
@@ -378,6 +482,7 @@
       state.roster[i].careerLog = state.roster[i].careerLog instanceof Array ? state.roster[i].careerLog : [];
       state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
       state.roster[i].awards = state.roster[i].awards instanceof Array ? state.roster[i].awards : [];
+      state.roster[i].trainingPoints = Number(state.roster[i].trainingPoints) || 0;
       updateDerivedFighterFields(state.roster[i]);
     }
 

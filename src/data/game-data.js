@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "ratings-tournaments-hotfix-1.3.1",
+    appVersion: "structural-rework-1.4.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -37,11 +37,6 @@
       }
     },
 
-    tactics: [
-      { id: "pressure", label: "Давить", power: 5, stamina: -3, defense: -3, ko: 6 },
-      { id: "balanced", label: "Спокойно", power: 0, stamina: 0, defense: 0, ko: 0 },
-      { id: "careful", label: "Осторожно", power: -3, stamina: 4, defense: 5, ko: -3 }
-    ],
 
     weightClasses: [
       { id: "bantam", label: "Легчайший", min: 52, max: 56 },
@@ -138,12 +133,22 @@
     },
 
     amateurRanks: [
-      { id: "junior_1", label: "I юношеский", minRating: 1 },
-      { id: "adult_3", label: "III разряд", minRating: 28 },
-      { id: "adult_2", label: "II разряд", minRating: 38 },
-      { id: "adult_1", label: "I разряд", minRating: 48 },
-      { id: "kms", label: "КМС", minRating: 62 },
-      { id: "ms", label: "МС", minRating: 78 }
+      { id: "junior_3", label: "III юношеский", minRating: 0, maxRating: 10, minAge: 0, maxAge: 17 },
+      { id: "junior_2", label: "II юношеский", minRating: 11, maxRating: 20, minAge: 0, maxAge: 17 },
+      { id: "junior_1", label: "I юношеский", minRating: 21, maxRating: 30, minAge: 0, maxAge: 17 },
+      { id: "adult_3", label: "III взрослый", minRating: 31, maxRating: 40, minAge: 18 },
+      { id: "adult_2", label: "II взрослый", minRating: 41, maxRating: 50, minAge: 18 },
+      { id: "adult_1", label: "I взрослый", minRating: 51, maxRating: 60, minAge: 18 },
+      { id: "kms", label: "КМС", minRating: 61, maxRating: 75, minAge: 18 },
+      { id: "ms", label: "МС", minRating: 76, maxRating: 90, minAge: 18 },
+      { id: "msmk", label: "МСМК", minRating: 91, maxRating: 100, minAge: 18 }
+    ],
+
+    beltBodies: [
+      { id: "wbc", label: "WBC", crown: "👑" },
+      { id: "wba", label: "WBA", crown: "👑" },
+      { id: "wbo", label: "WBO", crown: "👑" },
+      { id: "ibf", label: "IBF", crown: "👑" }
     ],
 
     offerDifficulties: [
@@ -154,20 +159,22 @@
 
     titleTypes: [
       { id: "street_country", label: "Чемпион улицы", trackId: "street", scope: "country" },
-      { id: "amateur_country", label: "Чемпион любителей", trackId: "amateur", scope: "country" },
-      { id: "pro_regional", label: "Региональный пояс", trackId: "pro", scope: "country" }
+      { id: "pro_world_wbc", label: "Чемпион мира WBC", bodyId: "wbc", trackId: "pro", scope: "world" },
+      { id: "pro_world_wba", label: "Чемпион мира WBA", bodyId: "wba", trackId: "pro", scope: "world" },
+      { id: "pro_world_wbo", label: "Чемпион мира WBO", bodyId: "wbo", trackId: "pro", scope: "world" },
+      { id: "pro_world_ibf", label: "Чемпион мира IBF", bodyId: "ibf", trackId: "pro", scope: "world" }
     ],
 
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     amateurCompetitions: [
-      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 1, rewardRating: 1, difficultyId: "safe", weekCooldown: 2, scope: "country", minOpponentRating: 1 },
-      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 34, rewardRating: 2, difficultyId: "safe", weekCooldown: 3, scope: "country", minOpponentRating: 30 },
-      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 46, rewardRating: 3, difficultyId: "even", weekCooldown: 4, scope: "country", minOpponentRating: 42 },
-      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 58, rewardRating: 4, difficultyId: "hard", weekCooldown: 5, scope: "country", minOpponentRating: 54 },
-      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 70, rewardRating: 5, difficultyId: "hard", weekCooldown: 6, scope: "continent", minOpponentRating: 62 },
-      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 78, rewardRating: 6, difficultyId: "hard", weekCooldown: 8, scope: "world", minOpponentRating: 72 },
-      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 84, rewardRating: 8, difficultyId: "hard", weekCooldown: 12, scope: "world_elite", minOpponentRating: 78 }
+      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, rewardRating: 1, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "safe", weekCooldown: 2, scope: "country", minOpponentRating: 0 },
+      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 31, rewardRating: 2, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "safe", weekCooldown: 3, scope: "country", minOpponentRating: 25 },
+      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 41, rewardRating: 3, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "even", weekCooldown: 4, scope: "country", minOpponentRating: 36 },
+      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 51, rewardRating: 4, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "hard", weekCooldown: 5, scope: "country", minOpponentRating: 48 },
+      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 61, rewardRating: 5, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "hard", weekCooldown: 6, scope: "continent", minOpponentRating: 58 },
+      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 76, rewardRating: 6, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "hard", weekCooldown: 8, scope: "world", minOpponentRating: 72 },
+      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 91, rewardRating: 8, rounds: ["1/32", "1/16", "1/8", "1/4", "1/2", "Финал"], difficultyId: "hard", weekCooldown: 12, scope: "world_elite", minOpponentRating: 84 }
     ],
 
     careerStages: {
