@@ -1,5 +1,4 @@
 {
-  "version": "interactive-ring-fight-1.8.1",
-  "mode": "interactive-ring-fight",
-  "base": "turn-based-fight-1.8.0"
+  "version": "ring-combat-hotfix-1.8.2",
+  "mode": "ring-combat-hotfix"
 }

@@ -39,21 +39,15 @@
   }
 
   function computePurse(player, opponent) {
-    var pOvr = U.statAverage(player.stats);
     var oOvr = U.statAverage(opponent.stats);
     var trackMul = Data.economy && Data.economy.fightIncomeMultiplier ? (Data.economy.fightIncomeMultiplier[player.trackId] || 1) : 1;
     var base;
-    var relative = 1;
 
-    if (player.trackId === "pro") { base = 120 + pOvr * 6 + oOvr * 8; }
-    else if (player.trackId === "street") { base = 70 + pOvr * 4 + oOvr * 5; }
-    else { base = 35 + pOvr * 2.2 + oOvr * 3.3; }
+    if (player.trackId === "pro") { base = 180 + oOvr * 11; }
+    else if (player.trackId === "street") { base = 90 + oOvr * 7; }
+    else { base = 35 + oOvr * 5; }
 
-    if (oOvr >= pOvr + 12) { relative = 1.45; }
-    else if (oOvr >= pOvr) { relative = 1.20; }
-    else if (oOvr <= pOvr - 18) { relative = 0.72; }
-
-    return Math.max(25, Math.round(base * trackMul * relative));
+    return Math.max(25, Math.round(base * trackMul));
   }
 
   function maxHp(fighter) {
@@ -76,6 +70,40 @@
     return { x: U.clamp(pos.x, 0, RING_SIZE - 1), y: U.clamp(pos.y, 0, RING_SIZE - 1) };
   }
 
+  function actionNameForRepeat(action) {
+    if (PUNCHES[action]) { return "punch:" + action; }
+    return action || "";
+  }
+
+  function repeatPenalty(fighterState, action) {
+    var name = actionNameForRepeat(action);
+    var count = fighterState.repeatAction === name ? (fighterState.repeatCount || 1) : 1;
+    if (count <= 1) { return 1; }
+    return U.clamp(1 - (count - 1) * 0.18, 0.38, 1);
+  }
+
+  function registerAction(fighterState, action) {
+    var name = actionNameForRepeat(action);
+    if (!name) { return; }
+    if (fighterState.repeatAction === name) {
+      fighterState.repeatCount = (fighterState.repeatCount || 1) + 1;
+    } else {
+      fighterState.repeatAction = name;
+      fighterState.repeatCount = 1;
+    }
+    fighterState.lastAction = action;
+  }
+
+  function blockEffect(defenderState) {
+    var penalty = repeatPenalty(defenderState, "block");
+    return defenderState.guard === "block" ? (15 * penalty) : 0;
+  }
+
+  function counterRisk(defenderState) {
+    var penalty = repeatPenalty(defenderState, "counter");
+    return defenderState.guard === "counter" ? (8 * penalty) : 0;
+  }
+
   function canUsePunch(punch, attackerState, defenderState) {
     var d = distance(attackerState.pos, defenderState.pos);
     return d >= punch.minDistance && d <= punch.maxDistance && attackerState.stamina >= Math.max(1, punch.stamina - 3);
@@ -83,16 +111,15 @@
 
   function hitChance(attacker, defender, punch, attackerState, defenderState) {
     var staminaFactor = attackerState.stamina / attackerState.maxStamina;
-    var defenderGuard = defenderState.guard === "block" ? 15 : 0;
-    var counterRisk = defenderState.guard === "counter" ? 8 : 0;
-    return U.clamp(40 + attacker.stats.technique * 0.36 + attacker.stats.speed * 0.22 + punch.accuracy + staminaFactor * 10 - defender.stats.defense * 0.25 - defender.stats.speed * 0.10 - defenderGuard - counterRisk, 8, 92);
+    var actionPenalty = repeatPenalty(attackerState, punch.id);
+    return U.clamp((40 + attacker.stats.technique * 0.36 + attacker.stats.speed * 0.22 + punch.accuracy + staminaFactor * 10 - defender.stats.defense * 0.25 - defender.stats.speed * 0.10 - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92);
   }
 
   function punchDamage(attacker, defender, punch, attackerState, defenderState) {
     var raw = attacker.stats.power * 0.22 + attacker.stats.technique * 0.10 + punch.stamina * 0.55 + U.randomInt(1, 6);
     var block = defender.stats.defense * 0.10 + defenderState.stamina * 0.025;
-    var damage = Math.round((raw - block) * punch.hp);
-    if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
+    var damage = Math.round((raw - block) * punch.hp * repeatPenalty(attackerState, punch.id));
+    if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.35)); }
     if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.55); }
     return U.clamp(damage, 1, 34);
   }
@@ -103,6 +130,30 @@
     return U.clamp(value, 0, 22);
   }
 
+  function estimatePunchDamage(attacker, defender, punch, attackerState, defenderState) {
+    var raw = attacker.stats.power * 0.22 + attacker.stats.technique * 0.10 + punch.stamina * 0.55 + 3;
+    var block = defender.stats.defense * 0.10 + defenderState.stamina * 0.025;
+    var damage = Math.round((raw - block) * punch.hp * repeatPenalty(attackerState, punch.id));
+    if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
+    return U.clamp(damage, 1, 34);
+  }
+
+  function punchActionsForModal(player, opponent, session) {
+    return Object.keys(PUNCHES).map(function (id) {
+      var punch = PUNCHES[id];
+      var enabled = canUsePunch(punch, session.player, session.opponent);
+      return {
+        id: id,
+        label: punch.label,
+        enabled: enabled,
+        reason: enabled ? "" : "дистанция/стамина",
+        damage: estimatePunchDamage(player, opponent, punch, session.player, session.opponent),
+        chance: hitChance(player, opponent, punch, session.player, session.opponent),
+        stamina: punch.stamina
+      };
+    });
+  }
+
   function spendStamina(fighterState, amount) {
     fighterState.stamina = U.clamp(fighterState.stamina - Math.max(1, Math.round(amount)), 0, fighterState.maxStamina);
   }
@@ -111,12 +162,13 @@
     fighterState.stamina = U.clamp(fighterState.stamina + Math.max(1, Math.round(amount)), 0, fighterState.maxStamina);
   }
 
-  function createSession(state, offer, opponent) {
+  function createSession(state, offer, opponent, tournamentSession) {
     var p = State.player(state);
     return {
       id: U.uid("active_fight"),
       offerId: offer.id,
       opponentId: opponent.id,
+      tournamentSession: tournamentSession || null,
       roundsTotal: offer.rounds || U.findTrack(p.trackId).rounds,
       round: 1,
       turn: 1,
@@ -124,16 +176,16 @@
       phase: "player",
       player: {
         pos: { x: 2, y: 4 }, hp: maxHp(p), maxHp: maxHp(p), stamina: maxStamina(p), maxStamina: maxStamina(p),
-        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0
+        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
       },
       opponent: {
         pos: { x: 2, y: 0 }, hp: maxHp(opponent), maxHp: maxHp(opponent), stamina: maxStamina(opponent), maxStamina: maxStamina(opponent),
-        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0
+        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
       },
       log: ["Бой начался. Ринг 5×5. Выбери движение, удар, блок или контратаку."],
       roundLog: [],
       finished: false,
-      purse: computePurse(p, opponent),
+      purse: tournamentSession ? 0 : computePurse(p, opponent),
       winChance: estimateWinChance(p, opponent),
       count: null
     };
@@ -184,9 +236,12 @@
       ringSize: RING_SIZE,
       player: session.player,
       opponent: session.opponent,
+      actions: opponent ? punchActionsForModal(p, opponent, session) : [],
+      canCounter: session.player.lastAction !== "counter" && session.player.stamina >= 7,
       log: session.log.slice(-10),
       purse: session.purse,
-      winChance: session.winChance
+      winChance: session.winChance,
+      tournament: !!session.tournamentSession
     };
   }
 
@@ -238,6 +293,7 @@
       return { hit: false, damage: 0, line: line, failed: true };
     }
 
+    registerAction(attackerState, punchId);
     spendStamina(attackerState, punch.stamina);
     chance = hitChance(attacker, defender, punch, attackerState, defenderState);
     roll = U.randomInt(1, 100);
@@ -250,7 +306,7 @@
       attackerState.landed += 1;
       attackerState.damage += damage;
       attackerState.roundDamage += damage;
-      line = labels.attacker + ": " + punch.label + ". Попадание. Урон " + damage + ", стамина -" + punch.stamina + ". HP " + labels.defenderGen + ": " + defenderState.hp + "/" + defenderState.maxHp + ".";
+      line = labels.attacker + ": " + punch.label + ". Попадание. Урон " + damage + ", стамина " + labels.defenderGen + " -" + stamDamage + ". HP " + labels.defenderGen + ": " + defenderState.hp + "/" + defenderState.maxHp + ".";
     } else {
       damage = 0;
       line = labels.attacker + ": " + punch.label + ". Мимо. Стамина -" + punch.stamina + ".";
@@ -258,9 +314,9 @@
 
     session.log.push(line);
 
-    if (!damage && defenderState.guard === "counter" && defenderState.stamina >= 8 && U.randomInt(1, 100) <= 45) {
+    if (!damage && defenderState.guard === "counter" && defenderState.stamina >= 8 && U.randomInt(1, 100) <= Math.round(45 * repeatPenalty(defenderState, "counter"))) {
       spendStamina(defenderState, 8);
-      damage = U.clamp(Math.round(defender.stats.technique * 0.12 + defender.stats.speed * 0.08 + U.randomInt(2, 8)), 2, 22);
+      damage = U.clamp(Math.round((defender.stats.technique * 0.12 + defender.stats.speed * 0.08 + U.randomInt(2, 8)) * repeatPenalty(defenderState, "counter")), 2, 22);
       attackerState.hp = U.clamp(attackerState.hp - damage, 0, attackerState.maxHp);
       defenderState.landed += 1;
       defenderState.damage += damage;
@@ -344,6 +400,7 @@
     if (d > 2) {
       next = moveToward(session.opponent.pos, session.player.pos);
       if (!samePos(next, session.player.pos)) {
+        registerAction(session.opponent, "move");
         session.opponent.pos = next;
         spendStamina(session.opponent, 3);
         session.log.push(opponent.name + " смещается ближе.");
@@ -352,8 +409,9 @@
     }
 
     if (session.opponent.stamina < 12 && U.randomInt(1, 100) <= 60) {
+      registerAction(session.opponent, "block");
       session.opponent.guard = "block";
-      recoverStamina(session.opponent, 8);
+      recoverStamina(session.opponent, Math.round(8 * repeatPenalty(session.opponent, "block")));
       session.log.push(opponent.name + " берёт блок и восстанавливает дыхание.");
       return;
     }
@@ -380,13 +438,21 @@
 
     session.player.guard = "";
     if (action === "move") {
+      registerAction(session.player, "move");
       moved = tryMove(session.player, session.opponent, Number(dx) || 0, Number(dy) || 0);
       session.log.push(moved ? "Ты смещаешься по рингу." : "Туда нельзя сместиться.");
     } else if (action === "block") {
+      registerAction(session.player, "block");
       session.player.guard = "block";
       spendStamina(session.player, 4);
       session.log.push("Ты ставишь блок.");
     } else if (action === "counter") {
+      if (session.player.lastAction === "counter") {
+        session.log.push("Две контратаки подряд использовать нельзя.");
+        state.modal = buildActiveModal(state, session);
+        return true;
+      }
+      registerAction(session.player, "counter");
       session.player.guard = "counter";
       spendStamina(session.player, 7);
       session.log.push("Ты готовишь контратаку.");
@@ -517,6 +583,21 @@
       else { result = "Ничья"; }
     }
 
+    if (session.tournamentSession && window.FS.Amateur && window.FS.Amateur.completeTournamentFightFromRing) {
+      state.modal = window.FS.Amateur.completeTournamentFightFromRing(state, session, {
+        result: result,
+        method: method,
+        scoreLine: scoreLine,
+        knockdown: knockdown,
+        playerRating: U.statAverage(p.stats),
+        opponentRating: U.statAverage(opponent.stats),
+        statsLine: "Урон: " + session.player.damage + ":" + session.opponent.damage + ". Попадания: " + session.player.landed + ":" + session.opponent.landed + ". HP: " + session.player.hp + "/" + session.player.maxHp + " — " + session.opponent.hp + "/" + session.opponent.maxHp + ".",
+        roundLog: session.roundLog.concat(session.log.slice(-20)),
+        winChance: session.winChance
+      });
+      return true;
+    }
+
     applyFightResult(state, p, opponent, result, method);
     completeFightEconomy(state, p, opponent, result, session.purse, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18);
     p.lastFightWeek = state.week;
@@ -641,6 +722,22 @@
     return true;
   }
 
+  function startTournamentInteractiveFight(state, tournamentModal) {
+    var p = State.player(state);
+    var session = tournamentModal && tournamentModal.session;
+    var opponent;
+    var fakeOffer;
+    var active;
+    if (!p || !session || !session.opponentId) { return false; }
+    if (p.fatigue >= 100) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
+    opponent = U.getFighterById(state, session.opponentId);
+    if (!opponent) { return false; }
+    fakeOffer = { id: "tournament_" + session.competitionId + "_" + session.roundIndex, opponentId: opponent.id, rounds: 3, purse: 0, difficultyId: "even" };
+    active = createSession(state, fakeOffer, opponent, session);
+    state.modal = buildActiveModal(state, active);
+    return true;
+  }
+
   function resolvePlayerFight(state, offerId) {
     return startInteractiveFight(state, offerId);
   }
@@ -679,6 +776,7 @@
     buildFightPreview: buildFightPreview,
     resolvePlayerFight: resolvePlayerFight,
     startInteractiveFight: startInteractiveFight,
+    startTournamentInteractiveFight: startTournamentInteractiveFight,
     playerAction: playerAction,
     handleCount: handleCount,
     resolveRandomFight: resolveRandomFight,

@@ -204,8 +204,6 @@
     State.updateDerivedFighterFields(winner);
     State.updateDerivedFighterFields(loser);
 
-    if (State.adjustFatigue) { State.adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10, "Турнирный бой"); }
-
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       window.FS.Clubs.recordClubFight(state, winner, loser, false);
     }
@@ -230,8 +228,6 @@
     opponent.lastFightWeek = state.week;
     State.updateDerivedFighterFields(player);
     State.updateDerivedFighterFields(opponent);
-
-    if (State.adjustFatigue) { State.adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10, "Турнирный бой"); }
 
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       window.FS.Clubs.recordClubFight(state, result === "Победа" ? player : opponent, result === "Победа" ? opponent : player, false);
@@ -547,6 +543,92 @@
     };
   }
 
+  function completeTournamentFightFromRing(state, activeSession, payload) {
+    var session = activeSession.tournamentSession;
+    var comp = getCompetition(session.competitionId);
+    var p = State.player(state);
+    var opponent = U.getFighterById(state, session.opponentId);
+    var result = payload.result;
+    var method = payload.method;
+    var isFinal;
+    var isSemi;
+    var continueMode = "final";
+    var finalPlace = "";
+    var nextLabel = "";
+
+    if (!opponent) {
+      return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Соперник исчез из турнира.", fights: session.fights || [] };
+    }
+
+    applyPlayerTournamentResult(state, p, opponent, result, method);
+
+    session.fights.push({
+      round: session.roundLabel,
+      opponentId: opponent.id,
+      opponentName: opponent.name,
+      opponentRating: U.statAverage(opponent.stats),
+      winChance: activeSession.winChance,
+      result: result
+    });
+
+    isFinal = session.specialRound === "third" || session.roundIndex >= session.rounds.length - 1;
+    isSemi = session.rounds[session.roundIndex] === "Полуфинал";
+
+    if (result === "Победа") {
+      if (session.specialRound === "third") {
+        finalPlace = "3 место";
+        continueMode = "final";
+      } else if (isFinal) {
+        finalPlace = "1 место";
+        continueMode = "final";
+      } else {
+        advanceBracketAfterPlayerWin(state, session);
+        nextLabel = session.rounds[session.roundIndex];
+        continueMode = "next";
+      }
+    } else {
+      if (session.specialRound === "third") {
+        finalPlace = "4 место";
+        continueMode = "final";
+      } else if (isFinal) {
+        finalPlace = "2 место";
+        continueMode = "final";
+      } else if (isSemi) {
+        session.thirdPlaceOpponentId = semifinalLoserOpponent(state, session) || session.opponentId;
+        session.specialRound = "third";
+        continueMode = "third";
+        nextLabel = "Матч за 3 место";
+      } else {
+        continueMode = "final";
+      }
+    }
+
+    session.continueMode = continueMode;
+    session.finalPlace = finalPlace;
+    session.pendingFatigue = (session.pendingFatigue || 0) + (Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10);
+
+    return {
+      type: "tournamentResult",
+      label: comp.label,
+      roundLabel: session.roundLabel,
+      result: result,
+      method: method,
+      scoreLine: payload.scoreLine,
+      winChance: activeSession.winChance,
+      opponentName: opponent.name,
+      opponentRating: U.statAverage(opponent.stats),
+      playerRating: U.statAverage(p.stats),
+      statsLine: payload.statsLine,
+      roundLog: payload.roundLog,
+      knockdown: payload.knockdown,
+      continueMode: continueMode,
+      nextLabel: nextLabel,
+      finalPlace: finalPlace,
+      alive: summarizeAlive(state, session),
+      session: session
+    };
+  }
+
   function continueTournament(state, modal) {
     var session = modal.session;
     var comp = getCompetition(session.competitionId);
@@ -557,6 +639,10 @@
     }
 
     state.amateurPath.lastCompetitionWeekById[comp.id] = state.week;
+    if (State.adjustFatigue && session.pendingFatigue) {
+      State.adjustFatigue(state, Math.min(55, session.pendingFatigue), "Турнир завершён");
+      session.pendingFatigue = 0;
+    }
 
     if (["1 место", "2 место", "3 место"].indexOf(place) !== -1 && !session.awarded) {
       awardPlacement(state, comp, place, place);
@@ -605,6 +691,7 @@
     availableCompetitions: availableCompetitions,
     startTournament: startTournament,
     resolveTournamentRound: resolveTournamentRound,
+    completeTournamentFightFromRing: completeTournamentFightFromRing,
     continueTournament: continueTournament,
     completeCompetition: completeCompetition,
     objectiveSummary: objectiveSummary,

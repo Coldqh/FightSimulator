@@ -842,3 +842,82 @@ button, input, select { max-width: 100%; }
     grid-template-columns: 62px 1fr 58px;
   }
 }
+
+
+/* 1.8.2 ring combat hotfix */
+.compact-offers {
+  display: grid;
+  gap: 6px;
+}
+
+.compact-offer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  min-height: 38px;
+}
+
+.compact-fight-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.compact-fight-info .pill,
+.compact-fight-info .small-btn {
+  padding: 4px 7px;
+  font-size: 12px;
+}
+
+.fight-window-body {
+  background: #070708;
+  overflow-x: hidden;
+}
+
+.detached-fight {
+  width: min(1120px, calc(100vw - 18px));
+  max-width: min(1120px, calc(100vw - 18px));
+  margin: 8px auto;
+}
+
+.ring-grid {
+  background:
+    linear-gradient(rgba(10, 10, 11, 0.16), rgba(10, 10, 11, 0.16)),
+    url("../ring_top_view.png") center/cover no-repeat;
+  border: 2px solid rgba(214, 160, 25, 0.35);
+  box-shadow: inset 0 0 0 999px rgba(0,0,0,0.14);
+}
+
+.fight-controls button small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.fight-controls button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.big-result.win {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.09);
+}
+
+@media (max-width: 720px) {
+  .compact-offer {
+    display: block;
+  }
+  .compact-offer > button {
+    width: 100%;
+    margin-top: 6px;
+  }
+}

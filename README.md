@@ -1,13 +1,13 @@
 # Fight Simulator
 
-Version: `interactive-ring-fight-1.8.1`
+Version: `ring-combat-hotfix-1.8.2`
 
-## Patch focus
-
-- Interactive 5×5 ring fight window.
-- Player-controlled movement, punches, block, counter.
-- HP, stamina, knockdown count to 10.
-- Skip fight resolves by winChance.
-- Fight purse depends on OVR and opponent strength, not just difficulty.
-- Money can go negative; debt must be cleared within 3 months.
-- Fatigue 100 locks every action except rest.
+- Fight window now opens in a separate browser tab/window.
+- Tournament fights can use the same interactive ring fight.
+- Tournament fatigue is applied only after tournament completion.
+- Fight offers show 10 compact opponents near player OVR.
+- Purse depends on opponent OVR, not player OVR.
+- Hook and uppercut are disabled unless fighters are adjacent.
+- Counter cannot be used twice in a row.
+- Punch buttons show damage, hit chance and stamina cost.
+- Repeating the same action reduces effectiveness.

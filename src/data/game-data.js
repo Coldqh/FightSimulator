@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "interactive-ring-fight-1.8.1",
+    appVersion: "ring-combat-hotfix-1.8.2",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -181,9 +181,9 @@
     ],
 
     offerDifficulties: [
-      { id: "safe", label: "Осторожный бой", offset: -5, purseMul: 0.85 },
-      { id: "even", label: "Ровный бой", offset: 0, purseMul: 1.0 },
-      { id: "hard", label: "Сложный бой", offset: 6, purseMul: 1.25 }
+      { id: "safe", label: "Бой", offset: -5, purseMul: 0.85 },
+      { id: "even", label: "Бой", offset: 0, purseMul: 1.0 },
+      { id: "hard", label: "Бой", offset: 6, purseMul: 1.25 }
     ],
 
     titleTypes: [

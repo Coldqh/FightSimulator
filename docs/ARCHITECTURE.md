@@ -1,34 +1,17 @@
-# Fight Simulator Architecture — 1.8.1
+# Architecture 1.8.2
 
-## Fight core
+`fight.js` owns:
+- Interactive ring session
+- Separate fight window state
+- Punch metadata
+- Action repeat penalty
+- Random auto resolve
 
-`src/core/fight.js` now owns:
+`matchmaking.js` owns:
+- 10 compact fight offers
+- OVR ±10 opponent selection
 
-- fight preview;
-- interactive fight session;
-- 5×5 ring positions;
-- player actions;
-- opponent AI action;
-- HP/stamina damage;
-- knockdown count;
-- fight finish and rewards;
-- random skip-fight resolution.
-
-## Economy lock
-
-`src/core/state.js` owns:
-
-- negative balance;
-- debt start/deadline;
-- debt notice/game-over modal state;
-- fatigue lock.
-
-## UI
-
-`src/ui/render.js` renders:
-
-- active ring window;
-- knockdown count window;
-- debt/fatigue/game-over modals.
-
-`src/app.js` routes button actions and blocks leaving the active fight window.
+`amateur.js` owns:
+- Tournament bracket
+- Tournament result flow
+- Tournament fatigue at the end only

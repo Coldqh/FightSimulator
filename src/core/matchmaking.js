@@ -159,7 +159,7 @@
 
   function findOpponent(state, difficultyId, slotIndex, usedIds) {
     var player = State.player(state);
-    var targetScore = opponentScoreTarget(player, difficultyId);
+    var playerOvr = U.statAverage(player.stats);
     var used = usedIds || {};
     var playerRank = player.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(player) : null;
     var internationalAmateur = player.trackId === "amateur" && ["kms", "ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
@@ -167,23 +167,36 @@
     var selected;
     var offset;
     window.FS.__currentStateWeek = state.week;
+
     candidates = state.roster.filter(function (fighter) {
-      var tier = careerTier(fighter);
-      var playerTier = careerTier(player);
-      var isChampion = tier.id === "champion";
       var fRank = fighter.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(fighter) : null;
+      var ovr = U.statAverage(fighter.stats);
       return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
         (player.trackId === "pro" || internationalAmateur || fighter.countryId === player.countryId) &&
         fighter.trackId === player.trackId &&
         (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
         (!internationalAmateur || ["kms", "ms", "msmk"].indexOf(fRank ? fRank.id : "") !== -1) &&
-        (!isChampion || difficultyId === "hard" && playerTier.level >= 4);
+        ovr >= playerOvr - 10 && ovr <= playerOvr + 10;
     });
-    candidates.sort(function (left, right) { return candidatePenalty(player, left, targetScore) - candidatePenalty(player, right, targetScore); });
-    offset = candidates.length ? ((Number(state.offerRefreshSalt) || 0) * 7 + slotIndex * 3) % candidates.length : 0;
+
+    if (!candidates.length) {
+      candidates = state.roster.filter(function (fighter) {
+        return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
+          (player.trackId === "pro" || fighter.countryId === player.countryId) &&
+          fighter.trackId === player.trackId &&
+          (player.trackId === "street" || fighter.weightClassId === player.weightClassId);
+      });
+    }
+
+    candidates.sort(function (left, right) {
+      return Math.abs(U.statAverage(left.stats) - playerOvr) - Math.abs(U.statAverage(right.stats) - playerOvr);
+    });
+
+    offset = candidates.length ? ((Number(state.offerRefreshSalt) || 0) * 11 + slotIndex * 5) % candidates.length : 0;
     selected = candidates[offset] || candidates[slotIndex] || candidates[0] || null;
+
     if (!selected) {
-      selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex + (state.offerRefreshSalt || 0) * 1000, U.statAverage(player.stats) + U.findDifficulty(difficultyId).offset, {
+      selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex + (state.offerRefreshSalt || 0) * 1000, playerOvr + U.randomInt(-10, 10), {
         weightClassId: player.trackId === "street" ? "" : player.weightClassId,
         gymId: player.gymId
       });
@@ -191,53 +204,33 @@
       state.roster.push(selected);
       if (window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
     }
+
     used[selected.id] = true;
     return selected;
   }
 
   function offerLabel(playerTrackId, difficultyId) {
-    var map = {
-      amateur: {
-        safe: "Проверочный любительский бой",
-        even: "Рейтинговый любительский бой",
-        hard: "Сильный отборочный бой"
-      },
-      street: {
-        safe: "Локальный уличный бой",
-        even: "Районный вызов",
-        hard: "Опасный бой за статус"
-      },
-      pro: {
-        safe: "Разогревочный профи-бой",
-        even: "Контрактный бой",
-        hard: "Бой с претендентом"
-      }
-    };
-
-    return map[playerTrackId][difficultyId] || "Бой";
+    return "Бой";
   }
 
   function buildPlayerOffers(state) {
     var player = State.player(state);
     var track = U.findTrack(player.trackId);
     var offers = [];
-    var difficulties = Data.offerDifficulties;
     var used = {};
     var i;
-    var difficulty;
     var opponent;
 
-    for (i = 0; i < 3; i += 1) {
-      difficulty = difficulties[i] || difficulties[1];
-      opponent = findOpponent(state, difficulty.id, i, used);
+    for (i = 0; i < 10; i += 1) {
+      opponent = findOpponent(state, "even", i, used);
 
       offers.push({
         id: U.uid("offer"),
-        label: offerLabel(player.trackId, difficulty.id),
-        difficultyId: difficulty.id,
+        label: "Бой",
+        difficultyId: "even",
         opponentId: opponent.id,
         rounds: track.rounds,
-        purse: Math.max(0, Math.round((track.basePurse + i * Math.round(track.basePurse * 0.38)) * difficulty.purseMul)),
+        purse: window.FS.Fight && window.FS.Fight.computePurse ? window.FS.Fight.computePurse(player, opponent) : Math.max(25, U.statAverage(opponent.stats) * 5),
         opponentTier: careerTier(opponent).label,
         opponentStage: careerStage(opponent).label,
         risk: Math.max(1, U.statAverage(opponent.stats) - U.statAverage(player.stats) + 50)

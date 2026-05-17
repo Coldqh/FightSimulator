@@ -1,4 +1,4 @@
-# Test Checklist 1.8.1
+# Test Checklist 1.8.2
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -6,18 +6,14 @@ node tools\core-smoke-test.cjs
 start index.html
 ```
 
-Manual checks:
-
-1. Accept a fight: a separate ring window opens.
-2. There is no exit button inside the active fight.
-3. Ring is 5×5.
-4. Player and opponent are circles on the ring.
-5. Movement buttons move the player.
-6. Straight head/body work from distance 1–2.
-7. Hook and uppercut work only close.
-8. Block and counter buttons work.
-9. HP and stamina change during the fight.
-10. Knockdown starts a count to 10.
-11. Skip fight resolves by winChance.
-12. Fatigue 100 allows only rest.
-13. Negative balance starts a 3-month debt timer.
+Manual:
+1. Fight tab shows 10 compact opponents.
+2. Old labels like старое название боя / старое название боя are gone.
+3. Purse grows with opponent OVR.
+4. Accepting a fight opens a separate browser window.
+5. Hook and uppercut are disabled outside adjacent distance.
+6. Counter cannot be used twice in a row.
+7. Punch buttons show damage/chance/stamina.
+8. Tournament fight has both Skip and Ring buttons.
+9. Tournament fatigue applies only after tournament ends.
+10. Rest closes the 100/100 fatigue modal after fatigue drops.

@@ -205,16 +205,21 @@
   }
 
   function renderFightsTab(state) {
+    var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
     return "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
-      "<div class=\"offer-list\">" + state.offers.map(function (offer) {
+      "<div class=\"offer-list compact-offers\">" + offers.map(function (offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
-      var difficulty = U.findDifficulty(offer.difficultyId);
       var preview = Fight.buildFightPreview(state, offer.id);
-      if (!opponent) { return ""; }
-      return "<div class=\"offer\"><div><div class=\"offer-title\">" + U.escapeHtml(offer.label) + "</div>" +
-        "<div class=\"muted\">Соперник: <button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button></div>" +
-        "<div class=\"pills\"><span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span><span class=\"pill\">" + offer.rounds + " раунда</span><span class=\"pill gold\">$" + offer.purse + "</span><span class=\"pill\">" + U.escapeHtml(difficulty.label) + "</span><span class=\"pill blue\">Шанс " + preview.winChance + "%</span></div></div>" +
-        "<button class=\"primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Открыть бой</button></div>";
+      if (!opponent || !preview) { return ""; }
+      return "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\">" +
+        "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
+        "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span>" +
+        "<span class=\"pill\">OVR " + preview.opponentRating + "</span>" +
+        "<span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span>" +
+        "<span class=\"pill\">" + offer.rounds + " раунда</span>" +
+        "<span class=\"pill gold\">$" + preview.purse + "</span>" +
+        "<span class=\"pill blue\">Шанс " + preview.winChance + "%</span>" +
+      "</div><button class=\"primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Бой</button></div>";
     }).join("") + "</div>";
   }
 
@@ -569,15 +574,25 @@
       return "<div class=\"ring-grid\">" + cells.join("") + "</div>";
     }
 
-    function renderFightControls() {
+    function renderFightControls(modal) {
+      var actions = modal.actions || [];
+      var actionMap = {};
+      actions.forEach(function (action) { actionMap[action.id] = action; });
+
+      function punchButton(id) {
+        var action = actionMap[id] || { id: id, label: id, enabled: true, damage: 0, chance: 0, stamina: 0, reason: "" };
+        return "<button data-fight-action=\"" + U.escapeHtml(id) + "\"" + (action.enabled ? "" : " disabled") + ">" +
+          U.escapeHtml(action.label) + "<small>урон " + action.damage + " · шанс " + action.chance + "% · стам. " + action.stamina + (action.reason ? " · " + U.escapeHtml(action.reason) : "") + "</small></button>";
+      }
+
       return "<div class=\"fight-controls\">" +
         "<div class=\"move-pad\"><button data-fight-move=\"0,-1\">↑</button><button data-fight-move=\"-1,0\">←</button><button data-fight-move=\"1,0\">→</button><button data-fight-move=\"0,1\">↓</button></div>" +
-        "<button data-fight-action=\"jabHead\">Прямой в голову</button>" +
-        "<button data-fight-action=\"jabBody\">Прямой в корпус</button>" +
-        "<button data-fight-action=\"hook\">Хук</button>" +
-        "<button data-fight-action=\"uppercut\">Апперкот</button>" +
-        "<button data-fight-action=\"block\">Блок</button>" +
-        "<button data-fight-action=\"counter\">Контратака</button>" +
+        punchButton("jabHead") +
+        punchButton("jabBody") +
+        punchButton("hook") +
+        punchButton("uppercut") +
+        "<button data-fight-action=\"block\">Блок<small>эффективность падает при повторах</small></button>" +
+        "<button data-fight-action=\"counter\"" + (modal.canCounter ? "" : " disabled") + ">Контратака<small>нельзя два раза подряд</small></button>" +
       "</div>";
     }
 
@@ -595,12 +610,8 @@
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость 100/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться, покупать услуги или двигать карьеру. Доступен только отдых.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
     }
 
-    if (modal.type === "activeFight") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal fight-modal\"><div class=\"modal-head\"><h2>Бой на ринге</h2><div class=\"muted small\">Раунд " + modal.round + "/" + modal.roundsTotal + " · ход " + modal.turn + " · выйти нельзя до завершения боя</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing(modal) + renderFightControls() + "</div><div class=\"fight-side\"><h3>Ты</h3>" + statBar("HP", modal.player.hp, modal.player.maxHp) + statBar("Стамина", modal.player.stamina, modal.player.maxStamina) + "<h3>" + U.escapeHtml(modal.opponentName) + "</h3>" + statBar("HP", modal.opponent.hp, modal.opponent.maxHp) + statBar("Стамина", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"pills\"><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div></div></div>";
-    }
-
-    if (modal.type === "fightCount") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal fight-modal\"><div class=\"modal-head\"><h2>Нокдаун</h2><div class=\"muted small\">Счёт: " + modal.count + "/10</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing({ ringSize: 5, player: modal.player, opponent: modal.opponent }) + "<div class=\"big-result loss\">" + (modal.side === "player" ? "Ты на настиле" : "Соперник на настиле") + "</div></div><div class=\"fight-side\">" + statBar("HP", modal.player.hp, modal.player.maxHp) + statBar("Стамина", modal.player.stamina, modal.player.maxStamina) + statBar("HP соперника", modal.opponent.hp, modal.opponent.maxHp) + statBar("Стамина соперника", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div><div class=\"modal-actions\"><button class=\"primary\" data-fight-count=\"1\">Продолжить счёт</button></div></div></div>";
+    if (modal.type === "activeFight" || modal.type === "fightCount") {
+      return "";
     }
 
 
@@ -659,7 +670,7 @@
     }
 
     if (modal.type === "tournamentFight") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal tournament-modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Этап: " + U.escapeHtml(modal.roundLabel) + " · " + (modal.roundIndex + 1) + "/" + modal.roundsTotal + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentCountry) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.roundLabel) + "</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Выйти</button><button class=\"primary\" data-tournament-fight=\"1\">Провести бой</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal tournament-modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Этап: " + U.escapeHtml(modal.roundLabel) + " · " + (modal.roundIndex + 1) + "/" + modal.roundsTotal + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentCountry) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.roundLabel) + "</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Выйти</button><button data-tournament-fight=\"1\">Пропустить бой</button><button class=\"primary\" data-tournament-ring=\"1\">Выйти на ринг</button></div></div></div>";
     }
 
     if (modal.type === "tournamentResult") {
@@ -671,7 +682,7 @@
     }
 
     if (modal.type === "fightPreview") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><span class=\"pill\">" + U.escapeHtml(modal.difficultyLabel) + "</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
     }
 
     if (modal.type === "fightResult") {
@@ -681,12 +692,80 @@
     return "";
   }
 
+
+  function renderFightWindow(state) {
+    var modal = state.modal;
+    var body = "";
+
+    function localStatBar(label, value, max) {
+      var pct = max ? Math.max(0, Math.min(100, Math.round(value / max * 100))) : 0;
+      return "<div class=\"fight-meter\"><span>" + U.escapeHtml(label) + "</span><div><i style=\"width:" + pct + "%\"></i></div><strong>" + value + "/" + max + "</strong></div>";
+    }
+
+    function localRing(data) {
+      var cells = [];
+      var size = data.ringSize || 5;
+      var x;
+      var y;
+      var cls;
+      var text;
+      for (y = 0; y < size; y += 1) {
+        for (x = 0; x < size; x += 1) {
+          cls = "ring-cell";
+          text = "";
+          if (data.player.pos.x === x && data.player.pos.y === y) { cls += " player-cell"; text = "Ты"; }
+          if (data.opponent.pos.x === x && data.opponent.pos.y === y) { cls += " opponent-cell"; text = "NPC"; }
+          cells.push("<div class=\"" + cls + "\">" + text + "</div>");
+        }
+      }
+      return "<div class=\"ring-grid\">" + cells.join("") + "</div>";
+    }
+
+    function localControls(data) {
+      var actions = data.actions || [];
+      var actionMap = {};
+      actions.forEach(function (action) { actionMap[action.id] = action; });
+
+      function punchButton(id) {
+        var action = actionMap[id] || { id: id, label: id, enabled: true, damage: 0, chance: 0, stamina: 0, reason: "" };
+        return "<button data-fight-action=\"" + U.escapeHtml(id) + "\"" + (action.enabled ? "" : " disabled") + ">" +
+          U.escapeHtml(action.label) + "<small>урон " + action.damage + " · шанс " + action.chance + "% · стам. " + action.stamina + (action.reason ? " · " + U.escapeHtml(action.reason) : "") + "</small></button>";
+      }
+
+      return "<div class=\"fight-controls\">" +
+        "<div class=\"move-pad\"><button data-fight-move=\"0,-1\">↑</button><button data-fight-move=\"-1,0\">←</button><button data-fight-move=\"1,0\">→</button><button data-fight-move=\"0,1\">↓</button></div>" +
+        punchButton("jabHead") + punchButton("jabBody") + punchButton("hook") + punchButton("uppercut") +
+        "<button data-fight-action=\"block\">Блок<small>эффективность падает при повторах</small></button>" +
+        "<button data-fight-action=\"counter\"" + (data.canCounter ? "" : " disabled") + ">Контратака<small>нельзя два раза подряд</small></button>" +
+      "</div>";
+    }
+
+    if (!modal) {
+      body = "<div class=\"modal fight-modal\"><h2>Бой не найден</h2></div>";
+    } else if (modal.type === "activeFight") {
+      body = "<div class=\"modal fight-modal detached-fight\"><div class=\"modal-head\"><h2>Бой на ринге</h2><div class=\"muted small\">Раунд " + modal.round + "/" + modal.roundsTotal + " · ход " + modal.turn + " · окно боя закрывать нельзя до завершения</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + localRing(modal) + localControls(modal) + "</div><div class=\"fight-side\"><h3>Ты</h3>" + localStatBar("HP", modal.player.hp, modal.player.maxHp) + localStatBar("Стамина", modal.player.stamina, modal.player.maxStamina) + "<h3>" + U.escapeHtml(modal.opponentName) + "</h3>" + localStatBar("HP", modal.opponent.hp, modal.opponent.maxHp) + localStatBar("Стамина", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"pills\"><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div></div>";
+    } else if (modal.type === "fightCount") {
+      body = "<div class=\"modal fight-modal detached-fight\"><div class=\"modal-head\"><h2>Нокдаун</h2><div class=\"muted small\">Счёт: " + modal.count + "/10</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + localRing({ ringSize: 5, player: modal.player, opponent: modal.opponent }) + "<div class=\"big-result " + (modal.side === "opponent" ? "win" : "loss") + "\">" + (modal.side === "player" ? "Ты на настиле" : "Соперник на настиле") + "</div></div><div class=\"fight-side\">" + localStatBar("HP", modal.player.hp, modal.player.maxHp) + localStatBar("Стамина", modal.player.stamina, modal.player.maxStamina) + localStatBar("HP соперника", modal.opponent.hp, modal.opponent.maxHp) + localStatBar("Стамина соперника", modal.opponent.stamina, modal.opponent.maxStamina) + "<div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div><div class=\"modal-actions\"><button class=\"primary\" data-fight-count=\"1\">Продолжить счёт</button></div></div>";
+    } else if (modal.type === "fightResult") {
+      body = "<div class=\"modal\"><div class=\"modal-head\"><h2>Результат боя</h2></div><div class=\"modal-body\"><div class=\"big-result " + Fight.resultClass(modal.result) + "\">" + U.escapeHtml(modal.result) + "</div><div class=\"muted\">Неделя " + modal.week + " · соперник: " + U.escapeHtml(modal.opponentName) + "</div><div class=\"pills\"><span class=\"pill\">Метод: " + U.escapeHtml(modal.method) + "</span><span class=\"pill\">Счёт: " + U.escapeHtml(modal.scoreLine) + "</span><span class=\"pill gold\">Гонорар $" + modal.purse + "</span><span class=\"pill blue\">Шанс до боя " + modal.winChance + "%</span></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Раунды</div>" + (modal.roundLog || []).map(function (line) { return "<div class=\"muted small\">" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-close-fight-window=\"1\">Закрыть окно боя</button></div></div>";
+    } else if (modal.type === "tournamentResult") {
+      body = "<div class=\"modal\"><div class=\"modal-head\"><h2>Результат турнира</h2><div class=\"muted small\">" + U.escapeHtml(modal.label) + " · " + U.escapeHtml(modal.roundLabel) + "</div></div><div class=\"modal-body\"><div class=\"big-result " + Fight.resultClass(modal.result) + "\">" + U.escapeHtml(modal.result) + "</div><div class=\"muted\">Соперник: " + U.escapeHtml(modal.opponentName) + " · OVR " + modal.opponentRating + "</div><div class=\"pills\"><span class=\"pill\">Метод: " + U.escapeHtml(modal.method) + "</span><span class=\"pill\">Счёт: " + U.escapeHtml(modal.scoreLine) + "</span><span class=\"pill blue\">Шанс до боя " + modal.winChance + "%</span></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Раунды</div>" + (modal.roundLog || []).map(function (line) { return "<div class=\"muted small\">" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-tournament-continue=\"1\">" + (modal.continueMode === "next" || modal.continueMode === "third" ? "Продолжить турнир" : "Завершить турнир") + "</button></div></div>";
+    } else if (modal.type === "tournamentFinal") {
+      body = "<div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2></div><div class=\"modal-body\"><div class=\"big-result win\">" + U.escapeHtml((modal.result || "") + (modal.place ? " · " + modal.place : "")) + "</div><div class=\"pills\"><span class=\"pill gold\">Награда $" + (modal.reward || 0) + "</span></div></div><div class=\"modal-actions\"><button class=\"primary\" data-close-fight-window=\"1\">Закрыть окно боя</button></div></div>";
+    } else {
+      body = "<div class=\"modal fight-modal\"><h2>Бой завершён</h2><button data-close-fight-window=\"1\">Закрыть</button></div>";
+    }
+
+    return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Fight Simulator — бой</title><link rel=\"stylesheet\" href=\"src/styles.css\"></head><body class=\"fight-window-body\"><div class=\"app-shell\">" + body + "</div><script>document.addEventListener('click',function(e){var b=e.target.closest('button'); if(!b||!window.opener||!window.opener.FSApp){return;} window.opener.FSApp.handleFightWindowButton(b.dataset);});</script></body></html>";
+  }
+
   function renderDashboard(state) {
     return renderHeader(state) + "<div class=\"layout single-layout\">" + renderMain(state) + "</div>" + renderModal(state);
   }
 
   window.FS.Render = {
     start: renderStartScreen,
-    dashboard: renderDashboard
+    dashboard: renderDashboard,
+    fightWindow: renderFightWindow
   };
 }());
