@@ -11,10 +11,10 @@
   var RING_SIZE = 5;
 
   var PUNCHES = {
-    jabHead: { id: "jabHead", label: "Прямой в голову", minDistance: 1, maxDistance: 2, stamina: 7, hp: 0.72, staminaDamage: 0.10, accuracy: 8 },
-    jabBody: { id: "jabBody", label: "Прямой в корпус", minDistance: 1, maxDistance: 2, stamina: 8, hp: 0.50, staminaDamage: 0.30, accuracy: 5 },
-    hook: { id: "hook", label: "Хук", minDistance: 1, maxDistance: 1, stamina: 10, hp: 0.95, staminaDamage: 0.14, accuracy: -2 },
-    uppercut: { id: "uppercut", label: "Апперкот", minDistance: 1, maxDistance: 1, stamina: 12, hp: 1.10, staminaDamage: 0.12, accuracy: -5 }
+    jabHead: { id: "jabHead", label: "Прямой в голову", minDistance: 1, maxDistance: 2, stamina: 14, hp: 0.58, staminaDamage: 0.12, accuracy: 8 },
+    jabBody: { id: "jabBody", label: "Прямой в корпус", minDistance: 1, maxDistance: 2, stamina: 16, hp: 0.42, staminaDamage: 0.34, accuracy: 5 },
+    hook: { id: "hook", label: "Хук", minDistance: 1, maxDistance: 1, stamina: 20, hp: 0.82, staminaDamage: 0.16, accuracy: -2 },
+    uppercut: { id: "uppercut", label: "Апперкот", minDistance: 1, maxDistance: 1, stamina: 24, hp: 0.96, staminaDamage: 0.14, accuracy: -5 }
   };
 
   function resultClass(result) {
@@ -50,12 +50,22 @@
     return Math.max(25, Math.round(base * trackMul));
   }
 
+  function healthStat(fighter) {
+    return Number(fighter.stats.health || fighter.stats.defense || 0);
+  }
+
+  function trackDamageMultiplier(trackId) {
+    if (trackId === "pro") { return 1.18; }
+    if (trackId === "street") { return 1.34; }
+    return 0.82;
+  }
+
   function maxHp(fighter) {
-    return Math.max(45, Math.round(60 + fighter.stats.stamina * 0.42 + fighter.stats.defense * 0.28));
+    return Math.round(100 + healthStat(fighter) * 0.72);
   }
 
   function maxStamina(fighter) {
-    return Math.max(45, Math.round(55 + fighter.stats.stamina * 0.62 + fighter.stats.speed * 0.12));
+    return Math.round(100 + fighter.stats.stamina * 0.72);
   }
 
   function fighterLabel(fighter, fallback) {
@@ -106,36 +116,34 @@
 
   function canUsePunch(punch, attackerState, defenderState) {
     var d = distance(attackerState.pos, defenderState.pos);
-    return d >= punch.minDistance && d <= punch.maxDistance && attackerState.stamina >= Math.max(1, punch.stamina - 3);
+    return d >= punch.minDistance && d <= punch.maxDistance && attackerState.stamina >= punch.stamina;
   }
 
   function hitChance(attacker, defender, punch, attackerState, defenderState) {
     var staminaFactor = attackerState.stamina / attackerState.maxStamina;
     var actionPenalty = repeatPenalty(attackerState, punch.id);
-    return U.clamp((40 + attacker.stats.technique * 0.36 + attacker.stats.speed * 0.22 + punch.accuracy + staminaFactor * 10 - defender.stats.defense * 0.25 - defender.stats.speed * 0.10 - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92);
+    return Math.round(U.clamp((39 + attacker.stats.technique * 0.34 + attacker.stats.speed * 0.24 + punch.accuracy + staminaFactor * 9 - defender.stats.speed * 0.18 - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92));
   }
 
   function punchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.22 + attacker.stats.technique * 0.10 + punch.stamina * 0.55 + U.randomInt(1, 6);
-    var block = defender.stats.defense * 0.10 + defenderState.stamina * 0.025;
-    var damage = Math.round((raw - block) * punch.hp * repeatPenalty(attackerState, punch.id));
-    if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.35)); }
-    if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.55); }
-    return U.clamp(damage, 1, 34);
+    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.36 + U.randomInt(0, 4);
+    var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
+    if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.28)); }
+    if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.48); }
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 38 : 46));
   }
 
   function staminaDamage(attacker, punch, damage, defenderState) {
-    var value = Math.round(punch.staminaDamage * (damage + attacker.stats.power * 0.12));
+    var value = Math.round(punch.staminaDamage * (damage + attacker.stats.power * 0.10));
     if (defenderState.guard === "block") { value = Math.round(value * 0.65); }
-    return U.clamp(value, 0, 22);
+    return U.clamp(value, 0, 26);
   }
 
   function estimatePunchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.22 + attacker.stats.technique * 0.10 + punch.stamina * 0.55 + 3;
-    var block = defender.stats.defense * 0.10 + defenderState.stamina * 0.025;
-    var damage = Math.round((raw - block) * punch.hp * repeatPenalty(attackerState, punch.id));
+    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.36 + 2;
+    var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
-    return U.clamp(damage, 1, 34);
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 38 : 46));
   }
 
   function punchActionsForModal(player, opponent, session) {
@@ -148,7 +156,7 @@
         enabled: enabled,
         reason: enabled ? "" : "дистанция/стамина",
         damage: estimatePunchDamage(player, opponent, punch, session.player, session.opponent),
-        chance: hitChance(player, opponent, punch, session.player, session.opponent),
+        chance: Math.round(hitChance(player, opponent, punch, session.player, session.opponent)),
         stamina: punch.stamina
       };
     });
@@ -171,7 +179,7 @@
   }
 
   function recoverTurnStamina(fighterState) {
-    recoverPercent(fighterState, Number(fighterState.turnRecovery) || 0.06);
+    recoverPercent(fighterState, Number(fighterState.turnRecovery) || 0.025);
     fighterState.turnRecovery = 0;
   }
 
@@ -196,6 +204,7 @@
         landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: "", turnRecovery: 0
       },
       log: ["Бой начался. Ринг 5×5. Выбери движение, удар, блок или контратаку."],
+      actionLog: [],
       roundLog: [],
       finished: false,
       purse: tournamentSession ? 0 : computePurse(p, opponent),
@@ -328,6 +337,8 @@
     }
 
     session.log.push(line);
+    session.actionLog = session.actionLog instanceof Array ? session.actionLog : [];
+    session.actionLog.push("Раунд " + session.round + ", ход " + session.turn + ": " + line);
 
     if (!damage && defenderState.guard === "counter" && defenderState.stamina >= 8 && U.randomInt(1, 100) <= Math.round(45 * repeatPenalty(defenderState, "counter"))) {
       spendStamina(defenderState, 8);
@@ -339,7 +350,9 @@
       defenderState.landed += 1;
       defenderState.damage += damage;
       defenderState.roundDamage += damage;
-      session.log.push(labels.defender + " ловит контратаку. Урон " + damage + ". HP " + labels.attackerGen + ": " + attackerState.hp + "/" + attackerState.maxHp + ".");
+      line = labels.defender + " ловит контратаку. Урон " + damage + ". HP " + labels.attackerGen + ": " + attackerState.hp + "/" + attackerState.maxHp + ".";
+      session.log.push(line);
+      session.actionLog.push("Раунд " + session.round + ", ход " + session.turn + ": " + line);
     }
 
     return { hit: roll <= chance, damage: damage, line: line };
@@ -369,8 +382,7 @@
     o.points += scoreO;
     if (scoreP > scoreO) { p.roundsWon += 1; }
     if (scoreO > scoreP) { o.roundsWon += 1; }
-    session.roundLog.push("Раунд " + session.round + ": урон " + p.roundDamage + ":" + o.roundDamage + ", счёт " + scoreP + ":" + scoreO + ".");
-    session.log.push("Итог раунда " + session.round + ": " + scoreP + ":" + scoreO + ".");
+    session.log.push("Раунд " + session.round + " завершён.");
     p.roundDamage = 0;
     o.roundDamage = 0;
   }
@@ -617,7 +629,7 @@
         playerRating: U.statAverage(p.stats),
         opponentRating: U.statAverage(opponent.stats),
         statsLine: "Урон: " + session.player.damage + ":" + session.opponent.damage + ". Удары: " + (session.player.landed || 0) + "/" + (session.player.thrown || 0) + " — " + (session.opponent.landed || 0) + "/" + (session.opponent.thrown || 0) + ". Контратаки: " + (session.player.counterLanded || 0) + ":" + (session.opponent.counterLanded || 0) + ". HP: " + session.player.hp + "/" + session.player.maxHp + " — " + session.opponent.hp + "/" + session.opponent.maxHp + ".",
-        roundLog: session.roundLog.concat(session.log.slice(-20)),
+        roundLog: (session.actionLog || []).slice(-60),
         winChance: session.winChance
       });
       return true;

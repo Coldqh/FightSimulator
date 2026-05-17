@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "stamina-recovery-1.8.4",
+    appVersion: "fight-balance-mobile-1.8.5",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -144,7 +144,7 @@
       { id: "technique", label: "Техника" },
       { id: "speed", label: "Скорость" },
       { id: "stamina", label: "Выносливость" },
-      { id: "defense", label: "Защита" }
+      { id: "defense", label: "Здоровье" }
     ],
 
     peopleRoles: {

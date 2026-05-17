@@ -1,4 +1,4 @@
-# Test Checklist 1.8.4
+# Test Checklist 1.8.5
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,8 +7,11 @@ start index.html
 ```
 
 Manual:
-1. Every turn should restore some stamina.
-2. Block should restore about 20% stamina.
-3. Counter should restore about 10% stamina.
-4. New round should restore 30% stamina.
-5. Knockdown should restore 10% to fallen fighter and 20% to the fighter who scored it.
+1. Punch stamina costs are about twice higher.
+2. HP and stamina start at 100+stat bonus.
+3. Defense is displayed as Health.
+4. Amateur knockdowns should be rarer than street/pro.
+5. Fight logs at the end show punches, not only score lines.
+6. Hit chances are whole percentages.
+7. On phone, top panel wraps into rows.
+8. On phone, Hide/Show buttons do not appear.
