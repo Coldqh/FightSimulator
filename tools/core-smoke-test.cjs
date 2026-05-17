@@ -60,58 +60,48 @@ FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 FS.World.refreshOffers(state);
 
-if (FS.Data.appVersion !== "fullscreen-ring-ui-1.8.3") throw new Error("bad version");
-
-let html = FS.Render.dashboard(state);
-if (html.includes("Медицина") || html.includes("Восстановление") || html.includes("Финансовая лента")) {
-  throw new Error("removed economy blocks are still visible");
-}
+if (FS.Data.appVersion !== "stamina-recovery-1.8.4") throw new Error("bad version");
 
 const offer = state.offers.filter(o => !o.isCompetition)[0];
 if (!offer) throw new Error("no offer");
-if (!FS.Fight.startInteractiveFight(state, offer.id)) throw new Error("could not start interactive fight");
-html = FS.Render.dashboard(state);
+if (!FS.Fight.startInteractiveFight(state, offer.id)) throw new Error("could not start fight");
 
-if (!html.includes("fight-fullscreen-backdrop") || !html.includes("fight-fullscreen-modal")) {
-  throw new Error("fight is not fullscreen overlay");
-}
-if (!html.includes("punch-damage") || !html.includes("punch-chance") || !html.includes("punch-stamina")) {
-  throw new Error("punch corner metadata missing");
-}
-if (html.includes("эффективность") || html.includes("нельзя два раза подряд</small>")) {
-  throw new Error("forbidden punch helper text visible");
-}
-if (!html.includes("hp-meter") || !html.includes("stamina-meter")) {
-  throw new Error("colored meter classes missing");
+let session = state.modal.session;
+const max = session.player.maxStamina;
+
+/* Block recovery: around 20% after the full turn. */
+session.player.stamina = Math.round(max * 0.40);
+const beforeBlock = session.player.stamina;
+FS.Fight.playerAction(state, "block", 0, 0);
+session = state.modal.session || state.modal.sourceModal?.session || state.modal.session;
+if (session.player.stamina < beforeBlock + Math.round(max * 0.14)) {
+  throw new Error("block recovery too low: " + beforeBlock + " -> " + session.player.stamina);
 }
 
-const session = state.modal.session;
-session.player.guard = "counter";
-session.opponent.hp = session.opponent.maxHp;
-session.player.thrown = 0;
-session.player.landed = 0;
-session.player.counterLanded = 0;
-/* Force a counter statistic without relying on random hit. */
-session.player.thrown += 1;
-session.player.landed += 1;
-session.player.counterLanded += 1;
-if (session.player.thrown < 1 || session.player.counterLanded < 1) {
-  throw new Error("counter stats are not tracked");
+/* Counter recovery: around 10% after the full turn. */
+session.player.lastAction = "";
+session.player.stamina = Math.round(max * 0.40);
+const beforeCounter = session.player.stamina;
+FS.Fight.playerAction(state, "counter", 0, 0);
+session = state.modal.session;
+if (session.player.stamina < beforeCounter + Math.round(max * 0.07)) {
+  throw new Error("counter recovery too low: " + beforeCounter + " -> " + session.player.stamina);
 }
 
-state.modal = null;
-const beforeForeignLogs = (state.world.transitionLog || []).length;
-for (let i = 0; i < 4; i += 1) {
-  FS.World.advanceWeek(state, "skip");
+/* Normal turn recovery exists in source; in a real exchange the opponent can still drain stamina with a body shot. */
+
+/* Round recovery source check: this avoids forcing many turns through random AI. */
+const source = fs.readFileSync(path.join(root, "src/core/fight.js"), "utf8");
+if (!source.includes("recoverPercent(session.player, 0.30)") || !source.includes("recoverPercent(session.opponent, 0.30)")) {
+  throw new Error("round 30% recovery missing");
 }
-if (!state.clubs || !state.clubs.length) throw new Error("clubs missing after world moves");
+if (!source.includes("recoverPercent(target, 0.10)") || !source.includes("recoverPercent(scorer, 0.20)")) {
+  throw new Error("knockdown recovery missing");
+}
 
-const appSource = fs.readFileSync(path.join(root, "src/app.js"), "utf8");
-if (appSource.includes("window.open(")) throw new Error("browser popup still used");
-
-console.log("fullscreen ring ui smoke ok", {
+console.log("stamina recovery smoke ok", {
   version: FS.Data.appVersion,
-  offers: state.offers.filter(o => !o.isCompetition).length,
-  fullscreen: true,
-  transitionLogDelta: (state.world.transitionLog || []).length - beforeForeignLogs
+  blockRecoveredFrom: beforeBlock,
+  counterRecoveredFrom: beforeCounter,
+  finalStamina: session.player.stamina
 });

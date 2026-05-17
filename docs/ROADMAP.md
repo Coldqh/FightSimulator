@@ -1,6 +1,6 @@
-# Roadmap after 1.8.3
+# Roadmap after 1.8.4
 
 Next:
-- Tune interactive fight AI.
-- Tune punch damage/stamina numbers.
-- Improve tournament fight UX without adding tactics/tempo/clinch systems.
+- Tune fight AI.
+- Tune stamina/damage balance.
+- Improve ring UI clarity without adding tactics/tempo/clinch systems.

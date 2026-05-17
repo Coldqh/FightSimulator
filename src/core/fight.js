@@ -162,6 +162,19 @@
     fighterState.stamina = U.clamp(fighterState.stamina + Math.max(1, Math.round(amount)), 0, fighterState.maxStamina);
   }
 
+  function recoverPercent(fighterState, percent) {
+    recoverStamina(fighterState, Math.round(fighterState.maxStamina * percent));
+  }
+
+  function markTurnRecovery(fighterState, percent) {
+    fighterState.turnRecovery = Math.max(Number(fighterState.turnRecovery) || 0, percent);
+  }
+
+  function recoverTurnStamina(fighterState) {
+    recoverPercent(fighterState, Number(fighterState.turnRecovery) || 0.06);
+    fighterState.turnRecovery = 0;
+  }
+
   function createSession(state, offer, opponent, tournamentSession) {
     var p = State.player(state);
     return {
@@ -176,11 +189,11 @@
       phase: "player",
       player: {
         pos: { x: 2, y: 4 }, hp: maxHp(p), maxHp: maxHp(p), stamina: maxStamina(p), maxStamina: maxStamina(p),
-        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
+        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: "", turnRecovery: 0
       },
       opponent: {
         pos: { x: 2, y: 0 }, hp: maxHp(opponent), maxHp: maxHp(opponent), stamina: maxStamina(opponent), maxStamina: maxStamina(opponent),
-        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
+        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: "", turnRecovery: 0
       },
       log: ["Бой начался. Ринг 5×5. Выбери движение, удар, блок или контратаку."],
       roundLog: [],
@@ -285,6 +298,7 @@
     var stamDamage;
     var line;
     attackerState.guard = "";
+    markTurnRecovery(attackerState, 0.06);
 
     if (!canUsePunch(punch, attackerState, defenderState)) {
       recoverStamina(attackerState, 3);
@@ -317,6 +331,7 @@
 
     if (!damage && defenderState.guard === "counter" && defenderState.stamina >= 8 && U.randomInt(1, 100) <= Math.round(45 * repeatPenalty(defenderState, "counter"))) {
       spendStamina(defenderState, 8);
+      markTurnRecovery(defenderState, 0.10);
       defenderState.thrown = (Number(defenderState.thrown) || 0) + 1;
       defenderState.counterLanded = (Number(defenderState.counterLanded) || 0) + 1;
       damage = U.clamp(Math.round((defender.stats.technique * 0.12 + defender.stats.speed * 0.08 + U.randomInt(2, 8)) * repeatPenalty(defenderState, "counter")), 2, 22);
@@ -332,9 +347,12 @@
 
   function checkKnockdown(session, side) {
     var target = side === "player" ? session.player : session.opponent;
+    var scorer = side === "player" ? session.opponent : session.player;
     if (target.hp > 0) { return false; }
+    recoverPercent(target, 0.10);
+    recoverPercent(scorer, 0.20);
     session.count = { side: side, count: 0 };
-    session.log.push((side === "player" ? "Ты падаешь" : "Соперник падает") + ". Судья начинает отсчёт.");
+    session.log.push((side === "player" ? "Ты падаешь" : "Соперник падает") + ". Судья начинает отсчёт. Упавший восстанавливает 10% стамины, уронивший — 20%.");
     return true;
   }
 
@@ -365,9 +383,11 @@
     session.turn = 1;
     session.player.guard = "";
     session.opponent.guard = "";
-    recoverStamina(session.player, 22);
-    recoverStamina(session.opponent, 22);
-    session.log.push("Раунд " + session.round + ". Стамина частично восстановлена.");
+    session.player.turnRecovery = 0;
+    session.opponent.turnRecovery = 0;
+    recoverPercent(session.player, 0.30);
+    recoverPercent(session.opponent, 0.30);
+    session.log.push("Раунд " + session.round + ". Оба бойца восстановили 30% стамины.");
     state.modal = buildActiveModal(state, session);
     return true;
   }
@@ -377,8 +397,8 @@
     session.opponent.guard = session.opponent.guard === "block" || session.opponent.guard === "counter" ? session.opponent.guard : "";
     if (session.count) { state.modal = buildCountModal(state, session); return true; }
     session.turn += 1;
-    recoverStamina(session.player, 2);
-    recoverStamina(session.opponent, 2);
+    recoverTurnStamina(session.player);
+    recoverTurnStamina(session.opponent);
     if (session.turn > session.maxTurns) {
       scoreRound(session);
       if (session.round >= session.roundsTotal) {
@@ -404,6 +424,7 @@
       next = moveToward(session.opponent.pos, session.player.pos);
       if (!samePos(next, session.player.pos)) {
         registerAction(session.opponent, "move");
+        markTurnRecovery(session.opponent, 0.06);
         session.opponent.pos = next;
         spendStamina(session.opponent, 3);
         session.log.push(opponent.name + " смещается ближе.");
@@ -413,8 +434,8 @@
 
     if (session.opponent.stamina < 12 && U.randomInt(1, 100) <= 60) {
       registerAction(session.opponent, "block");
+      markTurnRecovery(session.opponent, 0.20);
       session.opponent.guard = "block";
-      recoverStamina(session.opponent, Math.round(8 * repeatPenalty(session.opponent, "block")));
       session.log.push(opponent.name + " берёт блок и восстанавливает дыхание.");
       return;
     }
@@ -442,13 +463,14 @@
     session.player.guard = "";
     if (action === "move") {
       registerAction(session.player, "move");
+      markTurnRecovery(session.player, 0.06);
       moved = tryMove(session.player, session.opponent, Number(dx) || 0, Number(dy) || 0);
       session.log.push(moved ? "Ты смещаешься по рингу." : "Туда нельзя сместиться.");
     } else if (action === "block") {
       registerAction(session.player, "block");
+      markTurnRecovery(session.player, 0.20);
       session.player.guard = "block";
-      spendStamina(session.player, 4);
-      session.log.push("Ты ставишь блок.");
+      session.log.push("Ты ставишь блок и восстанавливаешь дыхание.");
     } else if (action === "counter") {
       if (session.player.lastAction === "counter") {
         session.log.push("Две контратаки подряд использовать нельзя.");
@@ -456,9 +478,9 @@
         return true;
       }
       registerAction(session.player, "counter");
+      markTurnRecovery(session.player, 0.10);
       session.player.guard = "counter";
-      spendStamina(session.player, 7);
-      session.log.push("Ты готовишь контратаку.");
+      session.log.push("Ты готовишь контратаку и экономишь стамину.");
     } else if (PUNCHES[action]) {
       executePunch(p, opponent, session.player, session.opponent, action, {
         attacker: "Ты",
@@ -516,7 +538,7 @@
     if (U.randomInt(1, 100) <= standChance) {
       target.knockdowns += 1;
       target.hp = Math.max(10, Math.round(target.maxHp * 0.24));
-      target.stamina = Math.max(5, Math.round(target.stamina * 0.55));
+      target.stamina = Math.max(target.stamina, Math.round(target.maxStamina * 0.10));
       session.log.push((side === "player" ? "Ты поднимаешься" : "Соперник поднимается") + ". Бой продолжается.");
       session.count = null;
       return endTurn(state, session);

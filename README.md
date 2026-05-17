@@ -1,9 +1,9 @@
 # Fight Simulator
 
-Version: `fullscreen-ring-ui-1.8.3`
+Version: `stamina-recovery-1.8.4`
 
-- Interactive fight is now a full-screen overlay over the game, not a browser popup.
-- Punch buttons show only damage, hit chance and stamina cost.
-- HP bars are red; stamina bars are blue.
-- Medicine/restoration and finance feed blocks are removed from Economy.
-- NPC fighters can rarely move to other countries and join gyms there.
+- Stamina now recovers every turn.
+- Block recovers about 20% stamina.
+- Counter recovers about 10% stamina.
+- New round recovers 30% stamina.
+- Knockdown recovers 10% for the fallen fighter and 20% for the fighter who scored the knockdown.

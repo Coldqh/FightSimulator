@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "fullscreen-ring-ui-1.8.3",
+    appVersion: "stamina-recovery-1.8.4",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

@@ -1,4 +1,4 @@
-# Test Checklist 1.8.3
+# Test Checklist 1.8.4
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,11 +7,8 @@ start index.html
 ```
 
 Manual:
-1. Accept a fight: it should cover the full screen inside the game tab.
-2. The main menu must be inaccessible until the fight ends.
-3. Punch buttons show red damage, yellow chance, blue stamina cost.
-4. HP bar is red; stamina bar is blue.
-5. Economy tab has no medicine/restoration block.
-6. Economy tab has no finance feed.
-7. Counter hit is counted in fight statistics.
-8. Some NPCs can rarely move countries and appear in foreign gyms.
+1. Every turn should restore some stamina.
+2. Block should restore about 20% stamina.
+3. Counter should restore about 10% stamina.
+4. New round should restore 30% stamina.
+5. Knockdown should restore 10% to fallen fighter and 20% to the fighter who scored it.
