@@ -1,11 +1,14 @@
 # Fight Simulator
 
-Version: `mobile-club-tournament-fix-1.4.4`
+Version: `tournament-national-team-fix-1.4.5`
 
-- Better club name generation with country/city style.
-- Clubs distribute NPC fighters evenly.
-- Trainers are clickable profiles.
-- Tournament OVR ranges updated.
-- Amateur max OVR is 120.
-- Compact mobile top bar and collapsible mobile cards.
-- Refresh opponents now rotates the opponent pool.
+## Patch focus
+
+- Age-capped initial records.
+- Header info displayed as compact pills.
+- Tournament fights now show full fight-result windows.
+- Tournament bracket uses real active participants.
+- Tournament awards no longer duplicate.
+- National team qualification is tied to 1–3 place at national championship.
+- Main national team is 12 fighters; reserve is 48 fighters.
+- Training tab shows current stat values.

@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "mobile-club-tournament-fix-1.4.4",
+    appVersion: "tournament-national-team-fix-1.4.5",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -136,9 +136,9 @@
       { id: "adult_3", label: "III взрослый", minRating: 0, maxRating: 19 },
       { id: "adult_2", label: "II взрослый", minRating: 20, maxRating: 39 },
       { id: "adult_1", label: "I взрослый", minRating: 40, maxRating: 59 },
-      { id: "kms", label: "КМС", minRating: 60, maxRating: 74 },
-      { id: "ms", label: "МС", minRating: 75, maxRating: 89 },
-      { id: "msmk", label: "МСМК", minRating: 90, maxRating: 100 }
+      { id: "kms", label: "КМС", minRating: 60, maxRating: 79 },
+      { id: "ms", label: "МС", minRating: 80, maxRating: 99 },
+      { id: "msmk", label: "МСМК", minRating: 100, maxRating: 120 }
     ],
 
     amateurRankRosterCounts: {
@@ -174,13 +174,13 @@
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     amateurCompetitions: [
-      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 50, rewardRating: 60, difficultyId: "safe", weekCooldown: 8, scope: "country", minOpponentRating: 0 },
-      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 60, rewardRating: 100, difficultyId: "safe", weekCooldown: 12, scope: "country", minOpponentRating: 20 },
-      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 70, rewardRating: 150, difficultyId: "even", weekCooldown: 16, scope: "country", minOpponentRating: 35 },
-      { id: "country", label: "Чемпионат страны", awardLabel: "Чемпион страны", minRating: 50, maxRating: 80, rewardRating: 230, difficultyId: "hard", weekCooldown: 24, scope: "country", minOpponentRating: 50 },
-      { id: "continent", label: "Чемпионат континента", awardLabel: "Чемпион континента", minRating: 65, maxRating: 100, rewardRating: 340, difficultyId: "hard", weekCooldown: 32, scope: "continent", minOpponentRating: 65 },
-      { id: "world", label: "Чемпионат мира", awardLabel: "Чемпион мира", minRating: 80, maxRating: 120, rewardRating: 500, difficultyId: "hard", weekCooldown: 40, scope: "world", minOpponentRating: 80 },
-      { id: "olympiad", label: "Олимпиада", awardLabel: "Олимпийский чемпион", minRating: 100, maxRating: 120, rewardRating: 750, difficultyId: "hard", weekCooldown: 64, scope: "world_elite", minOpponentRating: 100 }
+      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 50, rewardRating: 60, difficultyId: "safe", weekCooldown: 8, scope: "country", minOpponentRating: 0, schedule: "any" },
+      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 60, rewardRating: 100, difficultyId: "safe", weekCooldown: 12, scope: "country", minOpponentRating: 20, schedule: "any" },
+      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 70, rewardRating: 150, difficultyId: "even", weekCooldown: 16, scope: "country", minOpponentRating: 35, schedule: "any" },
+      { id: "country", label: "Чемпионат страны", awardLabel: "Призёр чемпионата страны", minRating: 50, maxRating: 80, rewardRating: 230, difficultyId: "hard", weekCooldown: 24, scope: "country", minOpponentRating: 50, schedule: "country" },
+      { id: "continent", label: "Чемпионат континента", awardLabel: "Призёр чемпионата континента", minRating: 65, maxRating: 100, rewardRating: 340, difficultyId: "hard", weekCooldown: 32, scope: "continent", minOpponentRating: 65, schedule: "continent" },
+      { id: "world", label: "Чемпионат мира", awardLabel: "Призёр чемпионата мира", minRating: 80, maxRating: 120, rewardRating: 500, difficultyId: "hard", weekCooldown: 40, scope: "world", minOpponentRating: 80, schedule: "world" },
+      { id: "olympiad", label: "Олимпиада", awardLabel: "Призёр Олимпиады", minRating: 100, maxRating: 120, rewardRating: 750, difficultyId: "hard", weekCooldown: 64, scope: "world_elite", minOpponentRating: 100, schedule: "olympiad" }
     ],
 
     careerStages: {

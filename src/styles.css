@@ -703,3 +703,25 @@ button, input, select { max-width: 100%; }
     overflow-x: hidden;
   }
 }
+
+
+.top-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .top-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .top-pills .pill {
+    flex: 0 0 auto;
+  }
+}

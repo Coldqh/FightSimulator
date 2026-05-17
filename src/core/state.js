@@ -71,11 +71,14 @@
     return 30;
   }
 
-  function recordByTrackAndRating(trackId, rating, rankId) {
+  function recordByTrackAndRating(trackId, rating, rankId, age) {
     var wins;
     var losses;
     var draws;
     var koRate;
+    var maxTotal;
+    var total;
+    var scale;
 
     if (trackId === "pro") {
       if (rating >= 180) { wins = U.randomInt(28, 45); losses = U.randomInt(0, 2); }
@@ -84,6 +87,7 @@
       else if (rating >= 105) { wins = U.randomInt(7, 20); losses = U.randomInt(2, 10); }
       else { wins = U.randomInt(0, 10); losses = U.randomInt(0, 6); }
       koRate = 0.62;
+      maxTotal = Math.max(0, (age || 18) - 17) * 8;
     } else if (trackId === "street") {
       if (rating >= 130) { wins = U.randomInt(55, 150); losses = U.randomInt(2, 18); }
       else if (rating >= 100) { wins = U.randomInt(30, 105); losses = U.randomInt(6, 38); }
@@ -91,17 +95,28 @@
       else if (rating >= 30) { wins = U.randomInt(4, 35); losses = U.randomInt(5, 45); }
       else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 22); }
       koRate = 0.58;
+      maxTotal = Math.max(12, ((age || 18) - 16) * 18);
     } else {
-      if (rankId === "msmk" || rating >= 90) { wins = U.randomInt(75, 165); losses = U.randomInt(3, 25); }
-      else if (rankId === "ms" || rating >= 75) { wins = U.randomInt(50, 130); losses = U.randomInt(7, 38); }
+      if (rankId === "msmk" || rating >= 100) { wins = U.randomInt(75, 165); losses = U.randomInt(3, 25); }
+      else if (rankId === "ms" || rating >= 80) { wins = U.randomInt(50, 130); losses = U.randomInt(7, 38); }
       else if (rankId === "kms" || rating >= 60) { wins = U.randomInt(28, 85); losses = U.randomInt(10, 48); }
       else if (rankId === "adult_1" || rating >= 40) { wins = U.randomInt(12, 48); losses = U.randomInt(8, 42); }
       else if (rankId === "adult_2" || rating >= 20) { wins = U.randomInt(4, 28); losses = U.randomInt(5, 34); }
       else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 20); }
       koRate = 0.28;
+      maxTotal = Math.max(12, 34 + Math.max(0, (age || 18) - 18) * 18);
     }
 
     draws = U.randomInt(0, Math.min(8, Math.floor((wins + losses) / 20)));
+    total = wins + losses + draws;
+
+    if (total > maxTotal) {
+      scale = maxTotal / total;
+      wins = Math.max(0, Math.floor(wins * scale));
+      losses = Math.max(0, Math.floor(losses * scale));
+      draws = Math.max(0, Math.min(6, maxTotal - wins - losses));
+    }
+
     return {
       wins: wins,
       losses: losses,
@@ -111,7 +126,7 @@
   }
 
   function createRecord(seed) {
-    return recordByTrackAndRating("amateur", Math.abs(seed) % 100, "");
+    return recordByTrackAndRating("amateur", Math.abs(seed) % 100, "", 18);
   }
 
   function createFighter(countryId, trackId, seed, baseValue, options) {
@@ -122,7 +137,7 @@
     var age = typeof opts.age === "number" ? opts.age : U.clamp(18 + (Math.abs(seed) % 18), 18, 42);
     var stats = opts.stats || U.createStats(trackId, baseValue);
     var rankId = opts.rankId || "";
-    var record = opts.record || recordByTrackAndRating(trackId, U.statAverage(stats), rankId);
+    var record = opts.record || recordByTrackAndRating(trackId, U.statAverage(stats), rankId, age);
     var fighter = {
       id: opts.id || U.uid("fighter"),
       name: opts.name || U.createName(country, seed),
@@ -269,7 +284,7 @@
       clubs: [],
       titles: {},
       amateurPath: { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 },
-      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [] },
+      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [], nationalTeamQualification: {}, reserveAdditions: {} },
       feed: "Карьера началась. Мир загружен, ближайшие соперники подобраны.",
       createdAt: new Date().toISOString()
     };
@@ -484,16 +499,25 @@
     var result = [];
     var medals;
     var i;
+    var seen = {};
+
+    function pushAward(award) {
+      if (!award || !award.label || seen[award.label]) {
+        return;
+      }
+      seen[award.label] = true;
+      result.push(award);
+    }
 
     if (!fighter) { return result; }
     if (fighter.awards instanceof Array) {
-      result = result.concat(fighter.awards);
+      fighter.awards.forEach(pushAward);
     }
 
     if (fighter.isPlayer && state.amateurPath && state.amateurPath.medals instanceof Array) {
       medals = state.amateurPath.medals;
       for (i = 0; i < medals.length; i += 1) {
-        result.push({ week: medals[i].week, label: medals[i].awardLabel || medals[i].label, source: "amateur" });
+        pushAward({ week: medals[i].week, label: medals[i].awardLabel || medals[i].label, source: "amateur" });
       }
     }
 
@@ -565,6 +589,9 @@
     state.world.teamsByCountry = state.world.teamsByCountry || {};
     state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
     state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
+    state.world.memorials = state.world.memorials instanceof Array ? state.world.memorials : [];
+    state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
+    state.world.reserveAdditions = state.world.reserveAdditions || {};
 
     for (i = 0; i < state.roster.length; i += 1) {
       state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];

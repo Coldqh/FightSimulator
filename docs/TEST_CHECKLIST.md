@@ -1,4 +1,4 @@
-# Test Checklist 1.4.4
+# Test Checklist 1.4.5
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,9 +7,12 @@ start index.html
 ```
 
 Manual:
-1. Club names are not duplicated and do not contain "#".
-2. Every club has a reasonable roster.
-3. Trainer button opens trainer profile.
-4. Refresh opponents changes opponents.
-5. Start screen has no stance.
-6. Mobile layout has compact top line and collapsible cards.
+1. 18-year-old amateurs should not spawn with absurd 150+ fight records.
+2. Header should display info as pills.
+3. Trainer profile says “Рекорд тренера”.
+4. Tournament fight shows a fight result first.
+5. Continue in tournament moves to next fight or final screen.
+6. Tournament participant list shows active fighters only.
+7. Tournament award appears once.
+8. National team shows ranks.
+9. Training tab shows current stat values.

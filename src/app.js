@@ -163,13 +163,18 @@
       state.selectedTab = button.dataset.tab;
       saveAndRender();
     } else if (button.dataset.amateurCompetition) {
-      if (window.FS.Amateur && window.FS.Amateur.runTournament) {
+      if (window.FS.Amateur && window.FS.Amateur.startTournament) {
         state.modal = window.FS.Amateur.startTournament(state, button.dataset.amateurCompetition);
       }
       saveAndRender();
     } else if (button.dataset.tournamentFight) {
       if (window.FS.Amateur && window.FS.Amateur.resolveTournamentRound) {
         state.modal = window.FS.Amateur.resolveTournamentRound(state, state.modal);
+      }
+      saveAndRender();
+    } else if (button.dataset.tournamentContinue) {
+      if (window.FS.Amateur && window.FS.Amateur.continueTournament) {
+        state.modal = window.FS.Amateur.continueTournament(state, state.modal);
       }
       saveAndRender();
     } else if (button.dataset.action === "refresh-offers") {

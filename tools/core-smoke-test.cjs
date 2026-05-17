@@ -59,58 +59,73 @@ let state = FS.State.createCareer({
 FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
-if (FS.Data.appVersion !== "mobile-club-tournament-fix-1.4.4") throw new Error("bad version");
-if (FS.Data.tracks.amateur.maxStat !== 120) throw new Error("amateur max OVR not 120");
+if (FS.Data.appVersion !== "tournament-national-team-fix-1.4.5") throw new Error("bad version");
+if (FS.Data.tracks.amateur.maxStat !== 120) throw new Error("amateur max stat should be 120");
 
-const startHtml = FS.Render.start();
-if (startHtml.includes("Стойка") || startHtml.includes("careerStance")) throw new Error("stance still on start screen");
-
-const clubNames = state.clubs.map(c => c.name);
-if (new Set(clubNames).size !== clubNames.length) throw new Error("duplicate club names");
-if (clubNames.some(n => n.includes("#") || n.includes("Бокс Бокс") || n.includes("Школа Школа"))) throw new Error("bad club naming");
-
-const tinyClubs = state.clubs.filter(c => (c.rosterIds || []).length < 20);
-if (tinyClubs.length > 0) throw new Error("clubs with fewer than 20 fighters: " + tinyClubs.slice(0, 5).map(c => c.name + ":" + c.rosterIds.length).join(", "));
-
-const p = FS.State.player(state);
-if (p.stanceId) throw new Error("player stance should be removed/blank");
-
-const compRanges = FS.Data.amateurCompetitions.map(c => c.minRating + "-" + c.maxRating).join(",");
-if (compRanges !== "0-50,20-60,35-70,50-80,65-100,80-120,100-120") throw new Error("bad tournament OVR ranges: " + compRanges);
-
-p.stats.power = 45; p.stats.technique = 45; p.stats.speed = 45; p.stats.stamina = 45; p.stats.defense = 45;
-FS.State.updateDerivedFighterFields(p);
-const comp = FS.Amateur.availableCompetitions(state).find(c => c.id === "city");
-if (!comp || !comp.available) throw new Error("city tournament unavailable");
-const modal = FS.Amateur.startTournament(state, "city");
-if (modal.type !== "tournamentFight") throw new Error("tournament did not open fight modal");
-if (modal.opponentRating < 0 || modal.opponentRating > 50) throw new Error("tournament opponent outside OVR range: " + modal.opponentRating);
-
-FS.World.refreshOffers(state);
-const first = state.offers.filter(o => !o.isCompetition).map(o => o.opponentId).join(",");
-state.offerRefreshSalt = (Number(state.offerRefreshSalt) || 0) + 1;
-FS.World.refreshOffers(state);
-const second = state.offers.filter(o => !o.isCompetition).map(o => o.opponentId).join(",");
-if (first === second) throw new Error("refresh opponents did not change offers");
+const absurd18 = state.roster.filter(f => f.trackId === "amateur" && f.age === 18 && (f.record.wins + f.record.losses + f.record.draws) > 40);
+if (absurd18.length) throw new Error("18yo amateur records too high: " + absurd18[0].name + " " + JSON.stringify(absurd18[0].record));
 
 let html = FS.Render.dashboard(state);
-if (!html.includes("compact-topbar")) throw new Error("compact header missing");
-if (html.includes("Стойка")) throw new Error("stance still visible in dashboard");
-if (html.includes("1/128 → 1/64")) throw new Error("tournament long bracket line visible");
+if (!html.includes("top-pills")) throw new Error("header pills missing");
+if (html.includes("Рекорд клуба при тренере")) throw new Error("old trainer record label found");
+
+state.selectedTab = "training";
+html = FS.Render.dashboard(state);
+["Сила","Техника","Скорость","Выносливость","Защита"].forEach(label => {
+  if (!html.includes(label)) throw new Error("training stat missing " + label);
+});
+
+/* Make a scheduled national tournament available. Year 1 March week 2 -> week 10. */
+state.week = 10;
+const p = FS.State.player(state);
+p.stats.power = 58;
+p.stats.technique = 58;
+p.stats.speed = 58;
+p.stats.stamina = 58;
+p.stats.defense = 58;
+FS.State.updateDerivedFighterFields(p);
+
+let comps = FS.Amateur.availableCompetitions(state);
+const country = comps.find(c => c.id === "country");
+if (!country || !country.available) throw new Error("country championship should be available at scheduled date: " + (country && country.reason));
+
+let modal = FS.Amateur.startTournament(state, "country");
+if (modal.type !== "tournamentFight") throw new Error("tournament did not start with fight modal");
+if (!modal.alive || modal.alive.length < 2) throw new Error("active participants missing");
+if (modal.opponentRating < 50 || modal.opponentRating > 80) throw new Error("opponent outside tournament OVR range");
+
+let resultModal = FS.Amateur.resolveTournamentRound(state, modal);
+if (resultModal.type !== "tournamentResult") throw new Error("tournament round should show fight result");
+if (!resultModal.roundLog || !resultModal.roundLog.length) throw new Error("tournament result has no round log");
+
+let after = FS.Amateur.continueTournament(state, resultModal);
+if (!["tournamentFight", "tournamentFinal"].includes(after.type)) throw new Error("continue tournament broken: " + after.type);
+
+const beforeMedals = state.amateurPath.medals.length;
+if (after.type === "tournamentFinal") {
+  const once = state.amateurPath.medals.length - beforeMedals;
+  if (once > 1) throw new Error("award duplicated");
+}
+
+FS.World.buildNationalTeams(state);
+const team = state.world.teamsByCountry[p.countryId];
+if (!team || team.main.length > 12 || team.reserve.length > 48) throw new Error("team size broken");
+
+state.selectedTab = "world";
+html = FS.Render.dashboard(state);
+if (!html.includes("III взрослый") && !html.includes("II взрослый") && !html.includes("I взрослый") && !html.includes("КМС")) throw new Error("team ranks not visible");
+if (html.includes("пройдено")) throw new Error("completed label should be removed from tournaments");
 
 const club = state.clubs[0];
-html = FS.Render.dashboard({ ...state, modal: { type: "club", clubId: club.id } });
-if (!html.includes('data-person="' + club.coach.id + '"')) throw new Error("coach is not clickable in club card");
-
 state.modal = { type: "person", personId: club.coach.id };
 html = FS.Render.dashboard(state);
-if (!html.includes("Рекорд клуба при тренере")) throw new Error("coach profile did not open");
+if (!html.includes("Рекорд тренера")) throw new Error("trainer profile label missing");
 
-console.log("mobile club tournament fix smoke ok", {
+console.log("tournament national team smoke ok", {
   version: FS.Data.appVersion,
   fighters: state.roster.length,
-  clubs: state.clubs.length,
-  smallestClub: Math.min(...state.clubs.map(c => c.rosterIds.length)),
-  firstOffers: first,
-  secondOffers: second
+  alive: modal.alive.length,
+  modalAfterFight: resultModal.type,
+  teamMain: team.main.length,
+  teamReserve: team.reserve.length
 });

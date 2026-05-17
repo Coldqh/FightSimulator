@@ -262,19 +262,47 @@
 
   function buildNationalTeams(state) {
     var teams = {};
-    var i;
+    var countryIndex;
+    var weightIndex;
     var country;
+    var weight;
     var pool;
+    var main;
+    var reserve;
+    var qualification;
+    var p = State.player(state);
 
-    for (i = 0; i < Data.countries.length; i += 1) {
-      country = Data.countries[i];
-      pool = State.ranking(state, country.id, "amateur", "").filter(function (fighter) {
-        return U.statAverage(fighter.stats) >= 40;
-      });
+    if (!state.world) { state.world = {}; }
+    state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
+    state.world.reserveAdditions = state.world.reserveAdditions || {};
+
+    for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
+      country = Data.countries[countryIndex];
+      main = [];
+      reserve = [];
+
+      for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
+        weight = Data.weightClasses[weightIndex];
+        pool = State.ranking(state, country.id, "amateur", weight.id).filter(function (fighter) {
+          return !fighter.retired && U.statAverage(fighter.stats) >= 40;
+        });
+
+        qualification = state.world.nationalTeamQualification[country.id + "|" + weight.id];
+        if (qualification && p && p.id === qualification.fighterId && p.trackId === "amateur" && p.countryId === country.id && p.weightClassId === weight.id) {
+          pool = pool.filter(function (fighter) { return fighter.id !== p.id; });
+          pool.unshift(p);
+        } else {
+          pool = pool.filter(function (fighter) { return !fighter.isPlayer; });
+        }
+
+        main = main.concat(pool.slice(0, 2).map(function (fighter) { return fighter.id; }));
+        var addedReserve = state.world.reserveAdditions[country.id + "|" + weight.id] || [];
+        reserve = reserve.concat(addedReserve).concat(pool.slice(2, 10).map(function (fighter) { return fighter.id; }));
+      }
 
       teams[country.id] = {
-        main: pool.slice(0, 4).map(function (fighter) { return fighter.id; }),
-        reserve: pool.slice(4, 8).map(function (fighter) { return fighter.id; })
+        main: Array.from(new Set(main)).slice(0, 12),
+        reserve: Array.from(new Set(reserve.filter(function (id) { return main.indexOf(id) === -1; }))).slice(0, 48)
       };
     }
 
