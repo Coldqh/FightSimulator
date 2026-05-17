@@ -145,6 +145,13 @@
       storyFlags: opts.storyFlags || [],
       trainingPoints: opts.trainingPoints || 0,
       money: Number(opts.money) || 0,
+      birthMonth: opts.birthMonth || U.randomInt(1, 12),
+      birthWeek: opts.birthWeek || U.randomInt(1, 4),
+      retired: !!opts.retired,
+      retiredWeek: opts.retiredWeek || 0,
+      retiredReason: opts.retiredReason || "",
+      memorial: opts.memorial || null,
+      recentOpponentIds: opts.recentOpponentIds instanceof Array ? opts.recentOpponentIds : [],
       nextFightWeek: opts.nextFightWeek || 0,
       contractOpponentId: opts.contractOpponentId || "",
       contractLabel: opts.contractLabel || "",
@@ -222,13 +229,7 @@
   }
 
   function createPeople(countryId) {
-    var country = U.findCountry(countryId);
-    return [
-      { id: U.uid("person"), role: "coach", name: U.createName(country, 11), note: "Ведёт тренировки в зале." },
-      { id: U.uid("person"), role: "rival", name: U.createName(country, 33), note: "Появляется в местной боксёрской среде." },
-      { id: U.uid("person"), role: "organizer", name: U.createName(country, 44), note: "Помогает собрать бои." },
-      { id: U.uid("person"), role: "cutman", name: U.createName(country, 55), note: "Работает возле ринга." }
-    ];
+    return [];
   }
 
   function createCareer(payload) {
@@ -262,7 +263,7 @@
       rankingPage: 0,
       modal: null,
       roster: [],
-      people: createPeople(countryId),
+      people: [],
       offers: [],
       trackedFighterIds: [],
       clubs: [],
@@ -374,7 +375,7 @@
 
     p.countryId = country.id;
     p.gymId = "";
-    state.people = createPeople(country.id);
+    state.people = [];
     state.rankingCountryId = country.id;
     state.rankingPage = 0;
     state.feed = "Перелёт: " + country.label + ". Старый зал сброшен, выбери новый во вкладке “Мой клуб”.";
@@ -529,7 +530,7 @@
           weightOk = !weightClassId || fighter.weightClassId === weightClassId;
         }
 
-        return countryOk && fighter.trackId === trackId && weightOk;
+        return !fighter.retired && countryOk && fighter.trackId === trackId && weightOk;
       })
       .sort(function (left, right) {
         return U.scoreFighter(right) - U.scoreFighter(left);
@@ -570,6 +571,10 @@
       state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
       state.roster[i].awards = state.roster[i].awards instanceof Array ? state.roster[i].awards : [];
       state.roster[i].trainingPoints = Number(state.roster[i].trainingPoints) || 0;
+      state.roster[i].birthMonth = state.roster[i].birthMonth || U.randomInt(1, 12);
+      state.roster[i].birthWeek = state.roster[i].birthWeek || U.randomInt(1, 4);
+      state.roster[i].retired = !!state.roster[i].retired;
+      state.roster[i].recentOpponentIds = state.roster[i].recentOpponentIds instanceof Array ? state.roster[i].recentOpponentIds : [];
       state.roster[i].money = Number(state.roster[i].money) || 0;
       state.roster[i].nextFightWeek = Number(state.roster[i].nextFightWeek) || 0;
       state.roster[i].contractOpponentId = state.roster[i].contractOpponentId || "";
@@ -655,6 +660,21 @@
     };
   }
 
+  function dateParts(state) {
+    var months = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+    var weekIndex = Math.max(0, (Number(state.week) || 1) - 1);
+    var year = Math.floor(weekIndex / 48) + 1;
+    var monthIndex = Math.floor((weekIndex % 48) / 4);
+    var weekOfMonth = (weekIndex % 4) + 1;
+    return { year: year, month: monthIndex + 1, monthLabel: months[monthIndex], weekOfMonth: weekOfMonth };
+  }
+
+  function dateText(state) {
+    var parts = dateParts(state);
+    return "год " + parts.year + ", " + parts.monthLabel + ", " + parts.weekOfMonth + " неделя";
+  }
+
+
   window.FS.State = {
     createCareer: createCareer,
     createFighter: createFighter,
@@ -677,6 +697,8 @@
     pathProgress: pathProgress,
     switchFighterTrack: switchFighterTrack,
     ensureTrackRecords: ensureTrackRecords,
-    cloneRecord: cloneRecord
+    cloneRecord: cloneRecord,
+    dateParts: dateParts,
+    dateText: dateText
   };
 }());

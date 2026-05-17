@@ -1,5 +1,9 @@
 # Fight Simulator
 
-Version: `tournament-mobile-club-rework-1.4.2`
+Version: `world-life-club-hotfix-1.4.3`
 
-Tournament modal, mobile UI pass, club economy, larger rosters, faster world simulation.
+- Unique club names.
+- Step-by-step tournament window.
+- People/coaches profiles.
+- NPC retirement and better opponent rotation.
+- Club links in fighter cards.

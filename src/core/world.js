@@ -17,21 +17,43 @@
     }, 90);
   }
 
+  function shuffleList(list) {
+    var copy = list.slice();
+    var i, j, tmp;
+    for (i = copy.length - 1; i > 0; i -= 1) {
+      j = U.randomInt(0, i);
+      tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+    }
+    return copy;
+  }
+
+  function rememberOpponent(fighter, opponentId) {
+    fighter.recentOpponentIds = fighter.recentOpponentIds instanceof Array ? fighter.recentOpponentIds : [];
+    fighter.recentOpponentIds.unshift(opponentId);
+    if (fighter.recentOpponentIds.length > 8) { fighter.recentOpponentIds.length = 8; }
+  }
+
   function findCloseOpponent(state, sourceFighter) {
+    var recent = sourceFighter.recentOpponentIds instanceof Array ? sourceFighter.recentOpponentIds : [];
     var pool = state.roster.filter(function (fighter) {
       return fighter.id !== sourceFighter.id &&
-        !fighter.isPlayer &&
+        !fighter.isPlayer && !fighter.retired && recent.indexOf(fighter.id) === -1 &&
         fighter.trackId === sourceFighter.trackId &&
         (sourceFighter.trackId === "pro" || fighter.countryId === sourceFighter.countryId) &&
         (sourceFighter.trackId === "street" || fighter.weightClassId === sourceFighter.weightClassId);
     });
-
+    if (!pool.length) {
+      pool = state.roster.filter(function (fighter) {
+        return fighter.id !== sourceFighter.id && !fighter.isPlayer && !fighter.retired &&
+          fighter.trackId === sourceFighter.trackId &&
+          (sourceFighter.trackId === "pro" || fighter.countryId === sourceFighter.countryId) &&
+          (sourceFighter.trackId === "street" || fighter.weightClassId === sourceFighter.weightClassId);
+      });
+    }
     pool.sort(function (left, right) {
-      return Math.abs(U.scoreFighter(left) - U.scoreFighter(sourceFighter)) -
-        Math.abs(U.scoreFighter(right) - U.scoreFighter(sourceFighter));
+      return Math.abs(U.scoreFighter(left) - U.scoreFighter(sourceFighter)) - Math.abs(U.scoreFighter(right) - U.scoreFighter(sourceFighter));
     });
-
-    return pool[U.randomInt(0, Math.min(4, pool.length - 1))] || pool[0] || null;
+    return pool[U.randomInt(0, Math.min(9, pool.length - 1))] || pool[0] || null;
   }
 
   function resolveNpcFight(state, a, b) {
@@ -43,49 +65,27 @@
     var loser;
     var draw = Math.abs(aScore - bScore) <= 2 && U.randomInt(1, 100) <= 7;
     var ko;
-
+    rememberOpponent(a, b.id);
+    rememberOpponent(b, a.id);
     if (draw) {
-      a.record.draws += 1;
-      b.record.draws += 1;
+      a.record.draws += 1; b.record.draws += 1;
       a.careerLog.unshift({ week: state.week, text: "Ничья с " + b.name });
       b.careerLog.unshift({ week: state.week, text: "Ничья с " + a.name });
-      a.lastFightWeek = state.week;
-      b.lastFightWeek = state.week;
-      return {
-        type: "draw",
-        text: a.name + " и " + b.name + " завершили бой вничью."
-      };
+      a.lastFightWeek = state.week; b.lastFightWeek = state.week;
+      if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
+      return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью." };
     }
-
-    if (roll <= aChance) {
-      winner = a;
-      loser = b;
-    } else {
-      winner = b;
-      loser = a;
-    }
-
+    if (roll <= aChance) { winner = a; loser = b; } else { winner = b; loser = a; }
     ko = U.randomInt(1, 100) <= 20;
-    winner.record.wins += 1;
-    loser.record.losses += 1;
-    if (ko) {
-      winner.record.kos += 1;
-    }
-
+    winner.record.wins += 1; loser.record.losses += 1; if (ko) { winner.record.kos += 1; }
     winner.careerLog.unshift({ week: state.week, text: "Победа над " + loser.name + (ko ? " KO/TKO" : " решением") });
     loser.careerLog.unshift({ week: state.week, text: "Поражение от " + winner.name });
-    winner.lastFightWeek = state.week;
-    loser.lastFightWeek = state.week;
-
-    State.updateDerivedFighterFields(winner);
-    State.updateDerivedFighterFields(loser);
-
-    return {
-      type: "win",
-      winner: winner.id,
-      loser: loser.id,
-      text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей.")
-    };
+    winner.lastFightWeek = state.week; loser.lastFightWeek = state.week;
+    if (winner.trackRecords) { winner.trackRecords[winner.trackId] = State.cloneRecord(winner.record); }
+    if (loser.trackRecords) { loser.trackRecords[loser.trackId] = State.cloneRecord(loser.record); }
+    State.updateDerivedFighterFields(winner); State.updateDerivedFighterFields(loser);
+    if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, winner, loser, false); }
+    return { type: "win", winner: winner.id, loser: loser.id, text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей.") };
   }
 
   function simulateNpcTraining(state) {
@@ -182,8 +182,8 @@
 
     for (key in buckets) {
       if (!Object.prototype.hasOwnProperty.call(buckets, key)) { continue; }
-      bucket = buckets[key];
-      maxPairs = Math.min(Math.floor(bucket.length / 2), 220);
+      bucket = shuffleList(buckets[key]);
+      maxPairs = Math.min(Math.floor(bucket.length / 2), 260);
       for (i = 0; i < maxPairs; i += 1) {
         a = bucket[i * 2];
         b = bucket[i * 2 + 1];
@@ -350,6 +350,45 @@
     state.offers = normalOffers.concat(competitionOffers);
   }
 
+  function retireFighter(state, fighter, reason) {
+    if (!fighter || fighter.isPlayer || fighter.retired) { return false; }
+    fighter.retired = true;
+    fighter.retiredWeek = state.week;
+    fighter.retiredReason = reason || "завершил карьеру";
+    fighter.memorial = { name: fighter.name, record: State.cloneRecord(fighter.record), trackId: fighter.trackId, countryId: fighter.countryId, retiredWeek: state.week, reason: fighter.retiredReason };
+    fighter.careerLog.unshift({ week: state.week, text: "Завершил карьеру: " + fighter.retiredReason + "." });
+    return true;
+  }
+
+  function createYoungFighter(state, countryId, trackId, index) {
+    var base = trackId === "pro" ? U.randomInt(90, 105) : (trackId === "street" ? U.randomInt(0, 35) : U.randomInt(0, 22));
+    var weightClassId = trackId === "street" ? "" : Data.weightClasses[U.randomInt(0, Data.weightClasses.length - 1)].id;
+    var f = State.createFighter(countryId, trackId, 800000 + state.week * 1000 + index, base, { age: U.randomInt(18, 22), weightClassId: weightClassId });
+    state.roster.push(f);
+    return f;
+  }
+
+  function simulateRetirementsAndNewFighters(state) {
+    var i, fighter, rating, chance, created = 0, parts = State.dateParts(state);
+    for (i = 0; i < state.roster.length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
+      if (fighter.birthMonth === parts.month && fighter.birthWeek === parts.weekOfMonth) { fighter.age += 1; }
+      rating = U.statAverage(fighter.stats);
+      if (fighter.trackId === "amateur" && fighter.age > 30) {
+        if (rating >= 90) { tryMoveFighter(state, fighter, "pro", "перерос любители и ушёл в профи"); }
+        else { tryMoveFighter(state, fighter, "street", "перерос любители и ушёл на улицу"); }
+        continue;
+      }
+      chance = fighter.age >= 40 ? 7 : (fighter.age >= 36 ? 3 : (fighter.age >= 32 ? 1 : 0));
+      if (chance && U.randomInt(1, 1000) <= chance) { retireFighter(state, fighter, "возраст"); }
+    }
+    for (i = 0; i < Data.countries.length; i += 1) { createYoungFighter(state, Data.countries[i].id, "amateur", created++); createYoungFighter(state, Data.countries[i].id, "street", created++); }
+    for (i = 0; i < Data.weightClasses.length; i += 1) { createYoungFighter(state, Data.countries[i % Data.countries.length].id, "pro", created++).weightClassId = Data.weightClasses[i].id; }
+    if (window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
+  }
+
+
   function advanceWeek(state, action) {
     var npcReport;
     state.week += 1;
@@ -357,10 +396,12 @@
       window.FS.Clubs.ensureClubs(state);
       
     }
+    simulateRetirementsAndNewFighters(state);
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
     simulateTransitions(state);
     if (window.FS.Clubs && window.FS.Clubs.maybeMoveNpcClubs) { window.FS.Clubs.maybeMoveNpcClubs(state); }
+    if (window.FS.Clubs && window.FS.Clubs.simulateCoachLife) { window.FS.Clubs.simulateCoachLife(state); }
     buildNationalTeams(state);
     if (window.FS.Titles) {
       window.FS.Titles.updateTitles(state);

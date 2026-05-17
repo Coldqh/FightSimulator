@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "tournament-mobile-club-rework-1.4.2",
+    appVersion: "world-life-club-hotfix-1.4.3",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

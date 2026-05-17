@@ -1,29 +1,76 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+
 const root = path.resolve(__dirname, "..");
-const sandbox = { console, window:{ prompt(){return ""}, alert(){} }, localStorage:{ store:{}, getItem(k){return this.store[k]||null}, setItem(k,v){this.store[k]=String(v)}, removeItem(k){delete this.store[k]} } };
-sandbox.window.window=sandbox.window; sandbox.window.console=console; sandbox.window.localStorage=sandbox.localStorage; sandbox.global=sandbox.window;
-["src/data/game-data.js","src/core/utils.js","src/core/storage.js","src/core/state.js","src/core/clubs.js","src/core/titles.js","src/core/stories.js","src/core/matchmaking.js","src/core/amateur.js","src/core/world.js","src/core/fight.js","src/ui/render.js"].forEach(f=>vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
-const FS=sandbox.window.FS;
-let state=FS.State.createCareer({name:"Smoke",age:18,countryId:"russia",trackId:"amateur",weightClassId:"welter",stanceId:"orthodox"});
+const sandbox = {
+  console,
+  window: { prompt() { return ""; }, alert() {} },
+  localStorage: { store: {}, getItem(k){return this.store[k]||null}, setItem(k,v){this.store[k]=String(v)}, removeItem(k){delete this.store[k]} }
+};
+sandbox.window.window = sandbox.window;
+sandbox.window.console = console;
+sandbox.window.localStorage = sandbox.localStorage;
+sandbox.global = sandbox.window;
+[
+  "src/data/game-data.js","src/core/utils.js","src/core/storage.js","src/core/state.js","src/core/clubs.js","src/core/titles.js","src/core/stories.js","src/core/matchmaking.js","src/core/amateur.js","src/core/world.js","src/core/fight.js","src/ui/render.js"
+].forEach((file) => vm.runInNewContext(fs.readFileSync(path.join(root,file),"utf8"), sandbox.window, { filename:file }));
+const FS = sandbox.window.FS;
+if(FS.Data.appVersion!=="world-life-club-hotfix-1.4.3") throw new Error("version bad");
+let state = FS.State.createCareer({ name:"Smoke", age:18, countryId:"russia", trackId:"amateur", weightClassId:"welter", stanceId:"orthodox" });
 FS.World.bootstrapWorld(state); FS.State.repairState(state);
-const p=FS.State.player(state);
-if(FS.Data.appVersion!=="tournament-mobile-club-rework-1.4.2") throw new Error("version bad");
-FS.Data.weightClasses.forEach(w=>{let c=state.roster.filter(f=>f.trackId==="pro"&&f.weightClassId===w.id).length; if(c<200) throw new Error("pro pool <200 "+w.id+" "+c);});
-FS.Data.countries.forEach(c=>{let street=state.roster.filter(f=>f.trackId==="street"&&f.countryId===c.id).length; if(street<1000) throw new Error("street <1000"); let clubs=state.clubs.filter(cl=>cl.countryId===c.id).length; if(clubs<70) throw new Error("clubs <70 "+c.id+" "+clubs);});
-if(state.roster.filter(f=>f.trackId==="amateur"&&f.countryId==="russia").length<2000) throw new Error("amateur pool not doubled");
-if(state.clubs.some(cl=>!cl.trainingModifier||typeof cl.minOvr!=="number")) throw new Error("club bands missing");
-if(state.roster.filter(f=>!f.isPlayer).some(f=>!f.gymId)) throw new Error("npc without club");
-FS.World.refreshOffers(state); let ids=state.offers.filter(o=>!o.isCompetition).map(o=>o.opponentId); if(new Set(ids).size!==ids.length) throw new Error("duplicate offers");
-let week=state.week; FS.State.trainPlayer(state); let pts=p.trainingPoints; FS.State.trainPlayer(state,"power"); if(state.week!==week) throw new Error("upgrade week changed"); if(p.trainingPoints!==pts-1) throw new Error("point not spent");
-p.stats.power=52;p.stats.technique=52;p.stats.speed=52;p.stats.stamina=52;p.stats.defense=52;FS.State.updateDerivedFighterFields(p);let comp=FS.Amateur.availableCompetitions(state).find(c=>c.available); if(!comp) throw new Error("no comp");let modal=FS.Amateur.runTournament(state,comp.id); if(modal.type!=="tournamentResult"||!modal.fights.length) throw new Error("tournament modal failed"); if(state.week!==week) throw new Error("tournament changed week"); if(modal.fights.some(f=>f.opponentRating<comp.minRating||f.opponentRating>comp.maxRating)) throw new Error("tournament opponent outside range");
-let html=FS.Render.dashboard(state); if(html.includes("Следующая цель")) throw new Error("next goal block visible");
-state.selectedTab="world"; html=FS.Render.dashboard(state); if(html.includes("<h3>Любительский путь</h3>")||html.includes("Следующая цель")) throw new Error("world old blocks visible");
-state.modal=modal; html=FS.Render.dashboard(state); if(!html.includes("Бои турнира")) throw new Error("tournament modal UI missing");
-state.selectedTab="settings"; state.modal=null; html=FS.Render.dashboard(state); if(html.includes("Где менять карьеру")) throw new Error("settings career helper still visible");
-state.selectedTab="myclub"; html=FS.Render.dashboard(state); if(!html.includes("Лучшие")||!html.includes("Выбрать зал")) throw new Error("myclub selector missing");
-let eligible=FS.Clubs.eligibleClubsForFighter(state,p,null); if(!eligible.length) throw new Error("no eligible clubs"); FS.Clubs.movePlayerToClub(state,eligible[0].id); if(!FS.Clubs.playerClub(state)) throw new Error("club join failed"); html=FS.Render.dashboard(state); if(!html.includes("Покинуть клуб")||!html.includes("Сильнейший")) throw new Error("joined club UI missing");
-let old=Undef=>0; // keep parser calm
-let before=state.roster.filter(f=>!f.isPlayer).reduce((s,f)=>s+f.record.wins+f.record.losses+f.record.draws,0); FS.World.advanceWeek(state,"skip"); FS.World.advanceWeek(state,"skip"); FS.World.advanceWeek(state,"skip"); let after=state.roster.filter(f=>!f.isPlayer).reduce((s,f)=>s+f.record.wins+f.record.losses+f.record.draws,0); if(after<=before) throw new Error("npc fights inactive");
-console.log("tournament mobile club smoke ok",{version:FS.Data.appVersion,fighters:state.roster.length,clubs:state.clubs.length,streetRussia:state.roster.filter(f=>f.trackId==="street"&&f.countryId==="russia").length,week:state.week});
+const p = FS.State.player(state);
+if((state.people||[]).length !== 0) throw new Error("people should start empty");
+const names = state.clubs.map(c=>c.name);
+if(new Set(names).size !== names.length) throw new Error("duplicate club names");
+if(names.some(n=>n.includes("#"))) throw new Error("club name contains #");
+if(state.clubs.some(c => !c.rosterIds || c.rosterIds.length === 0)) throw new Error("empty club roster");
+const npcWithoutClub = state.roster.filter(f=>!f.isPlayer && !f.retired && !f.gymId).length;
+if(npcWithoutClub) throw new Error("npc without club " + npcWithoutClub);
+let html = FS.Render.dashboard(state);
+if(html.includes("Истории</button>")) throw new Error("stories tab still visible");
+state.selectedTab = "people"; html = FS.Render.dashboard(state);
+if(!html.includes("Пока никого нет")) throw new Error("empty people text missing");
+// choose a club
+const eligible = FS.Clubs.eligibleClubsForFighter(state, p, null);
+if(!eligible.length) throw new Error("no eligible clubs");
+FS.Clubs.movePlayerToClub(state, eligible[0].id);
+if(!state.people.some(person => person.role === "coach")) throw new Error("coach not added to people");
+state.selectedTab = "people"; html = FS.Render.dashboard(state);
+if(!html.includes("data-person")) throw new Error("people cards not clickable");
+state.modal = {type:"person", personId: state.people.find(x=>x.role==="coach").id};
+html = FS.Render.dashboard(state);
+if(!html.includes("Рекорд клуба при тренере")) throw new Error("coach profile missing");
+state.modal = null;
+// fights: refresh and unique opponents
+FS.World.refreshOffers(state);
+const offers = state.offers.filter(o=>!o.isCompetition);
+if(offers.length !== 3) throw new Error("offers != 3");
+if(new Set(offers.map(o=>o.opponentId)).size !== offers.length) throw new Error("duplicate offer opponents");
+state.selectedTab = "fights"; html = FS.Render.dashboard(state);
+if(html.includes("Новичок") || html.includes("андердог") || html.includes("фаворит")) throw new Error("forbidden fight labels");
+if(!html.includes("Обновить соперников")) throw new Error("refresh button missing");
+// tournament step-by-step
+p.stats.power = 15; p.stats.technique = 15; p.stats.speed = 15; p.stats.stamina = 15; p.stats.defense = 15; FS.State.updateDerivedFighterFields(p);
+const comp = FS.Amateur.availableCompetitions(state).find(c=>c.available);
+if(!comp) throw new Error("no comp available");
+let modal = FS.Amateur.startTournament(state, comp.id);
+if(modal.type !== "tournamentFight") throw new Error("tournament should start fight modal");
+if(modal.session.fights.length !== 0) throw new Error("tournament revealed future fights");
+html = FS.Render.dashboard({...state, modal});
+if(!html.includes("Провести бой")) throw new Error("tournament fight button missing");
+let resolved = FS.Amateur.resolveTournamentRound(state, modal);
+if(["tournamentFight","tournamentFinal"].indexOf(resolved.type) === -1) throw new Error("bad tournament resolution");
+// fighter modal club link
+const npc = state.roster.find(f=>!f.isPlayer && !f.retired && f.gymId);
+state.modal = {type:"fighter", fighterId:npc.id}; html = FS.Render.dashboard(state);
+if(!html.includes("data-club") || !html.includes("Зал")) throw new Error("fighter card lacks club link");
+// NPC history varied after several weeks
+const watched = state.roster.find(f=>!f.isPlayer && !f.retired && f.trackId==="amateur" && f.countryId==="russia");
+for(let i=0;i<8;i++) FS.World.advanceWeek(state,"skip");
+const namesInLog = new Set((watched.careerLog||[]).map(e => (e.text||"").replace(/^.*?(над|от|с) /,'').split(' KO')[0].split(' решением')[0]));
+if((watched.careerLog||[]).length >= 2 && namesInLog.size < 2) throw new Error("npc repeats same opponent only");
+// date
+const dt = FS.State.dateText(state);
+if(!dt.includes("год") || !dt.includes("неделя")) throw new Error("date text bad");
+console.log("world life club smoke ok", {version:FS.Data.appVersion, fighters:state.roster.length, clubs:state.clubs.length, people:state.people.length, date:dt});

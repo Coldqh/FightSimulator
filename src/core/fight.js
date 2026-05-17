@@ -187,6 +187,15 @@
 
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
+    p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
+    opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
+    p.recentOpponentIds.unshift(opponent.id); opponent.recentOpponentIds.unshift(p.id);
+    if (p.recentOpponentIds.length > 8) { p.recentOpponentIds.length = 8; }
+    if (opponent.recentOpponentIds.length > 8) { opponent.recentOpponentIds.length = 8; }
+    if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
+      if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }
+      else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
+    }
   }
 
   function resolvePlayerFight(state, offerId) {

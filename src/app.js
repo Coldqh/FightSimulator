@@ -139,8 +139,20 @@
       saveAndRender();
     } else if (button.dataset.amateurCompetition) {
       if (window.FS.Amateur && window.FS.Amateur.runTournament) {
-        state.modal = window.FS.Amateur.runTournament(state, button.dataset.amateurCompetition);
+        state.modal = window.FS.Amateur.startTournament(state, button.dataset.amateurCompetition);
       }
+      saveAndRender();
+    } else if (button.dataset.tournamentFight) {
+      if (window.FS.Amateur && window.FS.Amateur.resolveTournamentRound) {
+        state.modal = window.FS.Amateur.resolveTournamentRound(state, state.modal);
+      }
+      saveAndRender();
+    } else if (button.dataset.action === "refresh-offers") {
+      World.refreshOffers(state);
+      state.feed = "Соперники обновлены.";
+      saveAndRender();
+    } else if (button.dataset.person) {
+      state.modal = { type: "person", personId: button.dataset.person };
       saveAndRender();
     } else if (button.dataset.previewFight) {
       preview = Fight.buildFightPreview(state, button.dataset.previewFight);
