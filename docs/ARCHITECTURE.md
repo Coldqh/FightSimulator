@@ -1,16 +1,22 @@
-# Fight Simulator Architecture — 1.6.2
+# Fight Simulator Architecture — 1.8.0
 
-## Changed systems
+## Runtime
 
-- `src/data/game-data.js`: economy configuration.
-- `src/core/state.js`: money, fatigue, equipment, monthly expenses, medical services.
-- `src/core/world.js`: monthly expense tick and weekly fatigue recovery.
-- `src/core/fight.js`: fight income and fight fatigue.
-- `src/core/amateur.js`: tournament entry fees and tournament income.
-- `src/ui/render.js`: Economy tab and fatigue display.
-- `src/app.js`: economy actions and deep repair.
-- `src/core/storage.js`: save compatibility fields.
+Static browser app with modular files under `src/`. No build step.
 
-## Patch discipline
+## Fight engine rule
 
-Future patches should remain delta-only: include only files that changed.
+`src/core/fight.js` owns the fight engine. The 1.8.0 engine is deliberately simple:
+
+- fighter A acts;
+- fighter B answers;
+- hit chance comes from technique and speed against defense and speed;
+- damage comes from power and technique against defense and stamina;
+- HP loss can stop the fight;
+- if no stoppage happens, round score decides the result.
+
+No tactical plans, no aggression model, no tempo model, no clinch model.
+
+## Tournament use
+
+`src/core/amateur.js` calls `Fight.simulateRounds()` for tournament fights, so normal fights and tournament fights use the same engine.

@@ -452,11 +452,9 @@
     var opponent = U.getFighterById(state, session.opponentId);
     var roundData;
     var chance;
-    var roll;
     var result;
     var method;
     var scoreLine;
-    var koChance;
     var isFinal;
     var isSemi;
     var continueMode = "final";
@@ -465,20 +463,22 @@
 
     if (!opponent) { return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Соперник исчез из турнира.", fights: session.fights || [] }; }
 
-    chance = chanceFor(p, opponent);
-    roll = U.randomInt(1, 100);
+    chance = window.FS.Fight && window.FS.Fight.estimateWinChance ? window.FS.Fight.estimateWinChance(p, opponent) : chanceFor(p, opponent);
     roundData = window.FS.Fight.simulateRounds(p, opponent, 3);
-    koChance = U.clamp(9 + Math.round((p.stats.power - opponent.stats.defense) * 0.42), 4, 34);
 
-    if (roll <= chance || roundData.playerPoints > roundData.opponentPoints) {
+    if (roundData.stoppage) {
+      result = roundData.stoppage.winner === "player" ? "Победа" : "Поражение";
+      method = "KO/TKO";
+      scoreLine = "остановка боя, раунд " + roundData.stoppage.round;
+    } else if (roundData.playerPoints >= roundData.opponentPoints) {
       result = "Победа";
-      method = U.randomInt(1, 100) <= koChance ? "KO/TKO" : "решение судей";
+      method = "решение судей";
+      scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
     } else {
       result = "Поражение";
-      method = U.randomInt(1, 100) <= 18 ? "KO/TKO" : "решение судей";
+      method = "решение судей";
+      scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
     }
-
-    scoreLine = method === "KO/TKO" ? "остановка боя" : roundData.playerPoints + ":" + roundData.opponentPoints;
     applyPlayerTournamentResult(state, p, opponent, result, method);
 
     session.fights.push({
@@ -536,7 +536,7 @@
       opponentName: opponent.name,
       opponentRating: U.statAverage(opponent.stats),
       playerRating: U.statAverage(p.stats),
-      statsLine: "Точные удары: " + roundData.playerLanded + ":" + roundData.opponentLanded + ". Раунды: " + roundData.playerRounds + ":" + roundData.opponentRounds + ".",
+      statsLine: "Урон: " + roundData.playerDamage + ":" + roundData.opponentDamage + ". Попадания: " + roundData.playerLanded + ":" + roundData.opponentLanded + ". HP: " + roundData.playerHpLeft + "/" + roundData.playerMaxHp + " — " + roundData.opponentHpLeft + "/" + roundData.opponentMaxHp + ".",
       roundLog: roundData.log,
       knockdown: roundData.knockdown,
       continueMode: continueMode,

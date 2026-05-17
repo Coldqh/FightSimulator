@@ -49,7 +49,7 @@ let state = FS.State.createCareer({ name: "Smoke", age: 18, countryId: "russia",
 FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
-if (FS.Data.appVersion !== "economy-expenses-pack-1.6.2") throw new Error("bad version");
+if (FS.Data.appVersion !== "turn-based-fight-1.8.0") throw new Error("bad version");
 if (!FS.Data.economy || !FS.Data.economy.equipment || FS.Data.economy.equipment.length < 3) throw new Error("economy data missing");
 
 const p = FS.State.player(state);
@@ -98,6 +98,11 @@ const offer = state.offers.find(o => !o.isCompetition);
 if (!offer) throw new Error("no fight offer");
 const preview = FS.Fight.buildFightPreview(state, offer.id);
 if (!preview || typeof preview.purse !== "number") throw new Error("fight preview purse broken");
+
+const sim = FS.Fight.simulateRounds(p, FS.Utils.getFighterById(state, offer.opponentId), 3);
+if (!sim.log.some(line => line.includes("ход")) || !sim.log.some(line => line.includes("Урон"))) throw new Error("turn-based fight log missing");
+if (typeof sim.playerDamage !== "number" || typeof sim.opponentDamage !== "number") throw new Error("turn-based damage missing");
+
 const fightMoney = p.money;
 FS.Fight.resolvePlayerFight(state, offer.id);
 if (p.money <= fightMoney) throw new Error("fight income missing");
@@ -106,11 +111,12 @@ if (p.fatigue <= 0) throw new Error("fight fatigue missing");
 // Export/import is intentionally not part of the fast smoke test because the live world has ~20k fighters.
 // Manual save/export can still be checked from Settings.
 
-console.log("economy expenses smoke ok", {
+console.log("turn based fight smoke ok", {
   version: FS.Data.appVersion,
   money: p.money,
   fatigue: p.fatigue,
   monthlyExpense: expenses.total,
   equipment: Object.keys(p.equipment).length,
-  offers: state.offers.length
+  offers: state.offers.length,
+  lastFightLog: state.modal.roundLog.slice(0,2)
 });

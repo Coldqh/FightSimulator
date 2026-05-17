@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "economy-expenses-pack-1.6.2",
+    appVersion: "turn-based-fight-1.8.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

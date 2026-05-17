@@ -1,20 +1,12 @@
-# Roadmap after 1.6.2
+# Roadmap after 1.8.0
 
-## 1.7.0 Fatigue Core Expansion
+## Current rule
 
-- More detailed fatigue sources.
-- Training plans.
-- Recovery weeks.
-- Form / peak condition.
+The combat system stays turn-by-turn and stat-driven. Do not add tactical noise.
 
-## 1.8.0 Fight Engine Core
+## Next useful work
 
-- New round-by-round boxing engine.
-- Tempo, distance, damage and scorecards.
-- Styles and game plans.
-
-## 1.9.0 Professional Contracts
-
-- Contracts scheduled weeks ahead.
-- Promoters and managers.
-- Mandatory challengers.
+1. Tune damage and HP numbers.
+2. Improve visual presentation of the turn log.
+3. Add better judges only if it does not create a new tactical layer.
+4. Keep economy/fatigue separate from fight controls.

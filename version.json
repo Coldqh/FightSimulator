@@ -1,5 +1,5 @@
 {
-  "version": "economy-expenses-pack-1.6.2",
-  "mode": "economy-expenses-pack",
-  "includedPatches": ["1.5.1", "1.5.2", "1.6.0", "1.6.1", "1.6.2"]
+  "version": "turn-based-fight-1.8.0",
+  "mode": "turn-based-fight",
+  "base": "economy-expenses-pack-1.6.2"
 }

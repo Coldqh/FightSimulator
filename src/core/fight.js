@@ -35,20 +35,8 @@
     return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.55) - fatiguePenalty, 8, 90);
   }
 
-  function fightExpectation(winChance) {
-    if (winChance >= 70) {
-      return "Ты фаворит";
-    }
-    if (winChance >= 55) {
-      return "Небольшое преимущество";
-    }
-    if (winChance >= 45) {
-      return "Ровный бой";
-    }
-    if (winChance >= 30) {
-      return "Ты андердог";
-    }
-    return "Очень опасный бой";
+  function fightExpectation() {
+    return "";
   }
 
   function buildFightPreview(state, offerId) {
@@ -99,56 +87,124 @@
     return winner === "player" ? { player: 10, opponent: 9 } : { player: 9, opponent: 10 };
   }
 
+  function maxHp(fighter) {
+    return Math.max(50, Math.round(65 + fighter.stats.stamina * 0.55 + fighter.stats.defense * 0.22));
+  }
+
+  function hitChance(attacker, defender) {
+    return U.clamp(42 + Math.round(attacker.stats.technique * 0.34 + attacker.stats.speed * 0.24 - defender.stats.defense * 0.30 - defender.stats.speed * 0.12), 12, 88);
+  }
+
+  function punchDamage(attacker, defender) {
+    var raw = attacker.stats.power * 0.28 + attacker.stats.technique * 0.10 + U.randomInt(1, 7);
+    var block = defender.stats.defense * 0.13 + defender.stats.stamina * 0.03;
+    var damage = Math.round(raw - block);
+    if (U.randomInt(1, 100) <= U.clamp(4 + Math.round((attacker.stats.power - defender.stats.defense) / 12), 2, 18)) {
+      damage += Math.max(2, Math.round(attacker.stats.power * 0.08));
+    }
+    return U.clamp(damage, 1, 34);
+  }
+
+  function fighterLabel(fighter, fallback) {
+    return fighter && fighter.isPlayer ? "Ты" : (fighter && fighter.name ? fighter.name : fallback);
+  }
+
+  function simulateTurn(attacker, defender, attackerState, defenderState, labels) {
+    var chance = hitChance(attacker, defender);
+    var roll = U.randomInt(1, 100);
+    var damage = 0;
+    var hit = roll <= chance;
+    var line;
+
+    if (hit) {
+      damage = punchDamage(attacker, defender);
+      defenderState.hp = Math.max(0, defenderState.hp - damage);
+      attackerState.landed += 1;
+      attackerState.damage += damage;
+      line = labels.attacker + " попадает. Урон " + damage + ". HP " + labels.defenderGen + ": " + defenderState.hp + "/" + defenderState.maxHp + ".";
+    } else {
+      line = labels.attacker + " промахивается.";
+    }
+
+    return {
+      hit: hit,
+      damage: damage,
+      line: line
+    };
+  }
+
   function simulateRounds(player, opponent, rounds) {
     var log = [];
     var playerRounds = 0;
     var opponentRounds = 0;
     var playerPoints = 0;
     var opponentPoints = 0;
-    var playerEnergy = 100;
-    var opponentEnergy = 100;
-    var playerLanded = 0;
-    var opponentLanded = 0;
-    var i;
-    var pRound;
-    var oRound;
-    var winner;
-    var score;
-    var kdBy = "";
+    var playerState = { hp: maxHp(player), maxHp: maxHp(player), landed: 0, damage: 0 };
+    var opponentState = { hp: maxHp(opponent), maxHp: maxHp(opponent), landed: 0, damage: 0 };
     var knockdown = null;
-    var pLanded;
-    var oLanded;
+    var stoppage = null;
+    var round;
+    var turn;
+    var firstIsPlayer;
+    var playerRoundDamage;
+    var opponentRoundDamage;
+    var result;
+    var score;
+    var exchanges;
 
-    for (i = 1; i <= rounds; i += 1) {
-      pLanded = U.clamp(Math.round((player.stats.technique + player.stats.speed) / 10) + U.randomInt(-3, 5), 1, 28);
-      oLanded = U.clamp(Math.round((opponent.stats.technique + opponent.stats.speed) / 10) + U.randomInt(-3, 5), 1, 28);
-      playerLanded += pLanded;
-      opponentLanded += oLanded;
+    for (round = 1; round <= rounds; round += 1) {
+      playerRoundDamage = 0;
+      opponentRoundDamage = 0;
+      exchanges = 6 + Math.min(4, Math.floor((player.stats.stamina + opponent.stats.stamina) / 80));
 
-      pRound = U.scoreFighter(player) + U.randomInt(-8, 8) + Math.round(playerEnergy / 12) + Math.round(pLanded / 3);
-      oRound = U.scoreFighter(opponent) + U.randomInt(-8, 8) + Math.round(opponentEnergy / 12) + Math.round(oLanded / 3);
+      for (turn = 1; turn <= exchanges; turn += 1) {
+        firstIsPlayer = (round + turn) % 2 === 0;
 
-      playerEnergy = U.clamp(playerEnergy - U.randomInt(5, 11), 0, 100);
-      opponentEnergy = U.clamp(opponentEnergy - U.randomInt(6, 11), 0, 100);
+        if (firstIsPlayer) {
+          result = simulateTurn(player, opponent, playerState, opponentState, { attacker: fighterLabel(player, "Ты"), defenderGen: "соперника" });
+          playerRoundDamage += result.damage;
+          log.push("Раунд " + round + ", ход " + turn + ": " + result.line);
+          if (opponentState.hp <= 0) { stoppage = { winner: "player", round: round, turn: turn }; break; }
 
-      if (!knockdown && U.randomInt(1, 100) <= U.clamp(4 + Math.round((player.stats.power - opponent.stats.defense) / 10), 2, 22)) {
-        kdBy = "player";
-        knockdown = { round: i, by: "player" };
-        pRound += 10;
-      } else if (!knockdown && U.randomInt(1, 100) <= U.clamp(3 + Math.round((opponent.stats.power - player.stats.defense) / 10), 1, 18)) {
-        kdBy = "opponent";
-        knockdown = { round: i, by: "opponent" };
-        oRound += 10;
-      } else {
-        kdBy = "";
+          result = simulateTurn(opponent, player, opponentState, playerState, { attacker: fighterLabel(opponent, "Соперник"), defenderGen: "твой" });
+          opponentRoundDamage += result.damage;
+          log.push("Раунд " + round + ", ответ " + turn + ": " + result.line);
+          if (playerState.hp <= 0) { stoppage = { winner: "opponent", round: round, turn: turn }; break; }
+        } else {
+          result = simulateTurn(opponent, player, opponentState, playerState, { attacker: fighterLabel(opponent, "Соперник"), defenderGen: "твой" });
+          opponentRoundDamage += result.damage;
+          log.push("Раунд " + round + ", ход " + turn + ": " + result.line);
+          if (playerState.hp <= 0) { stoppage = { winner: "opponent", round: round, turn: turn }; break; }
+
+          result = simulateTurn(player, opponent, playerState, opponentState, { attacker: fighterLabel(player, "Ты"), defenderGen: "соперника" });
+          playerRoundDamage += result.damage;
+          log.push("Раунд " + round + ", ответ " + turn + ": " + result.line);
+          if (opponentState.hp <= 0) { stoppage = { winner: "player", round: round, turn: turn }; break; }
+        }
       }
 
-      winner = pRound >= oRound ? "player" : "opponent";
-      score = roundScore(winner, !!kdBy);
+      if (playerRoundDamage === opponentRoundDamage) {
+        if (U.scoreFighter(player) >= U.scoreFighter(opponent)) { playerRoundDamage += 1; }
+        else { opponentRoundDamage += 1; }
+      }
+
+      if (playerRoundDamage > opponentRoundDamage) {
+        score = roundScore("player", false);
+        playerRounds += 1;
+      } else {
+        score = roundScore("opponent", false);
+        opponentRounds += 1;
+      }
+
       playerPoints += score.player;
       opponentPoints += score.opponent;
-      if (winner === "player") { playerRounds += 1; } else { opponentRounds += 1; }
-      log.push("Раунд " + i + ": " + (winner === "player" ? "твой раунд" : "раунд соперника") + " " + score.player + ":" + score.opponent + ". Точные удары " + pLanded + ":" + oLanded + (kdBy ? ". Нокдаун." : "."));
+      log.push("Раунд " + round + " итог: урон " + playerRoundDamage + ":" + opponentRoundDamage + ", счёт " + score.player + ":" + score.opponent + ".");
+
+      if (stoppage) {
+        knockdown = { round: round, by: stoppage.winner };
+        log.push("Бой остановлен. Победитель: " + (stoppage.winner === "player" ? "ты" : "соперник") + ".");
+        break;
+      }
     }
 
     return {
@@ -156,10 +212,17 @@
       opponentRounds: opponentRounds,
       playerPoints: playerPoints,
       opponentPoints: opponentPoints,
-      playerLanded: playerLanded,
-      opponentLanded: opponentLanded,
+      playerLanded: playerState.landed,
+      opponentLanded: opponentState.landed,
+      playerDamage: playerState.damage,
+      opponentDamage: opponentState.damage,
+      playerHpLeft: playerState.hp,
+      opponentHpLeft: opponentState.hp,
+      playerMaxHp: playerState.maxHp,
+      opponentMaxHp: opponentState.maxHp,
       log: log,
-      knockdown: knockdown
+      knockdown: knockdown,
+      stoppage: stoppage
     };
   }
 
@@ -206,12 +269,10 @@
     var p = State.player(state);
     var opponent;
     var winChance;
-    var roll;
     var result;
     var method;
     var scoreLine;
     var roundData;
-    var koChance;
 
     if (!offer || !p) {
       return false;
@@ -223,22 +284,25 @@
     }
 
     winChance = estimateWinChance(p, opponent);
-    roll = U.randomInt(1, 100);
     roundData = simulateRounds(p, opponent, offer.rounds);
-    koChance = U.clamp(9 + Math.round((p.stats.power - opponent.stats.defense) * 0.42), 4, 34);
 
-    if (Math.abs(roundData.playerPoints - roundData.opponentPoints) <= 1 && U.randomInt(1, 100) <= 14) {
+    if (roundData.stoppage) {
+      result = roundData.stoppage.winner === "player" ? "Победа" : "Поражение";
+      method = "KO/TKO";
+      scoreLine = "остановка боя, раунд " + roundData.stoppage.round;
+    } else if (roundData.playerPoints === roundData.opponentPoints) {
       result = "Ничья";
       method = "решение судей";
-    } else if (roll <= winChance || roundData.playerPoints > roundData.opponentPoints) {
+      scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
+    } else if (roundData.playerPoints > roundData.opponentPoints) {
       result = "Победа";
-      method = U.randomInt(1, 100) <= koChance ? "KO/TKO" : "решение судей";
+      method = "решение судей";
+      scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
     } else {
       result = "Поражение";
-      method = U.randomInt(1, 100) <= 18 ? "KO/TKO" : "решение судей";
+      method = "решение судей";
+      scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
     }
-
-    scoreLine = method === "KO/TKO" ? "остановка боя" : roundData.playerPoints + ":" + roundData.opponentPoints;
 
     applyFightResult(state, p, opponent, result, method);
 
@@ -282,7 +346,7 @@
       winChance: winChance,
       roundLog: roundData.log,
       knockdown: roundData.knockdown,
-      statsLine: "Точные удары: " + roundData.playerLanded + ":" + roundData.opponentLanded
+      statsLine: "Урон: " + roundData.playerDamage + ":" + roundData.opponentDamage + ". Попадания: " + roundData.playerLanded + ":" + roundData.opponentLanded + ". HP: " + roundData.playerHpLeft + "/" + roundData.playerMaxHp + " — " + roundData.opponentHpLeft + "/" + roundData.opponentMaxHp + "."
     };
 
     if (offer.isCompetition) {
