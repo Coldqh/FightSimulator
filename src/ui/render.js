@@ -244,29 +244,18 @@
     var breakdown = State.monthlyExpenseBreakdown ? State.monthlyExpenseBreakdown(state) : { total: 0, trackCost: 0, food: 0, medical: 0, clubFee: 0, equipment: 0 };
     var eq = State.equipmentSummary ? State.equipmentSummary(state) : { owned: [], trainingBonus: 0, fatigueReduction: 0, upkeep: 0 };
     var equipment = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
-    var medical = Data.economy && Data.economy.medicalServices ? Data.economy.medicalServices : [];
 
     return "<div class=\"grid two\">" +
       "<div class=\"content-card\"><h3>Баланс и расходы</h3>" +
         "<div class=\"split-row\"><span>Баланс</span><strong>$" + (p.money || 0) + "</strong></div>" +
         "<div class=\"split-row\"><span>Усталость</span><strong>" + (p.fatigue || 0) + "/100</strong></div>" +
         "<div class=\"split-row\"><span>Ежемесячно</span><strong>$" + breakdown.total + "</strong></div>" +
-        "<div class=\"muted small\">Жизнь $" + breakdown.trackCost + " · питание $" + breakdown.food + " · медицина $" + breakdown.medical + " · зал $" + breakdown.clubFee + " · экипировка $" + breakdown.equipment + "</div>" +
+        "<div class=\"muted small\">Жизнь $" + breakdown.trackCost + " · питание $" + breakdown.food + " · зал $" + breakdown.clubFee + " · экипировка $" + breakdown.equipment + "</div>" +
       "</div>" +
-      "<div class=\"content-card\"><h3>Экипировка</h3><div class=\"muted small\">Бонус тренировки: +" + Math.round(eq.trainingBonus * 100) + "% · снижение усталости: " + eq.fatigueReduction + " · обслуживание $" + eq.upkeep + "/мес.</div>" +
-        equipment.map(function (item) {
-          var owned = p.equipment && p.equipment[item.id];
-          return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(item.label) + "</strong><div class=\"muted small\">$" + item.cost + " · обслуживание $" + item.upkeep + " · тренировка +" + Math.round((item.trainingBonus || 0) * 100) + "%</div></div>" + (owned ? "<span class=\"pill green\">куплено</span>" : "<button class=\"small-btn primary\" data-buy-equipment=\"" + U.escapeHtml(item.id) + "\">Купить</button>") + "</div>";
-        }).join("") +
-      "</div>" +
-      "<div class=\"content-card\"><h3>Медицина и восстановление</h3>" +
-        medical.map(function (service) {
-          return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(service.label) + "</strong><div class=\"muted small\">$" + service.cost + " · усталость " + service.fatigue + "</div></div><button class=\"small-btn\" data-medical-service=\"" + U.escapeHtml(service.id) + "\">Оплатить</button></div>";
-        }).join("") +
-      "</div>" +
-      "<div class=\"content-card\"><h3>Финансовая лента</h3>" +
-        (p.financeLog || []).slice(0, 10).map(function (entry) { return "<div class=\"split-row\"><span>Неделя " + entry.week + " · " + U.escapeHtml(entry.text) + "</span><strong>" + (entry.amount >= 0 ? "+" : "") + "$" + entry.amount + "</strong></div>"; }).join("") +
-      "</div>" +
+      "<div class=\"content-card\"><h3>Экипировка</h3><div class=\"muted small\">Бонус тренировки: +" + Math.round(eq.trainingBonus * 100) + "% · снижение усталости: " + Math.round(eq.fatigueReduction * 100) + "% · обслуживание $" + eq.upkeep + "/мес</div>" + equipment.map(function (item) {
+        var owned = p.equipment && p.equipment[item.id];
+        return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(item.label) + "</strong><div class=\"muted small\">Цена $" + item.price + " · обслуживание $" + item.upkeep + "</div></div><span>" + (owned ? "<span class=\"pill green\">куплено</span>" : "<button class=\"small-btn\" data-buy-equipment=\"" + U.escapeHtml(item.id) + "\">Купить</button>") + "</span></div>";
+      }).join("") + "</div>" +
     "</div>";
   }
 
@@ -550,9 +539,10 @@
 
 
 
-    function statBar(label, value, max) {
+    function statBar(label, value, max, kind) {
       var pct = max ? Math.max(0, Math.min(100, Math.round(value / max * 100))) : 0;
-      return "<div class=\"fight-meter\"><span>" + U.escapeHtml(label) + "</span><div><i style=\"width:" + pct + "%\"></i></div><strong>" + value + "/" + max + "</strong></div>";
+      var cls = kind === "stamina" ? " stamina-meter" : " hp-meter";
+      return "<div class=\"fight-meter" + cls + "\"><span>" + U.escapeHtml(label) + "</span><div><i style=\"width:" + pct + "%\"></i></div><strong>" + value + "/" + max + "</strong></div>";
     }
 
     function renderRing(modal) {
@@ -580,9 +570,13 @@
       actions.forEach(function (action) { actionMap[action.id] = action; });
 
       function punchButton(id) {
-        var action = actionMap[id] || { id: id, label: id, enabled: true, damage: 0, chance: 0, stamina: 0, reason: "" };
-        return "<button data-fight-action=\"" + U.escapeHtml(id) + "\"" + (action.enabled ? "" : " disabled") + ">" +
-          U.escapeHtml(action.label) + "<small>урон " + action.damage + " · шанс " + action.chance + "% · стам. " + action.stamina + (action.reason ? " · " + U.escapeHtml(action.reason) : "") + "</small></button>";
+        var action = actionMap[id] || { id: id, label: id, enabled: true, damage: 0, chance: 0, stamina: 0 };
+        return "<button class=\"punch-action-btn\" data-fight-action=\"" + U.escapeHtml(id) + "\"" + (action.enabled ? "" : " disabled") + ">" +
+          "<span class=\"punch-damage\">" + action.damage + "</span>" +
+          "<span class=\"punch-chance\">" + action.chance + "%</span>" +
+          "<span class=\"punch-stamina\">" + action.stamina + "</span>" +
+          "<span class=\"punch-title\">" + U.escapeHtml(action.label) + "</span>" +
+        "</button>";
       }
 
       return "<div class=\"fight-controls\">" +
@@ -591,8 +585,8 @@
         punchButton("jabBody") +
         punchButton("hook") +
         punchButton("uppercut") +
-        "<button data-fight-action=\"block\">Блок<small>эффективность падает при повторах</small></button>" +
-        "<button data-fight-action=\"counter\"" + (modal.canCounter ? "" : " disabled") + ">Контратака<small>нельзя два раза подряд</small></button>" +
+        "<button data-fight-action=\"block\">Блок</button>" +
+        "<button data-fight-action=\"counter\"" + (modal.canCounter ? "" : " disabled") + ">Контратака</button>" +
       "</div>";
     }
 
@@ -610,8 +604,12 @@
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость 100/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться, покупать услуги или двигать карьеру. Доступен только отдых.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
     }
 
-    if (modal.type === "activeFight" || modal.type === "fightCount") {
-      return "";
+    if (modal.type === "activeFight") {
+      return "<div class=\"modal-backdrop fight-fullscreen-backdrop\"><div class=\"modal fight-modal fight-fullscreen-modal\"><div class=\"modal-head\"><h2>Бой на ринге</h2><div class=\"muted small\">Раунд " + modal.round + "/" + modal.roundsTotal + " · ход " + modal.turn + " · выйти нельзя до завершения боя</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing(modal) + renderFightControls(modal) + "</div><div class=\"fight-side\"><h3>Ты</h3>" + statBar("HP", modal.player.hp, modal.player.maxHp, "hp") + statBar("Стамина", modal.player.stamina, modal.player.maxStamina, "stamina") + "<h3>" + U.escapeHtml(modal.opponentName) + "</h3>" + statBar("HP", modal.opponent.hp, modal.opponent.maxHp, "hp") + statBar("Стамина", modal.opponent.stamina, modal.opponent.maxStamina, "stamina") + "<div class=\"pills\"><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div></div></div>";
+    }
+
+    if (modal.type === "fightCount") {
+      return "<div class=\"modal-backdrop fight-fullscreen-backdrop\"><div class=\"modal fight-modal fight-fullscreen-modal\"><div class=\"modal-head\"><h2>Нокдаун</h2><div class=\"muted small\">Счёт: " + modal.count + "/10</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing({ ringSize: 5, player: modal.player, opponent: modal.opponent }) + "<div class=\"big-result " + (modal.side === "opponent" ? "win" : "loss") + "\">" + (modal.side === "player" ? "Ты на настиле" : "Соперник на настиле") + "</div></div><div class=\"fight-side\">" + statBar("HP", modal.player.hp, modal.player.maxHp, "hp") + statBar("Стамина", modal.player.stamina, modal.player.maxStamina, "stamina") + statBar("HP соперника", modal.opponent.hp, modal.opponent.maxHp, "hp") + statBar("Стамина соперника", modal.opponent.stamina, modal.opponent.maxStamina, "stamina") + "<div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div><div class=\"modal-actions\"><button class=\"primary\" data-fight-count=\"1\">Продолжить счёт</button></div></div></div>";
     }
 
 
@@ -765,7 +763,6 @@
 
   window.FS.Render = {
     start: renderStartScreen,
-    dashboard: renderDashboard,
-    fightWindow: renderFightWindow
+    dashboard: renderDashboard
   };
 }());

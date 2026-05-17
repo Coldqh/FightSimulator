@@ -176,11 +176,11 @@
       phase: "player",
       player: {
         pos: { x: 2, y: 4 }, hp: maxHp(p), maxHp: maxHp(p), stamina: maxStamina(p), maxStamina: maxStamina(p),
-        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
+        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
       },
       opponent: {
         pos: { x: 2, y: 0 }, hp: maxHp(opponent), maxHp: maxHp(opponent), stamina: maxStamina(opponent), maxStamina: maxStamina(opponent),
-        landed: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
+        landed: 0, thrown: 0, counterLanded: 0, damage: 0, roundDamage: 0, knockdowns: 0, guard: "", points: 0, roundsWon: 0, repeatAction: "", repeatCount: 0, lastAction: ""
       },
       log: ["Бой начался. Ринг 5×5. Выбери движение, удар, блок или контратаку."],
       roundLog: [],
@@ -294,6 +294,7 @@
     }
 
     registerAction(attackerState, punchId);
+    attackerState.thrown = (Number(attackerState.thrown) || 0) + 1;
     spendStamina(attackerState, punch.stamina);
     chance = hitChance(attacker, defender, punch, attackerState, defenderState);
     roll = U.randomInt(1, 100);
@@ -316,6 +317,8 @@
 
     if (!damage && defenderState.guard === "counter" && defenderState.stamina >= 8 && U.randomInt(1, 100) <= Math.round(45 * repeatPenalty(defenderState, "counter"))) {
       spendStamina(defenderState, 8);
+      defenderState.thrown = (Number(defenderState.thrown) || 0) + 1;
+      defenderState.counterLanded = (Number(defenderState.counterLanded) || 0) + 1;
       damage = U.clamp(Math.round((defender.stats.technique * 0.12 + defender.stats.speed * 0.08 + U.randomInt(2, 8)) * repeatPenalty(defenderState, "counter")), 2, 22);
       attackerState.hp = U.clamp(attackerState.hp - damage, 0, attackerState.maxHp);
       defenderState.landed += 1;
@@ -591,7 +594,7 @@
         knockdown: knockdown,
         playerRating: U.statAverage(p.stats),
         opponentRating: U.statAverage(opponent.stats),
-        statsLine: "Урон: " + session.player.damage + ":" + session.opponent.damage + ". Попадания: " + session.player.landed + ":" + session.opponent.landed + ". HP: " + session.player.hp + "/" + session.player.maxHp + " — " + session.opponent.hp + "/" + session.opponent.maxHp + ".",
+        statsLine: "Урон: " + session.player.damage + ":" + session.opponent.damage + ". Удары: " + (session.player.landed || 0) + "/" + (session.player.thrown || 0) + " — " + (session.opponent.landed || 0) + "/" + (session.opponent.thrown || 0) + ". Контратаки: " + (session.player.counterLanded || 0) + ":" + (session.opponent.counterLanded || 0) + ". HP: " + session.player.hp + "/" + session.player.maxHp + " — " + session.opponent.hp + "/" + session.opponent.maxHp + ".",
         roundLog: session.roundLog.concat(session.log.slice(-20)),
         winChance: session.winChance
       });

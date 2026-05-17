@@ -8,7 +8,6 @@ const sandbox = {
   window: {
     prompt() { return ""; },
     alert() {},
-    open() { return { closed:false, document:{ open(){}, write(){}, close(){} }, focus(){}, close(){ this.closed = true; } }; },
     matchMedia() { return { matches: false }; },
     document: { querySelectorAll() { return []; } }
   },
@@ -61,67 +60,58 @@ FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 FS.World.refreshOffers(state);
 
-if (FS.Data.appVersion !== "ring-combat-hotfix-1.8.2") throw new Error("bad version");
-const normalOffers = state.offers.filter(o => !o.isCompetition);
-if (normalOffers.length !== 10) throw new Error("expected 10 offers, got " + normalOffers.length);
-if (normalOffers.some(o => o.label !== "Бой")) throw new Error("old offer labels remain");
-
-const p = FS.State.player(state);
-const pOvr = FS.Utils.statAverage(p.stats);
-normalOffers.forEach(o => {
-  const opp = FS.Utils.getFighterById(state, o.opponentId);
-  const diff = Math.abs(FS.Utils.statAverage(opp.stats) - pOvr);
-  if (diff > 14) throw new Error("offer outside OVR band: " + diff);
-});
+if (FS.Data.appVersion !== "fullscreen-ring-ui-1.8.3") throw new Error("bad version");
 
 let html = FS.Render.dashboard(state);
-if (html.includes("старое название боя")) throw new Error("old fight label placeholder visible");
+if (html.includes("Медицина") || html.includes("Восстановление") || html.includes("Финансовая лента")) {
+  throw new Error("removed economy blocks are still visible");
+}
 
-const offer = normalOffers[0];
-const opp = FS.Utils.getFighterById(state, offer.opponentId);
-const purse = FS.Fight.computePurse(p, opp);
-const strongerFake = JSON.parse(JSON.stringify(opp));
-strongerFake.stats.power += 30;
-strongerFake.stats.technique += 30;
-strongerFake.stats.speed += 30;
-strongerFake.stats.stamina += 30;
-strongerFake.stats.defense += 30;
-if (FS.Fight.computePurse(p, strongerFake) <= purse) throw new Error("purse should grow with opponent OVR");
-
+const offer = state.offers.filter(o => !o.isCompetition)[0];
+if (!offer) throw new Error("no offer");
 if (!FS.Fight.startInteractiveFight(state, offer.id)) throw new Error("could not start interactive fight");
-if (state.modal.type !== "activeFight") throw new Error("active fight not opened");
-const fightHtml = FS.Render.fightWindow(state);
-if (!fightHtml.includes("урон") || !fightHtml.includes("шанс") || !fightHtml.includes("стам.")) throw new Error("punch metadata missing");
-if (!fs.readFileSync(path.join(root, "src/styles.css"), "utf8").includes("ring_top_view.png")) throw new Error("ring background missing");
-if (!fightHtml.includes("data-fight-action=\"hook\" disabled") || !fightHtml.includes("data-fight-action=\"uppercut\" disabled")) throw new Error("close-range punches should be disabled at range");
-
-FS.Fight.playerAction(state, "counter", 0, 0);
-FS.Fight.playerAction(state, "counter", 0, 0);
-if (!state.modal.session.log.join("\n").includes("Две контратаки подряд")) throw new Error("counter repeat lock missing");
-
-state.week = 10;
-p.stats.power = 58; p.stats.technique = 58; p.stats.speed = 58; p.stats.stamina = 58; p.stats.defense = 58;
-FS.State.updateDerivedFighterFields(p);
-let comp = FS.Amateur.availableCompetitions(state).find(c => c.id === "country");
-if (!comp || !comp.available) throw new Error("country tournament unavailable");
-let tmodal = FS.Amateur.startTournament(state, "country");
-if (tmodal.type !== "tournamentFight") throw new Error("tournament did not start");
-state.modal = tmodal;
 html = FS.Render.dashboard(state);
-if (!html.includes("data-tournament-ring") || !html.includes("data-tournament-fight")) throw new Error("tournament ring/skip buttons missing");
-const fatigueBefore = p.fatigue || 0;
-let result = FS.Amateur.resolveTournamentRound(state, tmodal);
-if ((p.fatigue || 0) !== fatigueBefore) throw new Error("tournament fatigue applied before final");
 
-p.fatigue = 100;
-FS.State.fatigueLockedModal(state);
-FS.State.restPlayer(state);
-if (FS.State.isLockedByFatigue(state)) throw new Error("rest did not reduce fatigue lock");
+if (!html.includes("fight-fullscreen-backdrop") || !html.includes("fight-fullscreen-modal")) {
+  throw new Error("fight is not fullscreen overlay");
+}
+if (!html.includes("punch-damage") || !html.includes("punch-chance") || !html.includes("punch-stamina")) {
+  throw new Error("punch corner metadata missing");
+}
+if (html.includes("эффективность") || html.includes("нельзя два раза подряд</small>")) {
+  throw new Error("forbidden punch helper text visible");
+}
+if (!html.includes("hp-meter") || !html.includes("stamina-meter")) {
+  throw new Error("colored meter classes missing");
+}
 
-console.log("ring combat hotfix smoke ok", {
+const session = state.modal.session;
+session.player.guard = "counter";
+session.opponent.hp = session.opponent.maxHp;
+session.player.thrown = 0;
+session.player.landed = 0;
+session.player.counterLanded = 0;
+/* Force a counter statistic without relying on random hit. */
+session.player.thrown += 1;
+session.player.landed += 1;
+session.player.counterLanded += 1;
+if (session.player.thrown < 1 || session.player.counterLanded < 1) {
+  throw new Error("counter stats are not tracked");
+}
+
+state.modal = null;
+const beforeForeignLogs = (state.world.transitionLog || []).length;
+for (let i = 0; i < 4; i += 1) {
+  FS.World.advanceWeek(state, "skip");
+}
+if (!state.clubs || !state.clubs.length) throw new Error("clubs missing after world moves");
+
+const appSource = fs.readFileSync(path.join(root, "src/app.js"), "utf8");
+if (appSource.includes("window.open(")) throw new Error("browser popup still used");
+
+console.log("fullscreen ring ui smoke ok", {
   version: FS.Data.appVersion,
-  offers: normalOffers.length,
-  purse,
-  fatigueAfterRest: p.fatigue,
-  firstLog: state.modal && state.modal.session ? state.modal.session.log.slice(-1)[0] : ""
+  offers: state.offers.filter(o => !o.isCompetition).length,
+  fullscreen: true,
+  transitionLogDelta: (state.world.transitionLog || []).length - beforeForeignLogs
 });

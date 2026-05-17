@@ -921,3 +921,95 @@ button, input, select { max-width: 100%; }
     margin-top: 6px;
   }
 }
+
+
+/* 1.8.3 fullscreen ring UI */
+.fight-fullscreen-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  align-items: stretch;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.92);
+}
+
+.fight-fullscreen-modal {
+  width: min(1220px, calc(100vw - 20px));
+  max-width: min(1220px, calc(100vw - 20px));
+  height: calc(100vh - 20px);
+  max-height: calc(100vh - 20px);
+  margin: 0 auto;
+  overflow-y: auto;
+  border-radius: 16px;
+}
+
+.hp-meter i {
+  background: var(--red) !important;
+}
+
+.stamina-meter i {
+  background: var(--blue) !important;
+}
+
+.punch-action-btn {
+  position: relative;
+  min-height: 64px;
+  padding: 17px 10px 14px;
+  overflow: hidden;
+}
+
+.punch-action-btn .punch-title {
+  display: block;
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.punch-damage,
+.punch-chance,
+.punch-stamina {
+  position: absolute;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.punch-damage {
+  top: 6px;
+  left: 7px;
+  color: var(--red);
+}
+
+.punch-chance {
+  top: 6px;
+  right: 7px;
+  color: var(--gold);
+}
+
+.punch-stamina {
+  bottom: 6px;
+  left: 7px;
+  color: var(--blue);
+}
+
+.fight-controls button small {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .fight-fullscreen-backdrop {
+    padding: 4px;
+  }
+
+  .fight-fullscreen-modal {
+    width: calc(100vw - 8px);
+    height: calc(100vh - 8px);
+    max-height: calc(100vh - 8px);
+    border-radius: 10px;
+  }
+
+  .punch-action-btn {
+    min-height: 58px;
+  }
+}

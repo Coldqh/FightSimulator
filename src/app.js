@@ -89,34 +89,15 @@
   var fightWindow = null;
 
   function fightModalOpenInWindow() {
-    return state && state.modal && (state.modal.type === "activeFight" || state.modal.type === "fightCount" || state.modal.type === "fightResult" || state.modal.type === "tournamentResult" || state.modal.type === "tournamentFinal");
+    return false;
   }
 
   function openFightWindow() {
-    if (!fightModalOpenInWindow() || !Render.fightWindow) {
-      return;
-    }
-
-    if (!fightWindow || fightWindow.closed) {
-      fightWindow = window.open("", "FightSimulatorRing", "width=1180,height=880");
-    }
-
-    if (!fightWindow) {
-      state.feed = "Браузер заблокировал новое окно боя. Разреши всплывающие окна для этой страницы.";
-      return;
-    }
-
-    fightWindow.document.open();
-    fightWindow.document.write(Render.fightWindow(state));
-    fightWindow.document.close();
-    fightWindow.focus();
+    return;
   }
 
   function closeFightWindow() {
-    if (fightWindow && !fightWindow.closed) {
-      fightWindow.close();
-    }
-    fightWindow = null;
+    return;
   }
 
   window.FSApp = {
@@ -144,15 +125,12 @@
         }
       } else if (data.closeFightWindow) {
         state.modal = null;
-        closeFightWindow();
       }
 
       Storage.save(state);
       render();
       if (fightModalOpenInWindow()) {
-        openFightWindow();
       } else {
-        closeFightWindow();
       }
     }
   };
@@ -177,7 +155,6 @@
     app.innerHTML = Render.dashboard(state);
     applyMobileCollapse();
     if (fightModalOpenInWindow()) {
-      openFightWindow();
     }
   }
 
@@ -330,7 +307,6 @@
         Fight.startTournamentInteractiveFight(state, state.modal);
       }
       saveAndRender();
-      openFightWindow();
     } else if (button.dataset.tournamentContinue) {
       if (window.FS.Amateur && window.FS.Amateur.continueTournament) {
         state.modal = window.FS.Amateur.continueTournament(state, state.modal);
@@ -353,7 +329,6 @@
     } else if (button.dataset.acceptFight) {
       Fight.startInteractiveFight(state, button.dataset.acceptFight);
       saveAndRender();
-      openFightWindow();
     } else if (button.dataset.skipFight) {
       Fight.resolveRandomFight(state, button.dataset.skipFight);
       saveAndRender();

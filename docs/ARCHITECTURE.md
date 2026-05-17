@@ -1,17 +1,12 @@
-# Architecture 1.8.2
+# Architecture 1.8.3
 
-`fight.js` owns:
-- Interactive ring session
-- Separate fight window state
-- Punch metadata
-- Action repeat penalty
-- Random auto resolve
+`render.js`
+- Renders active fights as a full-screen modal overlay.
+- Economy UI excludes medicine/restoration and finance feed blocks.
 
-`matchmaking.js` owns:
-- 10 compact fight offers
-- OVR ±10 opponent selection
+`fight.js`
+- Keeps interactive 5x5 ring combat.
+- Tracks thrown punches and counter hits.
 
-`amateur.js` owns:
-- Tournament bracket
-- Tournament result flow
-- Tournament fatigue at the end only
+`world.js`
+- Adds rare international NPC gym moves.

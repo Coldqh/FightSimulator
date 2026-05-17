@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "ring-combat-hotfix-1.8.2",
+    appVersion: "fullscreen-ring-ui-1.8.3",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

@@ -417,7 +417,55 @@
   }
 
 
-  function advanceWeek(state, action) {
+function simulateInternationalGymMoves(state) {
+    var attempts = Math.min(55, Math.max(8, Math.floor((state.roster || []).length / 380)));
+    var i;
+    var fighter;
+    var currentCountry;
+    var targetCountries;
+    var targetCountry;
+    var targetClubs;
+    var rating;
+    var club;
+
+    if (!window.FS.Clubs || !state.clubs || !state.clubs.length) {
+      return;
+    }
+
+    for (i = 0; i < attempts; i += 1) {
+      fighter = state.roster[U.randomInt(0, state.roster.length - 1)];
+      if (!fighter || fighter.isPlayer || fighter.retired || U.randomInt(1, 1000) > 6) {
+        continue;
+      }
+
+      currentCountry = fighter.countryId;
+      targetCountries = Data.countries.filter(function (country) { return country.id !== currentCountry; });
+      targetCountry = targetCountries[U.randomInt(0, targetCountries.length - 1)];
+      rating = U.statAverage(fighter.stats);
+      targetClubs = (state.clubs || []).filter(function (item) {
+        return item.countryId === targetCountry.id && rating >= item.minOvr && rating <= item.maxOvr;
+      });
+
+      if (!targetClubs.length) {
+        targetClubs = (state.clubs || []).filter(function (item) { return item.countryId === targetCountry.id; });
+      }
+
+      club = targetClubs[U.randomInt(0, Math.max(0, targetClubs.length - 1))];
+      if (!club) {
+        continue;
+      }
+
+      fighter.countryId = targetCountry.id;
+      fighter.gymId = club.id;
+      fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
+      fighter.careerLog.unshift({ week: state.week, text: "Переезд в " + targetCountry.label + ", клуб " + club.name + "." });
+      U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал в " + targetCountry.label + "." }, 120);
+    }
+
+    window.FS.Clubs.assignFightersToClubs(state);
+  }
+
+    function advanceWeek(state, action) {
     var npcReport;
     state.week += 1;
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
@@ -432,6 +480,7 @@
     npcReport = simulateNpcFights(state);
     simulateTransitions(state);
     if (window.FS.Clubs && window.FS.Clubs.maybeMoveNpcClubs) { window.FS.Clubs.maybeMoveNpcClubs(state); }
+    simulateInternationalGymMoves(state);
     if (window.FS.Clubs && window.FS.Clubs.simulateCoachLife) { window.FS.Clubs.simulateCoachLife(state); }
     buildNationalTeams(state);
     if (window.FS.Titles) {
