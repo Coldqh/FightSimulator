@@ -1,14 +1,20 @@
 # Roadmap
 
-## 1.4.0
-- Structural rank/reward/recruitment rework.
-- Four-belt pro title model.
-- Training point progression.
+## 1.4.1
+
+- Fix tournament flow.
+- Fix progression buttons.
+- Add paging to rankings.
+- Add records per path.
+- Add profile-based career changes.
+- Increase world simulation activity.
 
 ## 1.4.x
-- Real multi-fight tournament brackets.
-- Medal tiers and tournament history.
-- Title unification fight scheduling.
+
+- Real bracket UI with visible tournament tree.
+- Better title challenge scheduling.
+- Balance roster generation speed.
 
 ## 1.5
-- Pro contracts and promoters.
+
+- Pro contracts, promoters and mandatory challengers.

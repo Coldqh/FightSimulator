@@ -84,27 +84,33 @@
       return;
     }
 
-    if (fighter.trackId === "street") {
-      wins = rating >= 120 ? U.randomInt(80, 190) : rating >= 80 ? U.randomInt(35, 130) : U.randomInt(3, 55);
-      losses = rating >= 120 ? U.randomInt(3, 30) : rating >= 80 ? U.randomInt(8, 55) : U.randomInt(4, 80);
-    } else if (fighter.trackId === "amateur") {
-      if (rating >= 91) { wins = U.randomInt(100, 200); losses = U.randomInt(5, 35); }
-      else if (rating >= 76) { wins = U.randomInt(65, 150); losses = U.randomInt(8, 45); }
-      else if (rating >= 61) { wins = U.randomInt(35, 110); losses = U.randomInt(10, 60); }
-      else if (rating >= 31) { wins = U.randomInt(8, 50); losses = U.randomInt(5, 50); }
-      else { wins = U.randomInt(0, 20); losses = U.randomInt(0, 22); }
+    if (fighter.trackId === "pro") {
+      if (rating >= 180) { wins = U.randomInt(28, 45); losses = U.randomInt(0, 2); }
+      else if (rating >= 155) { wins = U.randomInt(21, 38); losses = U.randomInt(0, 4); }
+      else if (rating >= 125) { wins = U.randomInt(14, 30); losses = U.randomInt(1, 7); }
+      else if (rating >= 105) { wins = U.randomInt(7, 20); losses = U.randomInt(2, 10); }
+      else { wins = U.randomInt(0, 10); losses = U.randomInt(0, 6); }
+    } else if (fighter.trackId === "street") {
+      if (rating >= 130) { wins = U.randomInt(55, 150); losses = U.randomInt(2, 18); }
+      else if (rating >= 100) { wins = U.randomInt(30, 105); losses = U.randomInt(6, 38); }
+      else if (rating >= 65) { wins = U.randomInt(12, 65); losses = U.randomInt(8, 55); }
+      else if (rating >= 30) { wins = U.randomInt(4, 35); losses = U.randomInt(5, 45); }
+      else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 22); }
     } else {
-      if (rating >= 150) { wins = U.randomInt(24, 42); losses = U.randomInt(0, 3); }
-      else if (rating >= 105) { wins = U.randomInt(13, 30); losses = U.randomInt(1, 8); }
-      else { wins = U.randomInt(0, 16); losses = U.randomInt(0, 10); }
+      if (rating >= 90) { wins = U.randomInt(75, 165); losses = U.randomInt(3, 25); }
+      else if (rating >= 75) { wins = U.randomInt(50, 130); losses = U.randomInt(7, 38); }
+      else if (rating >= 60) { wins = U.randomInt(28, 85); losses = U.randomInt(10, 48); }
+      else if (rating >= 40) { wins = U.randomInt(12, 48); losses = U.randomInt(8, 42); }
+      else if (rating >= 20) { wins = U.randomInt(4, 28); losses = U.randomInt(5, 34); }
+      else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 20); }
     }
 
-    draws = U.randomInt(0, Math.min(8, Math.floor((wins + losses) / 18)));
+    draws = U.randomInt(0, Math.min(8, Math.floor((wins + losses) / 20)));
     fighter.record = {
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * (fighter.trackId === "amateur" ? 0.35 : 0.68)))))
+      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * (fighter.trackId === "amateur" ? 0.28 : 0.62)))))
     };
   }
 
@@ -151,9 +157,10 @@
     return penalty;
   }
 
-  function findOpponent(state, difficultyId, slotIndex) {
+  function findOpponent(state, difficultyId, slotIndex, usedIds) {
     var player = State.player(state);
     var targetScore = opponentScoreTarget(player, difficultyId);
+    var used = usedIds || {};
     var candidates;
     var selected;
 
@@ -163,7 +170,9 @@
       var tier = careerTier(fighter);
       var playerTier = careerTier(player);
       var isChampion = tier.id === "champion";
+
       return !fighter.isPlayer &&
+        !used[fighter.id] &&
         (player.trackId === "pro" || fighter.countryId === player.countryId) &&
         fighter.trackId === player.trackId &&
         (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
@@ -174,7 +183,7 @@
       return candidatePenalty(player, left, targetScore) - candidatePenalty(player, right, targetScore);
     });
 
-    selected = candidates[slotIndex] || candidates[0] || null;
+    selected = candidates[0] || null;
 
     if (!selected) {
       selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex, U.statAverage(player.stats) + U.findDifficulty(difficultyId).offset, {
@@ -188,6 +197,7 @@
       }
     }
 
+    used[selected.id] = true;
     return selected;
   }
 
@@ -218,13 +228,14 @@
     var track = U.findTrack(player.trackId);
     var offers = [];
     var difficulties = Data.offerDifficulties;
+    var used = {};
     var i;
     var difficulty;
     var opponent;
 
     for (i = 0; i < 3; i += 1) {
       difficulty = difficulties[i] || difficulties[1];
-      opponent = findOpponent(state, difficulty.id, i);
+      opponent = findOpponent(state, difficulty.id, i, used);
 
       offers.push({
         id: U.uid("offer"),

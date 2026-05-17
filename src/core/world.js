@@ -116,7 +116,7 @@
     });
     var used = {};
     var report = [];
-    var count = Math.min(16, Math.max(5, Math.floor(fighters.length / 34)));
+    var count = Math.min(120, Math.max(35, Math.floor(fighters.length / 90)));
     var i;
     var a;
     var b;
@@ -137,9 +137,17 @@
       result = resolveNpcFight(state, a, b);
       report.push(result.text);
 
+      if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
+        window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser);
+      }
+
       if (report.length <= 5) {
         createNews(state, "fight", result.text, { type: "npc_fight" });
       }
+    }
+
+    if (window.FS.Titles && window.FS.Titles.updateTitles) {
+      window.FS.Titles.updateTitles(state);
     }
 
     return report;
@@ -163,17 +171,9 @@
       return false;
     }
 
-    if (fighter.trackId === "pro" && targetTrackId === "street") {
-      fighter.proClosed = true;
+    if (!State.switchFighterTrack(state, fighter, targetTrackId, reason)) {
+      return false;
     }
-    if (targetTrackId === "pro") {
-      fighter.hasGonePro = true;
-    }
-
-    fighter.trackId = targetTrackId;
-    fighter.lastMoveWeek = state.week;
-    State.updateDerivedFighterFields(fighter);
-    fighter.careerLog.unshift({ week: state.week, text: reason });
 
     U.pushLimited(state.world.transitionLog, {
       id: U.uid("move"),

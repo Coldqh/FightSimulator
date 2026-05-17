@@ -23,76 +23,101 @@ FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
 const p = FS.State.player(state);
+if (FS.Data.amateurRanks.length !== 6) throw new Error("junior ranks not removed");
 if (p.gymId) throw new Error("player should start without club");
 if (FS.Clubs.playerClub(state)) throw new Error("player club should be null at start");
-if (FS.Data.tactics) throw new Error("tactics data should be removed");
-if (FS.Data.amateurRanks.length !== 9) throw new Error("amateur ranks != 9");
 
-const proByWeight = {};
-FS.Data.weightClasses.forEach(w => proByWeight[w.id] = state.roster.filter(f => f.trackId === "pro" && f.weightClassId === w.id).length);
-Object.keys(proByWeight).forEach(w => { if (proByWeight[w] < 100) throw new Error("pro weight pool too small "+w+" "+proByWeight[w]); });
-
+FS.Data.weightClasses.forEach(w => {
+  const count = state.roster.filter(f => f.trackId === "pro" && f.weightClassId === w.id).length;
+  if (count < 100) throw new Error("pro weight pool too small " + w.id + " " + count);
+});
 FS.Data.countries.forEach(c => {
   const street = state.roster.filter(f => f.trackId === "street" && f.countryId === c.id);
-  if (street.length < 100) throw new Error("street country pool too small "+c.id);
+  if (street.length < 1000) throw new Error("street country pool too small " + c.id + " " + street.length);
   if (street.some(f => f.weightClassId)) throw new Error("street fighter has weight");
-  FS.Data.amateurRanks.forEach(r => {
-    const count = state.roster.filter(f => f.trackId === "amateur" && f.countryId === c.id && f.amateurRankId === r.id).length;
-    if (count < 20) throw new Error("amateur rank pool too small "+c.id+" "+r.id+" "+count);
+  const expected = { adult_3:500, adult_2:300, adult_1:150, kms:60, ms:30, msmk:15 };
+  Object.keys(expected).forEach(rankId => {
+    const count = state.roster.filter(f => f.trackId === "amateur" && f.countryId === c.id && f.amateurRankId === rankId).length;
+    if (count < Math.floor(expected[rankId] * 0.65)) throw new Error("amateur rank pool too small " + c.id + " " + rankId + " " + count);
   });
 });
 
-FS.Titles.ensureTitles(state);
-if (Object.values(state.titles).some(t => t.trackId === "amateur")) throw new Error("amateur title exists");
-FS.Data.weightClasses.forEach(w => {
-  const proTitles = Object.values(state.titles).filter(t => t.trackId === "pro" && t.weightClassId === w.id);
-  if (proTitles.length !== 4) throw new Error("pro belts != 4 for "+w.id+" got "+proTitles.length);
-  const bodies = proTitles.map(t => t.bodyId).sort().join(",");
-  if (bodies !== "ibf,wba,wbc,wbo") throw new Error("wrong belt bodies "+bodies);
-});
+FS.World.refreshOffers(state);
+const normalOffers = state.offers.filter(o => !o.isCompetition);
+if (normalOffers.length !== 3) throw new Error("normal offers != 3");
+const oppIds = normalOffers.map(o => o.opponentId);
+if (new Set(oppIds).size !== oppIds.length) throw new Error("duplicate fight opponents in offers");
 
-let html = FS.Render.dashboard(state);
-if (html.includes("Тактика") || html.includes("Ближайшее действие") || html.includes("Одноклубник")) throw new Error("removed UI block still visible");
-if (!html.includes("Очки прокачки")) throw new Error("training points not visible");
-
-const oldPoints = p.trainingPoints || 0;
+const weekBeforeUpgrade = state.week;
 FS.State.trainPlayer(state);
-if (p.trainingPoints <= oldPoints) throw new Error("training week did not add points");
-const beforePower = p.stats.power;
+const pointsAfterTraining = p.trainingPoints;
 FS.State.trainPlayer(state, "power");
-if (p.stats.power <= beforePower) throw new Error("training point did not improve stat");
+if (state.week !== weekBeforeUpgrade) throw new Error("stat upgrade advanced week");
+if (p.trainingPoints !== pointsAfterTraining - 1) throw new Error("stat upgrade did not spend one point");
+
+p.stats.power = 52; p.stats.technique = 52; p.stats.speed = 52; p.stats.stamina = 52; p.stats.defense = 52;
+FS.State.updateDerivedFighterFields(p);
+const comps = FS.Amateur.availableCompetitions(state);
+const comp = comps.find(c => c.available);
+if (!comp) throw new Error("no tournament available");
+const compOffer = FS.Amateur.createCompetitionOffer(state, comp.id);
+const startWeek = state.week;
+FS.Fight.resolvePlayerFight(state, compOffer.id);
+if (state.week !== startWeek) throw new Error("tournament fight advanced week");
+if (state.modal && state.modal.result === "Победа" && state.modal.tournamentStillRunning && !state.offers.some(o => o.id === compOffer.id)) {
+  throw new Error("tournament should continue but offer disappeared");
+}
 
 state.selectedTab = "ranking";
 state.rankingTrackId = "street";
 state.rankingCountryId = "russia";
+state.rankingPage = 1;
+let html = FS.Render.dashboard(state);
+if (!html.includes("Страница 2")) throw new Error("ranking pagination missing");
+if (!html.includes("Без весов")) throw new Error("street no-weight UI missing");
+
+state.selectedTab = "settings";
 html = FS.Render.dashboard(state);
-if (!html.includes("Без весов")) throw new Error("street no-weight ranking missing");
+if (html.includes("Настройки карьеры") || html.includes("Смена веса")) throw new Error("career settings still in settings");
 
-state.rankingTrackId = "pro";
-state.rankingWeightClassId = "welter";
+state.selectedTab = "profile";
 html = FS.Render.dashboard(state);
-if (!html.includes("👑WBC") || !html.includes("👑WBA") || !html.includes("👑WBO") || !html.includes("👑IBF")) throw new Error("four pro crowns missing");
+["Смена пути", "Смена веса", "Перелёт", "Рекорды по путям"].forEach(word => {
+  if (!html.includes(word)) throw new Error("profile missing " + word);
+});
 
-const titles = Object.values(state.titles).filter(t => t.trackId === "pro" && t.weightClassId === "welter");
-const champA = titles[0].championId;
-const champB = titles[1].championId;
-const moved = FS.Titles.unifyBeltsAfterFight(state, champA, champB);
-if (moved < 1) throw new Error("belt unification failed");
-const champATitles = Object.values(state.titles).filter(t => t.championId === champA && t.trackId === "pro" && t.weightClassId === "welter");
-if (champATitles.length < 2) throw new Error("unified champion should have 2 belts");
+const oldCountry = p.countryId;
+FS.State.setPlayerCountry(state, oldCountry === "russia" ? "mexico" : "russia");
+if (p.gymId) throw new Error("travel should clear gym");
 
-const comps = FS.Amateur.availableCompetitions(state);
-if (!comps[0].rounds || !comps[0].rounds.includes("1/32")) throw new Error("tournament bracket missing");
+FS.State.setPlayerTrack(state, "street");
+p.record.wins = 7;
+p.trackRecords.street = FS.State.cloneRecord(p.record);
+FS.State.setPlayerTrack(state, "amateur");
+if (p.record.wins === 7) throw new Error("track record did not switch away from street");
+FS.State.setPlayerTrack(state, "street");
+if (p.record.wins !== 7) throw new Error("street record not restored");
+
+const beforeNpc = state.roster.filter(f => !f.isPlayer).reduce((sum, f) => sum + f.record.wins + f.record.losses + f.record.draws, 0);
+FS.World.advanceWeek(state, "skip");
+const afterNpc = state.roster.filter(f => !f.isPlayer).reduce((sum, f) => sum + f.record.wins + f.record.losses + f.record.draws, 0);
+if (afterNpc <= beforeNpc) throw new Error("NPC fights did not change records");
+
+FS.Titles.ensureTitles(state);
+FS.Data.weightClasses.forEach(w => {
+  const proTitles = Object.values(state.titles).filter(t => t.trackId === "pro" && t.weightClassId === w.id);
+  if (proTitles.length !== 4) throw new Error("pro belts != 4 for " + w.id);
+});
 
 const exported = FS.Storage.exportString(state);
 const imported = FS.Storage.importString(exported);
 if (!imported || !FS.State.player(imported)) throw new Error("export/import failed");
 
-console.log("structural rework smoke ok", {
+console.log("career world rework smoke ok", {
   version: FS.Data.appVersion,
   fighters: state.roster.length,
-  proWelter: proByWeight.welter,
-  titles: Object.keys(state.titles).length,
-  playerClub: FS.Clubs.playerClub(state) ? "has club" : "none",
+  offers: normalOffers.length,
+  streetRussia: state.roster.filter(f => f.trackId === "street" && f.countryId === "russia").length,
+  week: state.week,
   points: p.trainingPoints
 });

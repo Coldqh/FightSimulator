@@ -178,6 +178,13 @@
       }
     }
 
+    if (p.trackRecords) {
+      p.trackRecords[p.trackId] = window.FS.State.cloneRecord(p.record);
+    }
+    if (opponent.trackRecords) {
+      opponent.trackRecords[opponent.trackId] = window.FS.State.cloneRecord(opponent.record);
+    }
+
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
   }
@@ -229,8 +236,9 @@
       window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id);
     }
 
+    var competitionStatus = null;
     if (offer.isCompetition && window.FS.Amateur && window.FS.Amateur.completeCompetition) {
-      window.FS.Amateur.completeCompetition(state, offer, result);
+      competitionStatus = window.FS.Amateur.completeCompetition(state, offer, result);
     }
 
     p.lastFightWeek = state.week;
@@ -259,9 +267,16 @@
     };
 
     if (offer.isCompetition) {
-      state.offers = state.offers.filter(function (existingOffer) {
-        return existingOffer.id !== offer.id;
-      });
+      if (!competitionStatus || competitionStatus.finished) {
+        state.offers = state.offers.filter(function (existingOffer) {
+          return existingOffer.id !== offer.id;
+        });
+      }
+
+      state.modal.nextRound = competitionStatus && competitionStatus.continueTournament ? competitionStatus.nextRound : "";
+      state.modal.tournamentStillRunning = !!(competitionStatus && competitionStatus.continueTournament);
+      state.feed = state.feed || ("Турнирный бой: " + result + ".");
+      return true;
     }
 
     state.feed = "Неделя " + state.week + ": " + p.name + " vs " + opponent.name + " — " + result + ", " + method + ".";

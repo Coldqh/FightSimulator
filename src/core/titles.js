@@ -203,7 +203,42 @@
   }
 
   function updateTitles(state) {
+    var key;
+    var title;
+    var ranking;
+    var currentChampion;
+    var challenger;
+
     ensureTitles(state);
+
+    for (key in state.titles) {
+      if (!Object.prototype.hasOwnProperty.call(state.titles, key)) {
+        continue;
+      }
+
+      title = state.titles[key];
+      if (title.trackId === "amateur") {
+        continue;
+      }
+
+      ranking = window.FS.State.ranking(state, title.scope === "world" ? "world" : title.countryId, title.trackId, title.weightClassId);
+      if (!ranking.length) {
+        continue;
+      }
+
+      currentChampion = U.getFighterById(state, title.championId);
+      challenger = ranking.find(function (fighter) {
+        return fighter.id !== title.championId;
+      }) || ranking[0];
+
+      if (!currentChampion && challenger) {
+        transferTitle(state, title.id, challenger.id, challenger.name + " стал чемпионом: " + title.label);
+      } else if (currentChampion && challenger && U.scoreFighter(challenger) > U.scoreFighter(currentChampion) + 10 && state.week % 3 === 0) {
+        transferTitle(state, title.id, challenger.id, challenger.name + " сместил чемпиона: " + title.label);
+      } else if (currentChampion && state.week % 4 === 0) {
+        title.defenses += 1;
+      }
+    }
   }
 
   function listVisibleTitles(state, countryId) {

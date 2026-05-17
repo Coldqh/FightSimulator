@@ -29,9 +29,9 @@
 
   function repairRecord(record) {
     var safe = record && typeof record === "object" ? record : {};
-    var wins = clamp(Number(safe.wins) || 0, 0, 220);
-    var losses = clamp(Number(safe.losses) || 0, 0, 220);
-    var draws = clamp(Number(safe.draws) || 0, 0, 40);
+    var wins = clamp(Number(safe.wins) || 0, 0, 260);
+    var losses = clamp(Number(safe.losses) || 0, 0, 260);
+    var draws = clamp(Number(safe.draws) || 0, 0, 50);
     var kos = clamp(Number(safe.kos) || 0, 0, wins);
 
     return {
@@ -70,6 +70,11 @@
     fighter.stanceId = fighter.stanceId || "orthodox";
     fighter.age = clamp(Number(fighter.age) || 18, 16, 48);
     fighter.record = repairRecord(fighter.record);
+    fighter.trackRecords = fighter.trackRecords && typeof fighter.trackRecords === "object" ? fighter.trackRecords : { amateur: { wins: 0, losses: 0, draws: 0, kos: 0 }, street: { wins: 0, losses: 0, draws: 0, kos: 0 }, pro: { wins: 0, losses: 0, draws: 0, kos: 0 } };
+    fighter.trackRecords.amateur = repairRecord(fighter.trackRecords.amateur);
+    fighter.trackRecords.street = repairRecord(fighter.trackRecords.street);
+    fighter.trackRecords.pro = repairRecord(fighter.trackRecords.pro);
+    fighter.trackRecords[fighter.trackId || "amateur"] = repairRecord(fighter.record);
     fighter.stats = repairStats(fighter.stats, fighter.trackId);
     fighter.titles = fighter.titles instanceof Array ? fighter.titles : [];
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
@@ -93,6 +98,7 @@
     state.rankingCountryId = state.rankingCountryId || "russia";
     state.rankingTrackId = state.rankingTrackId || "amateur";
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
+    state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
     state.modal = null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];

@@ -1,11 +1,15 @@
 # Fight Simulator
 
-Version: `structural-rework-1.4.0`
+Version: `career-world-rework-1.4.1`
 
-- No tactics.
-- Training points progression.
-- 9 amateur ranks.
-- Large generated roster.
-- WBC/WBA/WBO/IBF pro belts.
-- Street rankings without weight classes.
-- No starting club.
+## Focus
+
+- Unique opponents by fight difficulty.
+- Stat upgrades spend points without advancing week.
+- Tournament brackets continue inside the same week.
+- Tournament OVR admission limits and stronger rewards.
+- My Club is the place to choose a gym.
+- Ranking pagination.
+- Separate records for amateur/street/pro.
+- Profile controls for path, weight and travel.
+- Much larger street/amateur roster.

@@ -1,15 +1,18 @@
 {
-  "version": "structural-rework-1.4.0",
-  "mode": "structural-rework",
+  "version": "career-world-rework-1.4.1",
+  "mode": "career-world-rework",
   "patches": [
-    "removed tactics",
-    "training points progression",
-    "9 amateur ranks",
-    "large roster generation",
-    "4 pro belts WBC/WBA/WBO/IBF",
-    "belt unification helper",
-    "street has no weight classes",
-    "no starting club",
-    "tournament bracket labels"
+    "unique fight opponents",
+    "stat upgrades no longer advance week",
+    "tournament bracket continues without week advance",
+    "tournament min/max OVR and larger rewards",
+    "club selection moved to My Club",
+    "ranking pagination",
+    "separate records for amateur/street/pro",
+    "NPC fights and title updates",
+    "career settings removed from Settings",
+    "profile path/weight/travel controls",
+    "street roster 1000 per country",
+    "amateur adult ranks only with requested counts"
   ]
 }

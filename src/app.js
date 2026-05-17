@@ -186,16 +186,38 @@
       saveAndRender();
     } else if (button.dataset.rankingCountry) {
       state.rankingCountryId = button.dataset.rankingCountry;
+      state.rankingPage = 0;
       saveAndRender();
     } else if (button.dataset.rankingTrack) {
       state.rankingTrackId = button.dataset.rankingTrack;
+      state.rankingPage = 0;
       saveAndRender();
     } else if (button.dataset.rankingWeight) {
       state.rankingWeightClassId = button.dataset.rankingWeight;
+      state.rankingPage = 0;
       saveAndRender();
     } else if (button.dataset.trainStat) {
       State.trainPlayer(state, button.dataset.trainStat);
-      World.advanceWeek(state, "training");
+      saveAndRender();
+    } else if (button.dataset.rankingPage) {
+      state.rankingPage = Math.max(0, parseInt(button.dataset.rankingPage, 10) || 0);
+      saveAndRender();
+    } else if (button.dataset.profileTrack) {
+      if (State.setPlayerTrack(state, button.dataset.profileTrack)) {
+        World.refreshOffers(state);
+      }
+      saveAndRender();
+    } else if (button.dataset.profileWeight) {
+      if (State.setPlayerWeightClass(state, button.dataset.profileWeight)) {
+        World.refreshOffers(state);
+      }
+      saveAndRender();
+    } else if (button.dataset.profileCountry) {
+      State.setPlayerCountry(state, button.dataset.profileCountry);
+      if (window.FS.Clubs) {
+        window.FS.Clubs.ensureClubs(state);
+      }
+      World.refreshOffers(state);
       saveAndRender();
     }
   });
