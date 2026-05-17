@@ -4,6 +4,7 @@
   window.FS = window.FS || {};
 
   var U = window.FS.Utils;
+  var Data = window.FS.Data;
   var State = window.FS.State;
   var World = window.FS.World;
 
@@ -30,7 +31,8 @@
   function estimateWinChance(player, opponent) {
     var playerScore = U.statAverage(player.stats) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
     var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
-    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.55), 10, 90);
+    var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 7);
+    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.55) - fatiguePenalty, 8, 90);
   }
 
   function fightExpectation(winChance) {
@@ -55,6 +57,7 @@
     var opponent;
     var difficulty;
     var chance;
+    var purse;
 
     if (!offer || !p) {
       return null;
@@ -67,17 +70,17 @@
 
     difficulty = U.findDifficulty(offer.difficultyId);
     chance = estimateWinChance(p, opponent);
+    purse = Math.max(0, Math.round((Number(offer.purse) || 0) * (Data.economy && Data.economy.fightIncomeMultiplier ? (Data.economy.fightIncomeMultiplier[p.trackId] || 1) : 1)));
 
     return {
       type: "fightPreview",
       offerId: offer.id,
       label: offer.label,
       difficultyLabel: difficulty.label,
-      expectation: fightExpectation(chance),
       opponentId: opponent.id,
       opponentName: opponent.name,
       rounds: offer.rounds,
-      purse: offer.purse,
+      purse: purse,
       winChance: chance,
       playerRating: U.statAverage(p.stats),
       opponentRating: U.statAverage(opponent.stats),
@@ -241,9 +244,12 @@
 
     var pointMod = 1;
     var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+    var incomeMul = Data.economy && Data.economy.fightIncomeMultiplier ? (Data.economy.fightIncomeMultiplier[p.trackId] || 1) : 1;
+    var purse = Math.max(0, Math.round((Number(offer.purse) || 0) * incomeMul));
     if (club) { pointMod = Number(club.trainingModifier) || 1; }
     p.trainingPoints = (Number(p.trainingPoints) || 0) + Math.max(1, Math.round((result === "Победа" ? 4 : (result === "Ничья" ? 2 : 1)) * pointMod));
-    p.money = (Number(p.money) || 0) + (Number(offer.purse) || 0);
+    if (State.addMoney) { State.addMoney(state, purse, "Гонорар за бой"); } else { p.money = (Number(p.money) || 0) + purse; }
+    if (State.adjustFatigue) { State.adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18, "Бой"); }
 
     if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
       window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id);
@@ -272,7 +278,7 @@
       week: state.week,
       playerRating: U.statAverage(p.stats),
       opponentRating: U.statAverage(opponent.stats),
-      purse: offer.purse,
+      purse: purse,
       winChance: winChance,
       roundLog: roundData.log,
       knockdown: roundData.knockdown,
@@ -328,7 +334,6 @@
       rounds: U.findTrack(title.trackId).rounds,
       purse: Math.round(U.findTrack(title.trackId).basePurse * 2.25),
       winChance: chance,
-      expectation: fightExpectation(chance),
       playerRating: U.statAverage(p.stats),
       championRating: U.statAverage(champion.stats),
       playerRecord: U.recordText(p.record),

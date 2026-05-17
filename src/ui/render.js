@@ -67,9 +67,10 @@
         "<span class=\"pill\">" + U.escapeHtml(U.recordText(p.record)) + "</span>" +
         "<span class=\"pill\">KO " + (p.record.kos || 0) + "</span>" +
         "<span class=\"pill gold\">$" + (Number(p.money) || 0) + "</span>" +
+        "<span class=\"pill red\">Усталость " + (Number(p.fatigue) || 0) + "/100</span>" +
         (status ? "<span class=\"pill green\">" + U.escapeHtml(status) + "</span>" : "") +
       "</div>" +
-      "<div class=\"toolbar compact-toolbar\"><button data-action=\"next-week\">Следующая неделя</button><button class=\"danger\" data-action=\"reset-career\">Сбросить</button><button class=\"primary\" data-action=\"train-week\">Тренировка</button></div>" +
+      "<div class=\"toolbar compact-toolbar\"><button data-action=\"next-week\">Следующая неделя</button><button class=\"danger\" data-action=\"reset-career\">Сбросить</button><button class=\"primary\" data-action=\"train-week\">Тренировка</button><button data-action=\"rest-week\">Отдых</button></div>" +
     "</header>";
   }
 
@@ -83,6 +84,7 @@
       ["profile", "Профиль"],
       ["fights", "Бои"],
       ["training", "Тренировка"],
+      ["economy", "Экономика"],
       ["ranking", "Рейтинг"],
       ["myclub", "Мой клуб"],
       ["clubs", "Клубы"],
@@ -219,16 +221,48 @@
   function renderTrainingTab(state) {
     var p = State.player(state);
     var disabled = (p.trainingPoints || 0) <= 0 ? " disabled" : "";
-    return "<div class=\"content-card\"><h3>Прокачка</h3><div class=\"split-row\"><span>Очки прокачки</span><strong>" + (p.trainingPoints || 0) + "</strong></div>" +
+    return "<div class=\"content-card\"><h3>Прокачка</h3><div class=\"split-row\"><span>Очки прокачки</span><strong>" + (p.trainingPoints || 0) + "</strong></div><div class=\"split-row\"><span>Усталость</span><strong>" + (p.fatigue || 0) + "/100</strong></div>" +
       "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Текущие характеристики</div>" +
       Data.statKeys.map(function (stat) {
         return "<div class=\"split-row\"><span>" + U.escapeHtml(stat.label) + "</span><strong>" + (p.stats[stat.id] || 0) + "</strong></div>";
       }).join("") + "</div>" +
-      "<div class=\"muted small\" style=\"margin-top:10px\">Кнопка “Тренировка” сверху даёт очки. Кнопки ниже тратят 1 очко и не двигают неделю.</div><div class=\"grid three\" style=\"margin-top:12px\">" +
+      "<div class=\"muted small\" style=\"margin-top:10px\">Высокая усталость снижает очки за тренировку. Отдых снижает усталость и двигает неделю.</div><div class=\"row\" style=\"margin-top:10px\"><button data-action=\"rest-week\">Неделя восстановления</button></div><div class=\"grid three\" style=\"margin-top:12px\">" +
       Data.statKeys.map(function (stat) {
         return "<button data-train-stat=\"" + U.escapeHtml(stat.id) + "\"" + disabled + ">+ " + U.escapeHtml(stat.label) + "</button>";
       }).join("") +
     "</div></div>";
+  }
+
+
+  function renderEconomyTab(state) {
+    var p = State.player(state);
+    var breakdown = State.monthlyExpenseBreakdown ? State.monthlyExpenseBreakdown(state) : { total: 0, trackCost: 0, food: 0, medical: 0, clubFee: 0, equipment: 0 };
+    var eq = State.equipmentSummary ? State.equipmentSummary(state) : { owned: [], trainingBonus: 0, fatigueReduction: 0, upkeep: 0 };
+    var equipment = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
+    var medical = Data.economy && Data.economy.medicalServices ? Data.economy.medicalServices : [];
+
+    return "<div class=\"grid two\">" +
+      "<div class=\"content-card\"><h3>Баланс и расходы</h3>" +
+        "<div class=\"split-row\"><span>Баланс</span><strong>$" + (p.money || 0) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Усталость</span><strong>" + (p.fatigue || 0) + "/100</strong></div>" +
+        "<div class=\"split-row\"><span>Ежемесячно</span><strong>$" + breakdown.total + "</strong></div>" +
+        "<div class=\"muted small\">Жизнь $" + breakdown.trackCost + " · питание $" + breakdown.food + " · медицина $" + breakdown.medical + " · зал $" + breakdown.clubFee + " · экипировка $" + breakdown.equipment + "</div>" +
+      "</div>" +
+      "<div class=\"content-card\"><h3>Экипировка</h3><div class=\"muted small\">Бонус тренировки: +" + Math.round(eq.trainingBonus * 100) + "% · снижение усталости: " + eq.fatigueReduction + " · обслуживание $" + eq.upkeep + "/мес.</div>" +
+        equipment.map(function (item) {
+          var owned = p.equipment && p.equipment[item.id];
+          return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(item.label) + "</strong><div class=\"muted small\">$" + item.cost + " · обслуживание $" + item.upkeep + " · тренировка +" + Math.round((item.trainingBonus || 0) * 100) + "%</div></div>" + (owned ? "<span class=\"pill green\">куплено</span>" : "<button class=\"small-btn primary\" data-buy-equipment=\"" + U.escapeHtml(item.id) + "\">Купить</button>") + "</div>";
+        }).join("") +
+      "</div>" +
+      "<div class=\"content-card\"><h3>Медицина и восстановление</h3>" +
+        medical.map(function (service) {
+          return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(service.label) + "</strong><div class=\"muted small\">$" + service.cost + " · усталость " + service.fatigue + "</div></div><button class=\"small-btn\" data-medical-service=\"" + U.escapeHtml(service.id) + "\">Оплатить</button></div>";
+        }).join("") +
+      "</div>" +
+      "<div class=\"content-card\"><h3>Финансовая лента</h3>" +
+        (p.financeLog || []).slice(0, 10).map(function (entry) { return "<div class=\"split-row\"><span>Неделя " + entry.week + " · " + U.escapeHtml(entry.text) + "</span><strong>" + (entry.amount >= 0 ? "+" : "") + "$" + entry.amount + "</strong></div>"; }).join("") +
+      "</div>" +
+    "</div>";
   }
 
   function renderRankingFilters(state) {
@@ -436,6 +470,7 @@
     else if (state.selectedTab === "profile") { content = renderProfileTab(state); }
     else if (state.selectedTab === "fights") { content = renderFightsTab(state); }
     else if (state.selectedTab === "training") { content = renderTrainingTab(state); }
+    else if (state.selectedTab === "economy") { content = renderEconomyTab(state); }
     else if (state.selectedTab === "ranking") { content = renderRankingTab(state); }
     else if (state.selectedTab === "myclub") { content = renderMyClubTab(state); }
     else if (state.selectedTab === "clubs") { content = renderClubsTab(state); }

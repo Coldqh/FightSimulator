@@ -160,6 +160,11 @@
       storyFlags: opts.storyFlags || [],
       trainingPoints: opts.trainingPoints || 0,
       money: Number(opts.money) || 0,
+      fatigue: Number(opts.fatigue) || 0,
+      equipment: opts.equipment || {},
+      financeLog: opts.financeLog instanceof Array ? opts.financeLog : [],
+      monthlyExpenseLog: opts.monthlyExpenseLog instanceof Array ? opts.monthlyExpenseLog : [],
+      lastExpenseWeek: opts.lastExpenseWeek || 1,
       birthMonth: opts.birthMonth || U.randomInt(1, 12),
       birthWeek: opts.birthWeek || U.randomInt(1, 4),
       retired: !!opts.retired,
@@ -262,7 +267,12 @@
       record: emptyRecord(),
       trackRecords: { amateur: emptyRecord(), street: emptyRecord(), pro: emptyRecord() },
       trainingPoints: 0,
-      money: 0,
+      money: Data.economy ? Data.economy.startingMoney : 650,
+      fatigue: 8,
+      equipment: {},
+      financeLog: [],
+      monthlyExpenseLog: [],
+      lastExpenseWeek: 1,
       careerLog: [{ week: 1, text: "Начало карьеры." }]
     });
 
@@ -388,6 +398,12 @@
     var p = player(state);
     if (!p) { return; }
 
+    var cost = Data.economy && Data.economy.travelCosts ? (Data.economy.travelCosts[country.id] || 220) : 220;
+    if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return; }
+    adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
+    var cost = Data.economy && Data.economy.travelCosts ? (Data.economy.travelCosts[country.id] || 220) : 220;
+    if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return; }
+    adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
     p.countryId = country.id;
     p.gymId = "";
     state.people = [];
@@ -459,34 +475,176 @@
     }
   }
 
-  function trainPlayer(state, statKey) {
+
+  function ensurePlayerSystems(state) {
     var p = player(state);
+    if (!p) { return null; }
+    p.money = Number(p.money);
+    if (!isFinite(p.money)) { p.money = Data.economy ? Data.economy.startingMoney : 650; }
+    p.fatigue = U.clamp(Number(p.fatigue) || 0, 0, 100);
+    p.equipment = p.equipment && typeof p.equipment === "object" ? p.equipment : {};
+    p.financeLog = p.financeLog instanceof Array ? p.financeLog : [];
+    p.monthlyExpenseLog = p.monthlyExpenseLog instanceof Array ? p.monthlyExpenseLog : [];
+    p.lastExpenseWeek = Number(p.lastExpenseWeek) || 1;
+    return p;
+  }
+
+  function pushFinanceLog(p, state, text, amount) {
+    p.financeLog = p.financeLog instanceof Array ? p.financeLog : [];
+    p.financeLog.unshift({ week: state.week, text: text, amount: Number(amount) || 0 });
+    if (p.financeLog.length > 30) { p.financeLog.length = 30; }
+  }
+
+  function addMoney(state, amount, reason) {
+    var p = ensurePlayerSystems(state);
+    var value = Math.round(Number(amount) || 0);
+    if (!p || value <= 0) { return false; }
+    p.money += value;
+    pushFinanceLog(p, state, reason || "Доход", value);
+    return true;
+  }
+
+  function spendMoney(state, amount, reason) {
+    var p = ensurePlayerSystems(state);
+    var value = Math.round(Number(amount) || 0);
+    if (!p || value <= 0) { return true; }
+    if (p.money < value) {
+      state.feed = "Не хватает денег: нужно $" + value + ".";
+      return false;
+    }
+    p.money -= value;
+    pushFinanceLog(p, state, reason || "Расход", -value);
+    return true;
+  }
+
+  function adjustFatigue(state, amount, reason) {
+    var p = ensurePlayerSystems(state);
+    if (!p) { return 0; }
+    p.fatigue = U.clamp(Math.round((Number(p.fatigue) || 0) + (Number(amount) || 0)), 0, 100);
+    if (reason && p.careerLog) {
+      p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/100." });
+    }
+    return p.fatigue;
+  }
+
+  function equipmentSummary(state) {
+    var p = ensurePlayerSystems(state);
+    var items = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
+    var owned = [];
+    var trainingBonus = 0;
+    var fatigueReduction = 0;
+    var upkeep = 0;
+    if (!p) { return { owned: owned, trainingBonus: 0, fatigueReduction: 0, upkeep: 0 }; }
+    items.forEach(function (item) {
+      if (p.equipment[item.id]) {
+        owned.push(item);
+        trainingBonus += Number(item.trainingBonus) || 0;
+        fatigueReduction += Number(item.fatigueReduction) || 0;
+        upkeep += Number(item.upkeep) || 0;
+      }
+    });
+    return { owned: owned, trainingBonus: trainingBonus, fatigueReduction: fatigueReduction, upkeep: upkeep };
+  }
+
+  function clubMonthlyFee(state) {
+    var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+    if (!club) { return 0; }
+    return Math.round(35 + (Number(club.level) || 1) * 42);
+  }
+
+  function monthlyExpenseBreakdown(state) {
+    var p = ensurePlayerSystems(state);
+    var econ = Data.economy || {};
+    var trackCost = econ.livingCostByTrack ? (econ.livingCostByTrack[p.trackId] || 100) : 100;
+    var food = Number(econ.foodCost) || 70;
+    var medical = Number(econ.medicalReserveCost) || 45;
+    var clubFee = clubMonthlyFee(state);
+    var equipment = equipmentSummary(state).upkeep;
+    var total = Math.round(trackCost + food + medical + clubFee + equipment);
+    return { trackCost: trackCost, food: food, medical: medical, clubFee: clubFee, equipment: equipment, total: total };
+  }
+
+  function applyMonthlyExpenses(state) {
+    var p = ensurePlayerSystems(state);
+    var parts;
+    if (!p) { return false; }
+    if (state.week <= 1 || state.week % 4 !== 1 || p.lastExpenseWeek === state.week) { return false; }
+    parts = monthlyExpenseBreakdown(state);
+    p.lastExpenseWeek = state.week;
+    p.monthlyExpenseLog.unshift({ week: state.week, total: parts.total, parts: parts });
+    if (p.monthlyExpenseLog.length > 24) { p.monthlyExpenseLog.length = 24; }
+    if (p.money >= parts.total) {
+      p.money -= parts.total;
+      pushFinanceLog(p, state, "Ежемесячные расходы", -parts.total);
+      adjustFatigue(state, -4, "Нормальный месяц оплачен");
+      state.feed = "Ежемесячные расходы: -$" + parts.total + ".";
+      return true;
+    }
+    pushFinanceLog(p, state, "Не хватило на месячные расходы", -p.money);
+    p.money = 0;
+    adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.monthlyStressNoMoney : 16, "Денег не хватило на месяц");
+    state.feed = "Денег не хватило на месячные расходы. Усталость выросла.";
+    return true;
+  }
+
+  function buyEquipment(state, itemId) {
+    var p = ensurePlayerSystems(state);
+    var items = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
+    var item = items.find(function (entry) { return entry.id === itemId; });
+    if (!p || !item) { return false; }
+    if (p.equipment[item.id]) { state.feed = "Эта экипировка уже куплена."; return false; }
+    if (!spendMoney(state, item.cost, "Покупка: " + item.label)) { return false; }
+    p.equipment[item.id] = true;
+    state.feed = "Куплено: " + item.label + ".";
+    return true;
+  }
+
+  function buyMedicalService(state, serviceId) {
+    var service = Data.economy && Data.economy.medicalServices ? Data.economy.medicalServices.find(function (entry) { return entry.id === serviceId; }) : null;
+    if (!service) { return false; }
+    if (!spendMoney(state, service.cost, service.label)) { return false; }
+    adjustFatigue(state, service.fatigue, service.label);
+    state.feed = service.label + ": усталость снижена.";
+    return true;
+  }
+
+  function restPlayer(state) {
+    var reduction = Data.economy && Data.economy.fatigue ? Data.economy.fatigue.restWeek : 18;
+    adjustFatigue(state, -reduction, "Неделя восстановления");
+    state.feed = "Неделя восстановления: усталость снижена.";
+    return true;
+  }
+
+  function trainPlayer(state, statKey) {
+    var p = ensurePlayerSystems(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var cap;
     var club;
     var mod = 1;
+    var fatiguePenalty;
+    var eq;
+    var points;
+    var fatigueGain;
 
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
     if (!statKey) {
       club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+      eq = equipmentSummary(state);
       mod = club ? (Number(club.trainingModifier) || 1) : 1;
-      p.trainingPoints += Math.max(1, Math.round(5 * mod));
-      p.careerLog.unshift({ week: state.week, text: "Тренировочная неделя: +" + Math.max(1, Math.round(5 * mod)) + " очков прокачки." });
-      state.feed = "Тренировочная неделя завершена. Получено " + Math.max(1, Math.round(5 * mod)) + " очков прокачки.";
+      fatiguePenalty = p.fatigue >= 80 ? 0.55 : (p.fatigue >= 60 ? 0.75 : 1);
+      points = Math.max(1, Math.round(5 * mod * (1 + eq.trainingBonus) * fatiguePenalty));
+      fatigueGain = Math.max(5, (Data.economy && Data.economy.fatigue ? Data.economy.fatigue.trainingWeek : 12) - eq.fatigueReduction);
+      p.trainingPoints += points;
+      adjustFatigue(state, fatigueGain, "Тренировочная неделя");
+      p.careerLog.unshift({ week: state.week, text: "Тренировка: +" + points + " очков прокачки, усталость " + p.fatigue + "/100." });
+      state.feed = "Тренировка: +" + points + " очков. Усталость " + p.fatigue + "/100.";
       return;
     }
 
-    if (keys.indexOf(statKey) === -1) {
-      return;
-    }
-
-    if (p.trainingPoints <= 0) {
-      state.feed = "Не хватает очков прокачки.";
-      return;
-    }
-
+    if (keys.indexOf(statKey) === -1) { return; }
+    if (p.trainingPoints <= 0) { state.feed = "Не хватает очков прокачки."; return; }
     cap = U.findTrack(p.trackId).maxStat;
     p.trainingPoints -= 1;
     p.stats[statKey] = U.clamp(p.stats[statKey] + 1, 1, cap);
@@ -604,6 +762,16 @@
       state.roster[i].retired = !!state.roster[i].retired;
       state.roster[i].recentOpponentIds = state.roster[i].recentOpponentIds instanceof Array ? state.roster[i].recentOpponentIds : [];
       state.roster[i].money = Number(state.roster[i].money) || 0;
+      state.roster[i].fatigue = U.clamp(Number(state.roster[i].fatigue) || 0, 0, 100);
+      state.roster[i].equipment = state.roster[i].equipment && typeof state.roster[i].equipment === "object" ? state.roster[i].equipment : {};
+      state.roster[i].financeLog = state.roster[i].financeLog instanceof Array ? state.roster[i].financeLog : [];
+      state.roster[i].monthlyExpenseLog = state.roster[i].monthlyExpenseLog instanceof Array ? state.roster[i].monthlyExpenseLog : [];
+      state.roster[i].lastExpenseWeek = Number(state.roster[i].lastExpenseWeek) || 1;
+      state.roster[i].fatigue = U.clamp(Number(state.roster[i].fatigue) || 0, 0, 100);
+      state.roster[i].equipment = state.roster[i].equipment && typeof state.roster[i].equipment === "object" ? state.roster[i].equipment : {};
+      state.roster[i].financeLog = state.roster[i].financeLog instanceof Array ? state.roster[i].financeLog : [];
+      state.roster[i].monthlyExpenseLog = state.roster[i].monthlyExpenseLog instanceof Array ? state.roster[i].monthlyExpenseLog : [];
+      state.roster[i].lastExpenseWeek = Number(state.roster[i].lastExpenseWeek) || 1;
       state.roster[i].nextFightWeek = Number(state.roster[i].nextFightWeek) || 0;
       state.roster[i].contractOpponentId = state.roster[i].contractOpponentId || "";
       state.roster[i].contractLabel = state.roster[i].contractLabel || "";
@@ -727,6 +895,16 @@
     ensureTrackRecords: ensureTrackRecords,
     cloneRecord: cloneRecord,
     dateParts: dateParts,
-    dateText: dateText
+    dateText: dateText,
+    ensurePlayerSystems: ensurePlayerSystems,
+    addMoney: addMoney,
+    spendMoney: spendMoney,
+    adjustFatigue: adjustFatigue,
+    monthlyExpenseBreakdown: monthlyExpenseBreakdown,
+    applyMonthlyExpenses: applyMonthlyExpenses,
+    equipmentSummary: equipmentSummary,
+    buyEquipment: buyEquipment,
+    buyMedicalService: buyMedicalService,
+    restPlayer: restPlayer
   };
 }());

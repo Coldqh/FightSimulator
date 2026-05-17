@@ -81,6 +81,11 @@
     fighter.storyFlags = fighter.storyFlags instanceof Array ? fighter.storyFlags : [];
     fighter.trainingPoints = Number(fighter.trainingPoints) || 0;
     fighter.money = Number(fighter.money) || 0;
+    fighter.fatigue = clamp(Number(fighter.fatigue) || 0, 0, 100);
+    fighter.equipment = fighter.equipment && typeof fighter.equipment === "object" ? fighter.equipment : {};
+    fighter.financeLog = fighter.financeLog instanceof Array ? fighter.financeLog : [];
+    fighter.monthlyExpenseLog = fighter.monthlyExpenseLog instanceof Array ? fighter.monthlyExpenseLog : [];
+    fighter.lastExpenseWeek = Number(fighter.lastExpenseWeek) || 1;
     fighter.nextFightWeek = Number(fighter.nextFightWeek) || 0;
     fighter.contractOpponentId = fighter.contractOpponentId || "";
     fighter.contractLabel = fighter.contractLabel || "";
@@ -189,7 +194,7 @@
   }
 
   function exportString(state) {
-    return JSON.stringify(migrate(JSON.parse(JSON.stringify(state))), null, 2);
+    return JSON.stringify(state, null, 2);
   }
 
   function importString(raw) {

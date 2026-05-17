@@ -1,4 +1,4 @@
-# Test Checklist 1.5.0
+# Test Checklist 1.6.2
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -6,13 +6,15 @@ node tools\core-smoke-test.cjs
 start index.html
 ```
 
-Manual:
-1. Top panel shows money.
-2. National team tab shows buttons, not full lists.
-3. Team composition opens in separate modal.
-4. Reserve list opens in separate paged modal.
-5. Tournament window has an Participants button.
-6. Participants list opens in separate paged modal.
-7. Tournament stages do not contain the duplicate pre-quarterfinal stage.
-8. Third-place fight should not repeat the semifinal opponent.
-9. Tournament reward increases money.
+Manual checks:
+
+1. The top panel shows fatigue.
+2. The tabs include Economy / Экономика.
+3. Economy shows monthly expenses.
+4. Buying equipment spends money and marks item as bought.
+5. Medical services spend money and lower fatigue.
+6. Training adds fatigue.
+7. Rest lowers fatigue.
+8. Month change pays expenses.
+9. Normal fights pay money and add fatigue.
+10. Settings has Deep Repair / Глубокая починка.

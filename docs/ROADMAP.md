@@ -1,15 +1,20 @@
-# Roadmap after 1.5
+# Roadmap after 1.6.2
 
-## Next safe feature areas
+## 1.7.0 Fatigue Core Expansion
 
-1. Professional contracts and promoters.
-2. Proper title challenge scheduling.
-3. Club economy and training specializations.
-4. Full tournament bracket tree visualization.
-5. Rivalries and named story arcs.
+- More detailed fatigue sources.
+- Training plans.
+- Recovery weeks.
+- Form / peak condition.
 
-## Do not do before this
+## 1.8.0 Fight Engine Core
 
-- Do not add more large UI blocks directly into tabs.
-- Do not mix tournament state with normal fight offers.
-- Do not reintroduce one huge monolithic `index.html` game logic.
+- New round-by-round boxing engine.
+- Tempo, distance, damage and scorecards.
+- Styles and game plans.
+
+## 1.9.0 Professional Contracts
+
+- Contracts scheduled weeks ahead.
+- Promoters and managers.
+- Mandatory challengers.

@@ -1,13 +1,25 @@
 # Fight Simulator
 
-Version: `stable-core-1.5.0`
+Version: `economy-expenses-pack-1.6.2`
 
-## Stable Core
+This delta patch contains the combined roadmap chunk:
 
-- Tournament bracket fixed: no duplicated pre-quarterfinal + quarterfinal stage.
-- Tournament participant list moved to a separate paged modal.
-- National team lists moved to separate paged modals.
-- Player balance is visible in the top panel.
-- Tournament rewards pay money and no longer duplicate awards.
-- Third-place match uses the loser of the other semifinal.
-- Main UI is lighter and ready for new feature work.
+- 1.5.1 Audit & Cleanup
+- 1.5.2 Save Compatibility & Repair
+- 1.6.0 Money & Expenses Core
+- 1.6.1 Income Balance
+- 1.6.2 Equipment & Medical Costs
+
+## Main changes
+
+- Added the Economy tab.
+- Added fatigue to the player.
+- Added monthly expenses.
+- Added equipment purchases and upkeep.
+- Added medical services / recovery spending.
+- Added fight income multipliers by path.
+- Added tournament entry fees.
+- Added deep repair button in Settings.
+- Training now gives fewer points when fatigue is high.
+- Fight preview shows scaled purse.
+- Smoke-test updated for economy systems.

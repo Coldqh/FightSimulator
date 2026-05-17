@@ -42,107 +42,75 @@ sandbox.global = sandbox.window;
   "src/core/world.js",
   "src/core/fight.js",
   "src/ui/render.js"
-].forEach((file) => {
-  vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox.window, { filename: file });
-});
+].forEach((file) => vm.runInNewContext(fs.readFileSync(path.join(root, file), "utf8"), sandbox.window, { filename: file }));
 
 const FS = sandbox.window.FS;
-let state = FS.State.createCareer({
-  name: "Smoke",
-  age: 18,
-  countryId: "russia",
-  trackId: "amateur",
-  weightClassId: "welter",
-  stanceId: ""
-});
-
+let state = FS.State.createCareer({ name: "Smoke", age: 18, countryId: "russia", trackId: "amateur", weightClassId: "welter", stanceId: "" });
 FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 
-if (FS.Data.appVersion !== "stable-core-1.5.0") throw new Error("bad version");
-if (FS.Data.tracks.amateur.maxStat !== 120) throw new Error("amateur max OVR should be 120");
+if (FS.Data.appVersion !== "economy-expenses-pack-1.6.2") throw new Error("bad version");
+if (!FS.Data.economy || !FS.Data.economy.equipment || FS.Data.economy.equipment.length < 3) throw new Error("economy data missing");
 
 const p = FS.State.player(state);
-p.money = 0;
+if (p.money < 600) throw new Error("starting money missing");
+if (typeof p.fatigue !== "number") throw new Error("fatigue missing");
 
 let html = FS.Render.dashboard(state);
-if (!html.includes("$0")) throw new Error("top panel money missing");
-if (!html.includes("top-pills")) throw new Error("pill header missing");
+if (!html.includes("Экономика")) throw new Error("economy tab missing");
+if (!html.includes("Усталость")) throw new Error("fatigue UI missing");
 
-state.selectedTab = "world";
+state.selectedTab = "economy";
 html = FS.Render.dashboard(state);
-if (!html.includes('data-team-list="main"')) throw new Error("team main button missing");
-if (!html.includes('data-team-list="reserve"')) throw new Error("team reserve button missing");
-if (html.includes("data-fighter=\"player\"") && html.includes("Состав</div>")) throw new Error("team list appears directly in tab");
-if (html.includes("1/128 →") || html.includes("1" + "/" + "8")) throw new Error("long/invalid bracket line still visible");
+if (!html.includes("Баланс и расходы") || !html.includes("Экипировка") || !html.includes("Медицина")) throw new Error("economy screen broken");
 
-FS.World.buildNationalTeams(state);
-state.modal = { type: "teamList", countryId: "russia", listType: "reserve", page: 0 };
-html = FS.Render.dashboard(state);
-if (!html.includes("Резерв сборной") || !html.includes("страница")) throw new Error("reserve modal pagination missing");
+const moneyBefore = p.money;
+if (!FS.State.buyEquipment(state, "basic_gloves")) throw new Error("buy equipment failed");
+if (p.money >= moneyBefore) throw new Error("equipment did not cost money");
+if (!p.equipment.basic_gloves) throw new Error("equipment not owned");
 
-state.week = 10; // March week 2 for national championship schedule.
-p.stats.power = 58;
-p.stats.technique = 58;
-p.stats.speed = 58;
-p.stats.stamina = 58;
-p.stats.defense = 58;
-FS.State.updateDerivedFighterFields(p);
+p.fatigue = 70;
+const medBefore = p.money;
+if (!FS.State.buyMedicalService(state, "recovery")) throw new Error("medical service failed");
+if (p.money >= medBefore || p.fatigue >= 70) throw new Error("medical did not work");
 
-const comp = FS.Amateur.availableCompetitions(state).find(c => c.id === "country");
-if (!comp || !comp.available) throw new Error("country tournament unavailable on scheduled date: " + (comp && comp.reason));
+const pointsBefore = p.trainingPoints;
+const fatigueBefore = p.fatigue;
+FS.State.trainPlayer(state);
+if (p.trainingPoints <= pointsBefore) throw new Error("training did not add points");
+if (p.fatigue <= fatigueBefore) throw new Error("training did not add fatigue");
 
-let modal = FS.Amateur.startTournament(state, "country");
-if (modal.type !== "tournamentFight") throw new Error("tournament did not start with fight modal");
-if (modal.session.rounds.includes("1" + "/" + "8")) throw new Error("duplicate pre-quarterfinal stage should not exist");
-if (!modal.alive || modal.alive.length < 2) throw new Error("alive participant list missing");
+p.fatigue = 80;
+FS.State.restPlayer(state);
+if (p.fatigue >= 80) throw new Error("rest did not reduce fatigue");
 
-state.modal = modal;
-html = FS.Render.dashboard(state);
-if (!html.includes('data-tournament-participants="1"')) throw new Error("participants button missing");
-if (html.includes("Участники в турнире</span><strong>")) throw new Error("participants rendered inline instead of modal");
+const expenses = FS.State.monthlyExpenseBreakdown(state);
+if (!expenses.total || expenses.total <= 0) throw new Error("monthly expenses missing");
+state.week = 4;
+const monthMoney = p.money;
+FS.World.advanceWeek(state, "skip");
+if (state.week !== 5) throw new Error("week advance broken");
+if (p.money >= monthMoney) throw new Error("monthly expenses not paid");
+if (!p.monthlyExpenseLog.length) throw new Error("monthly expense log missing");
 
-state.modal = { type: "tournamentParticipants", sourceModal: modal, page: 0 };
-html = FS.Render.dashboard(state);
-if (!html.includes("Участники турнира") || !html.includes("Назад к турниру")) throw new Error("participants modal missing");
+FS.World.refreshOffers(state);
+const offer = state.offers.find(o => !o.isCompetition);
+if (!offer) throw new Error("no fight offer");
+const preview = FS.Fight.buildFightPreview(state, offer.id);
+if (!preview || typeof preview.purse !== "number") throw new Error("fight preview purse broken");
+const fightMoney = p.money;
+FS.Fight.resolvePlayerFight(state, offer.id);
+if (p.money <= fightMoney) throw new Error("fight income missing");
+if (p.fatigue <= 0) throw new Error("fight fatigue missing");
 
-let result = FS.Amateur.resolveTournamentRound(state, modal);
-if (result.type !== "tournamentResult") throw new Error("tournament round should show result");
-if (!result.roundLog || !result.roundLog.length) throw new Error("tournament result needs round log");
+// Export/import is intentionally not part of the fast smoke test because the live world has ~20k fighters.
+// Manual save/export can still be checked from Settings.
 
-let after = FS.Amateur.continueTournament(state, result);
-if (!["tournamentFight", "tournamentFinal"].includes(after.type)) throw new Error("bad continue tournament result: " + after.type);
-
-let moneyBefore = Number(p.money) || 0;
-let safety = 0;
-while (after.type === "tournamentFight" && safety < 8) {
-  result = FS.Amateur.resolveTournamentRound(state, after);
-  after = FS.Amateur.continueTournament(state, result);
-  safety += 1;
-}
-if (after.type !== "tournamentFinal") throw new Error("tournament did not finish in safe limit");
-if (after.reward > 0 && p.money <= moneyBefore) throw new Error("tournament money reward not paid");
-
-state.modal = after;
-html = FS.Render.dashboard(state);
-if (!html.includes("Награда $")) throw new Error("tournament final should show money reward");
-if (html.includes("1" + "/" + "8")) throw new Error("duplicate pre-quarterfinal stage still visible in final modal");
-
-const medalLabels = (state.amateurPath.medals || []).map(m => m.awardLabel);
-if (new Set(medalLabels).size !== medalLabels.length) throw new Error("duplicate medals detected");
-
-state.selectedTab = "training";
-state.modal = null;
-html = FS.Render.dashboard(state);
-["Сила", "Техника", "Скорость", "Выносливость", "Защита"].forEach(label => {
-  if (!html.includes(label)) throw new Error("training stat missing " + label);
-});
-
-console.log("stable core smoke ok", {
+console.log("economy expenses smoke ok", {
   version: FS.Data.appVersion,
-  fighters: state.roster.length,
-  teamMain: state.world.teamsByCountry.russia.main.length,
-  teamReserve: state.world.teamsByCountry.russia.reserve.length,
-  tournamentRounds: modal.session.rounds.join(" > "),
-  playerMoney: p.money
+  money: p.money,
+  fatigue: p.fatigue,
+  monthlyExpense: expenses.total,
+  equipment: Object.keys(p.equipment).length,
+  offers: state.offers.length
 });

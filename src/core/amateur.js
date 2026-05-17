@@ -74,6 +74,7 @@
         minRating: comp.minRating,
         maxRating: comp.maxRating,
         rewardRating: comp.rewardRating,
+        entryFee: Data.economy && Data.economy.tournamentEntryFees ? (Data.economy.tournamentEntryFees[comp.id] || 0) : 0,
         difficultyId: comp.difficultyId,
         scheduleText: scheduleText(comp),
         available: status.available,
@@ -203,6 +204,8 @@
     State.updateDerivedFighterFields(winner);
     State.updateDerivedFighterFields(loser);
 
+    if (State.adjustFatigue) { State.adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10, "Турнирный бой"); }
+
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       window.FS.Clubs.recordClubFight(state, winner, loser, false);
     }
@@ -227,6 +230,8 @@
     opponent.lastFightWeek = state.week;
     State.updateDerivedFighterFields(player);
     State.updateDerivedFighterFields(opponent);
+
+    if (State.adjustFatigue) { State.adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10, "Турнирный бой"); }
 
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       window.FS.Clubs.recordClubFight(state, result === "Победа" ? player : opponent, result === "Победа" ? opponent : player, false);
@@ -352,6 +357,10 @@
 
     ensureAmateurState(state);
     if (!status.available) { state.feed = status.reason; return { type: "tournamentFinal", label: comp.label, blocked: true, reason: status.reason, fights: [] }; }
+    var entryFee = Data.economy && Data.economy.tournamentEntryFees ? (Data.economy.tournamentEntryFees[comp.id] || 0) : 0;
+    if (entryFee > 0 && State.spendMoney && !State.spendMoney(state, entryFee, "Заявка: " + comp.label)) {
+      return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Не хватает денег на заявку: $" + entryFee + ".", fights: [] };
+    }
 
     pool = shuffle(candidatePool(state, comp, {}));
     size = bracketSize(pool.length + 1);
@@ -393,7 +402,7 @@
 
     if (already) { return; }
 
-    p.money = (Number(p.money) || 0) + moneyReward;
+    if (moneyReward > 0) { State.addMoney ? State.addMoney(state, moneyReward, comp.label + " · " + place) : (p.money = (Number(p.money) || 0) + moneyReward); }
     state.amateurPath.completed[comp.id] = true;
     state.amateurPath.points += comp.rewardRating;
     state.amateurPath.medals.unshift({

@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "stable-core-1.5.0",
+    appVersion: "economy-expenses-pack-1.6.2",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -115,6 +115,29 @@
         gymNames: ["Almaty Boxing", "Nomad Ring", "Steppe Gloves", "Temir Gym"]
       }
     ],
+
+
+    economy: {
+      startingMoney: 650,
+      livingCostByTrack: { amateur: 95, street: 120, pro: 280 },
+      foodCost: 70,
+      medicalReserveCost: 45,
+      travelCosts: { russia: 170, mexico: 260, japan: 360, usa: 380, cuba: 300, kazakhstan: 210 },
+      tournamentEntryFees: { city: 25, oblast: 45, region: 75, country: 130, continent: 260, world: 420, olympiad: 650 },
+      fightIncomeMultiplier: { amateur: 0.75, street: 1.2, pro: 1.65 },
+      fatigue: { trainingWeek: 12, fight: 18, tournamentFight: 10, travel: 14, monthlyStressNoMoney: 16, recoveryPerWeek: 6, restWeek: 18 },
+      equipment: [
+        { id: "basic_gloves", label: "Базовые перчатки", cost: 120, upkeep: 8, trainingBonus: 0.03, fatigueReduction: 1 },
+        { id: "good_boots", label: "Хорошая обувь", cost: 180, upkeep: 10, trainingBonus: 0.04, fatigueReduction: 1 },
+        { id: "mouthguard", label: "Капа", cost: 60, upkeep: 4, trainingBonus: 0.00, fatigueReduction: 1 },
+        { id: "amateur_headgear", label: "Шлем для любителей", cost: 140, upkeep: 7, trainingBonus: 0.02, fatigueReduction: 2 }
+      ],
+      medicalServices: [
+        { id: "recovery", label: "Восстановление", cost: 90, fatigue: -18 },
+        { id: "sport_doctor", label: "Спортврач", cost: 180, fatigue: -32 },
+        { id: "rehab_week", label: "Реабилитационная неделя", cost: 260, fatigue: -45 }
+      ]
+    },
 
     statKeys: [
       { id: "power", label: "Сила" },

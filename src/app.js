@@ -134,6 +134,10 @@
       State.trainPlayer(state);
       World.advanceWeek(state, "training");
       saveAndRender();
+    } else if (button.dataset.action === "rest-week") {
+      if (State.restPlayer) { State.restPlayer(state); }
+      World.advanceWeek(state, "rest");
+      saveAndRender();
     } else if (button.dataset.action === "patch-notes") {
       state.modal = {
         type: "patchNotes"
@@ -141,6 +145,10 @@
       saveAndRender();
     } else if (button.dataset.action === "repair-save") {
       rebuildWorld("Сохранение проверено и починено.");
+      saveAndRender();
+    } else if (button.dataset.action === "deep-repair") {
+      rebuildWorld("Глубокая починка: сохранение, клубы, сборные, титулы и офферы пересобраны.");
+      if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
       saveAndRender();
     } else if (button.dataset.action === "world-audit") {
       state.modal = {
@@ -271,6 +279,12 @@
     } else if (button.dataset.rankingWeight) {
       state.rankingWeightClassId = button.dataset.rankingWeight;
       state.rankingPage = 0;
+      saveAndRender();
+    } else if (button.dataset.buyEquipment) {
+      if (State.buyEquipment) { State.buyEquipment(state, button.dataset.buyEquipment); }
+      saveAndRender();
+    } else if (button.dataset.medicalService) {
+      if (State.buyMedicalService) { State.buyMedicalService(state, button.dataset.medicalService); }
       saveAndRender();
     } else if (button.dataset.trainStat) {
       State.trainPlayer(state, button.dataset.trainStat);

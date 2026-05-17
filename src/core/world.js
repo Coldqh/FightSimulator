@@ -420,6 +420,9 @@
   function advanceWeek(state, action) {
     var npcReport;
     state.week += 1;
+    if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
+    if (action === "rest" && State.restPlayer) { State.restPlayer(state); }
+    else if (State.adjustFatigue) { State.adjustFatigue(state, -(Data.economy && Data.economy.fatigue ? Data.economy.fatigue.recoveryPerWeek : 6), "Недельное восстановление"); }
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
       
