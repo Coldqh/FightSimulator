@@ -187,11 +187,24 @@
     window.FS.__currentStateWeek = state.week;
 
     candidates = state.roster.filter(function (fighter) {
+      var tier = careerTier(fighter);
+      var playerTier = careerTier(player);
+      var isChampion = tier.id === "champion";
       return !fighter.isPlayer &&
         fighter.countryId === player.countryId &&
         fighter.trackId === player.trackId &&
-        fighter.weightClassId === player.weightClassId;
+        fighter.weightClassId === player.weightClassId &&
+        (!isChampion || difficultyId === "hard" && playerTier.level >= 4);
     });
+
+    if (!candidates.length) {
+      candidates = state.roster.filter(function (fighter) {
+        return !fighter.isPlayer &&
+          fighter.countryId === player.countryId &&
+          fighter.trackId === player.trackId &&
+          fighter.weightClassId === player.weightClassId;
+      });
+    }
 
     candidates.sort(function (left, right) {
       return candidatePenalty(player, left, targetScore) - candidatePenalty(player, right, targetScore);

@@ -4,14 +4,14 @@ Static modular boxing sim.
 
 ## Current version
 
-`realism-matchmaking-pack-1.2.0`
+`amateur-ladder-pack-1.3.0`
 
 ## Patch focus
 
-- New `src/core/matchmaking.js` module.
-- More realistic records.
-- Smarter opponent selection.
-- Opponent classes and career stages.
-- Career stage progress for amateur/street/pro.
-- World diagnostics from settings.
-- Better fight offer labels.
+- New `src/core/amateur.js` module.
+- Amateur tournament ladder.
+- City/regional/national/international competitions.
+- Amateur points and medals.
+- Competition fight offers.
+- Better normal matchmaking: champions are not picked casually for safe/even offers.
+- Patch notes modal.

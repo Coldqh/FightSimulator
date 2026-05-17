@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "realism-matchmaking-pack-1.2.0",
+    appVersion: "amateur-ladder-pack-1.3.0",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -147,6 +147,14 @@
     ],
 
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
+
+    amateurCompetitions: [
+      { id: "city_open", label: "Городской открытый турнир", minRating: 1, rewardRating: 1, difficultyId: "safe", weekCooldown: 2 },
+      { id: "regional_cup", label: "Региональный кубок", minRating: 42, rewardRating: 2, difficultyId: "even", weekCooldown: 3 },
+      { id: "national_trials", label: "Отбор на чемпионат страны", minRating: 58, rewardRating: 3, difficultyId: "hard", weekCooldown: 4 },
+      { id: "national_final", label: "Финал чемпионата страны", minRating: 68, rewardRating: 4, difficultyId: "hard", weekCooldown: 5 },
+      { id: "international_meet", label: "Международная встреча", minRating: 76, rewardRating: 5, difficultyId: "hard", weekCooldown: 6 }
+    ],
 
     careerStages: {
       amateur: [

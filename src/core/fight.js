@@ -238,6 +238,10 @@
 
     applyFightResult(state, p, opponent, result, method);
 
+    if (offer.isCompetition && window.FS.Amateur && window.FS.Amateur.completeCompetition) {
+      window.FS.Amateur.completeCompetition(state, offer, result);
+    }
+
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
     p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method });
@@ -262,6 +266,12 @@
       knockdown: roundData.knockdown,
       statsLine: "Точные удары: " + roundData.playerLanded + ":" + roundData.opponentLanded
     };
+
+    if (offer.isCompetition) {
+      state.offers = state.offers.filter(function (existingOffer) {
+        return existingOffer.id !== offer.id;
+      });
+    }
 
     state.feed = "Неделя " + state.week + ": " + p.name + " vs " + opponent.name + " — " + result + ", " + method + ".";
     World.advanceWeek(state, "fight");

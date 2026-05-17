@@ -105,6 +105,11 @@
       State.trainPlayer(state);
       World.advanceWeek(state, "training");
       saveAndRender();
+    } else if (button.dataset.action === "patch-notes") {
+      state.modal = {
+        type: "patchNotes"
+      };
+      saveAndRender();
     } else if (button.dataset.action === "repair-save") {
       rebuildWorld("Сохранение проверено и починено.");
       saveAndRender();
@@ -127,6 +132,17 @@
       saveAndRender();
     } else if (button.dataset.tab) {
       state.selectedTab = button.dataset.tab;
+      saveAndRender();
+    } else if (button.dataset.amateurCompetition) {
+      if (window.FS.Amateur) {
+        var competitionOffer = window.FS.Amateur.createCompetitionOffer(state, button.dataset.amateurCompetition);
+        if (competitionOffer) {
+          preview = Fight.buildFightPreview(state, competitionOffer.id);
+          if (preview) {
+            state.modal = preview;
+          }
+        }
+      }
       saveAndRender();
     } else if (button.dataset.previewFight) {
       preview = Fight.buildFightPreview(state, button.dataset.previewFight);

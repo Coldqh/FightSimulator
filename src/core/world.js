@@ -330,6 +330,9 @@
 
   function bootstrapWorld(state) {
     State.updateAllDerived(state);
+    if (window.FS.Amateur && window.FS.Amateur.ensureAmateurState) {
+      window.FS.Amateur.ensureAmateurState(state);
+    }
     if (window.FS.Matchmaking && window.FS.Matchmaking.normalizeRosterRecords) {
       window.FS.Matchmaking.normalizeRosterRecords(state);
     }

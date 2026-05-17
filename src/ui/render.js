@@ -297,6 +297,9 @@
     var p = State.player(state);
     var team = state.world.teamsByCountry[p.countryId] || { main: [], reserve: [] };
     var progress = State.pathProgress(state, p);
+    var comps = window.FS.Amateur ? window.FS.Amateur.availableCompetitions(state) : [];
+    var objective = window.FS.Amateur ? window.FS.Amateur.objectiveSummary(state) : { title: "Цель", text: "Нет данных." };
+    var summary = window.FS.Amateur ? window.FS.Amateur.worldSummary(state) : { points: 0, medals: 0, completed: 0, available: 0 };
 
     function renderTeam(ids) {
       if (!ids.length) {
@@ -308,11 +311,21 @@
       }).join("");
     }
 
-    return "<div class=\"grid two\"><div class=\"content-card\"><h3>Любительский путь</h3>" +
-      progress.lines.map(function (line) {
-        return "<div class=\"split-row\"><span>" + U.escapeHtml(line) + "</span></div>";
-      }).join("") +
-      "</div><div class=\"content-card\"><h3>Сборная " + U.escapeHtml(U.findCountry(p.countryId).label) + "</h3><div class=\"label\">Состав</div>" + renderTeam(team.main) + "<div class=\"label\" style=\"margin-top:14px\">Резерв</div>" + renderTeam(team.reserve) + "</div></div>";
+    function renderCompetition(comp) {
+      return "<div class=\"split-row\"><div><div class=\"name-line\">" + U.escapeHtml(comp.label) + (comp.completed ? " <span class=\"pill green\">пройдено</span>" : "") + "</div><div class=\"muted small\">Рейтинг " + comp.minRating + "+ · награда +" + comp.rewardRating + " · " + U.escapeHtml(comp.reason) + "</div></div><span>" + (comp.available ? "<button class=\"small-btn primary\" data-amateur-competition=\"" + U.escapeHtml(comp.id) + "\">Заявиться</button>" : "<span class=\"pill\">закрыто</span>") + "</span></div>";
+    }
+
+    return "<div class=\"grid two\">" +
+      "<div class=\"content-card\"><h3>Любительский путь</h3>" +
+        progress.lines.map(function (line) {
+          return "<div class=\"split-row\"><span>" + U.escapeHtml(line) + "</span></div>";
+        }).join("") +
+        "<div class=\"pills\"><span class=\"pill gold\">Очки: " + summary.points + "</span><span class=\"pill green\">Медали: " + summary.medals + "</span><span class=\"pill blue\">Доступно: " + summary.available + "</span></div>" +
+      "</div>" +
+      "<div class=\"content-card\"><h3>" + U.escapeHtml(objective.title) + "</h3><div class=\"muted small\">" + U.escapeHtml(objective.text) + "</div></div>" +
+      "<div class=\"content-card\"><h3>Турнирная лестница</h3>" + comps.map(renderCompetition).join("") + "</div>" +
+      "<div class=\"content-card\"><h3>Сборная " + U.escapeHtml(U.findCountry(p.countryId).label) + "</h3><div class=\"label\">Состав</div>" + renderTeam(team.main) + "<div class=\"label\" style=\"margin-top:14px\">Резерв</div>" + renderTeam(team.reserve) + "</div>" +
+    "</div>";
   }
 
   function renderPeopleTab(state) {
@@ -344,7 +357,7 @@
         "<label style=\"display:block;margin-top:12px\"><div class=\"label\">Тактика по умолчанию</div><select data-action=\"set-tactic\">" + tacticOptions + "</select></label>" +
       "</div>" +
       "<div class=\"content-card\"><h3>Сохранение</h3>" +
-        "<div class=\"row\"><button data-action=\"repair-save\">Починить сохранение</button><button data-action=\"world-audit\">Диагностика мира</button><button data-action=\"export-save\">Экспорт</button><button data-action=\"import-save\">Импорт</button></div>" +
+        "<div class=\"row\"><button data-action=\"repair-save\">Починить сохранение</button><button data-action=\"world-audit\">Диагностика мира</button><button data-action=\"patch-notes\">Патч</button><button data-action=\"export-save\">Экспорт</button><button data-action=\"import-save\">Импорт</button></div>" +
         "<div class=\"footer-note\">Версия: " + U.escapeHtml(Data.appVersion) + "</div>" +
       "</div>" +
     "</div>";
@@ -395,6 +408,10 @@
     if (modal.type === "club") {
       club = window.FS.Clubs.findClub(state, modal.clubId);
       return club ? renderClubModal(state, club) : "";
+    }
+
+    if (modal.type === "patchNotes") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Патч " + U.escapeHtml(Data.appVersion) + "</h2></div><div class=\"modal-body\"><div class=\"content-card\"><div class=\"label\">Главное</div><div class=\"muted small\">Любительская турнирная лестница, заявки на турниры, очки/медали, улучшенный подбор соперников и защита нормальных офферов от случайных чемпионов.</div></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Архитектура</div><div class=\"muted small\">Добавлен отдельный модуль src/core/amateur.js. Старая логика боя и матчмейкинга не смешана с турнирами.</div></div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "worldAudit") {

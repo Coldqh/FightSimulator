@@ -99,6 +99,11 @@
     state.clubs = state.clubs instanceof Array ? state.clubs : [];
     state.titles = state.titles && typeof state.titles === "object" ? state.titles : {};
     state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+    state.amateurPath = state.amateurPath && typeof state.amateurPath === "object" ? state.amateurPath : { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 };
+    state.amateurPath.completed = state.amateurPath.completed || {};
+    state.amateurPath.medals = state.amateurPath.medals instanceof Array ? state.amateurPath.medals : [];
+    state.amateurPath.lastCompetitionWeekById = state.amateurPath.lastCompetitionWeekById || {};
+    state.amateurPath.points = Number(state.amateurPath.points) || 0;
     state.feed = state.feed || "Сохранение загружено.";
 
     if (!state.world || typeof state.world !== "object") {

@@ -1,4 +1,4 @@
-# Test Checklist 1.2.0
+# Test Checklist 1.3.0
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,11 +7,11 @@ start index.html
 ```
 
 Manual:
-1. Version says realism-matchmaking-pack-1.2.0.
-2. Fight offers show class/tier.
-3. Fight chance changes depending on opponent.
-4. Records look sane.
-5. Settings -> Diagnostics opens modal.
-6. Export/import still works.
-7. Ranking crown still works.
-8. World/amateur path still shows player's country.
+1. Version says amateur-ladder-pack-1.3.0.
+2. Любительский путь shows tournament ladder.
+3. Available tournament has Заявиться button.
+4. Tournament opens fight preview.
+5. After fight, medals/points update on win.
+6. Normal safe/even offers do not randomly pick champions.
+7. Settings -> Patch opens patch notes.
+8. Export/import still works.

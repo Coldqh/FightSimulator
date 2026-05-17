@@ -1,32 +1,26 @@
 # Roadmap
 
-## 1.2.0 Realism & Matchmaking Pack
+## 1.3.0 Amateur Ladder Pack
 
-- Matchmaking module.
-- Realistic record normalization.
-- Opponent classes.
-- Career stages.
-- Smarter offers.
-- World diagnostics.
+- Amateur module.
+- Tournament ladder.
+- Competition offers.
+- Medals and points.
+- Better amateur path screen.
+- Safer matchmaking against champions.
 
-## 1.2.x Bugfix
+## 1.3.x
 
-- Tune chance formula.
-- Tune generated records.
-- Fix edge cases in old saves.
-- Polish diagnostics.
-
-## 1.3 Amateur Ladder
-
-- City championship.
-- Regional championship.
-- National championship.
-- National team goals.
+- Tune tournament difficulty.
+- Add tournament brackets.
+- Add national team qualification rules.
+- Add amateur season calendar.
 
 ## 1.4 Street Path
 
 - District rankings.
-- Status fights.
+- Street status fights.
+- Risk/reward choices.
 - Street-to-amateur transition events.
 
 ## 1.5 Pro Path

@@ -1,13 +1,13 @@
 {
-  "version": "realism-matchmaking-pack-1.2.0",
-  "mode": "realism-matchmaking-pack",
+  "version": "amateur-ladder-pack-1.3.0",
+  "mode": "amateur-ladder-pack",
   "patches": [
-    "new Matchmaking module",
-    "realistic record normalization",
-    "opponent tiers and stages",
-    "smarter fight offers",
-    "career stage progress",
-    "world diagnostics",
-    "better offer labels"
+    "new Amateur module",
+    "amateur tournament ladder",
+    "competition offers",
+    "medals and amateur points",
+    "opponent selection avoids normal champion mismatch",
+    "patch notes modal",
+    "expanded amateur path screen"
   ]
 }
