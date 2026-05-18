@@ -1,8 +1,8 @@
-# Roadmap after 2.0.0
+# Roadmap after 2.0.1
 
 Next:
-- Tune large-world generation speed.
-- Add country search/filter in ranking and travel modal.
-- Add region-level filters for countries.
-- Improve club name pools gradually with more real gyms.
-- Add richer local identity for amateur tournaments and national teams.
+- Add search inside country dropdowns.
+- Add regional grouping in travel/ranking selectors.
+- Keep improving exact real-life gym and name pools country by country.
+- Add visible rank movement after every fight.
+- Add fight history influence on title shots and pro contract quality.

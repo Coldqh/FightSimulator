@@ -158,6 +158,18 @@
       return;
     }
 
+    if (button.dataset.startCountry) {
+      var countryInput = document.getElementById("careerCountry");
+      var countryDropdown = document.getElementById("careerCountryDropdown");
+      if (countryInput) { countryInput.value = button.dataset.startCountry; }
+      if (countryDropdown && Render.startCountryDropdown) {
+        countryDropdown.innerHTML = Render.startCountryDropdown(button.dataset.startCountry);
+      }
+      var openDetails = button.closest("details");
+      if (openDetails) { openDetails.open = false; }
+      return;
+    }
+
     if (button.dataset.action === "create-career") {
       createCareerFromForm();
       return;

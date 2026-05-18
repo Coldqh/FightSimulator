@@ -1,33 +1,23 @@
-# Architecture 2.0.0
+# Architecture 2.0.1
+
+`assets/flags`
+- Contains PNG flags for every country in `Data.countries`.
 
 `Data.countries`
-- Contains final fighter counts:
-  - `amateurCount`
-  - `streetCount`
-  - `proCount`
-- Contains generated flag path:
-  - `assets/flags/<countryId>.png`
-- Contains large name pools and gym name pools.
+- Each country has its own `firstNames` and `lastNames` pools.
+- Big pools are kept at 200+ entries through real repeated name lists rather than fake initials.
 
-`State.createRoster`
-- Builds the roster from final country counts.
-- Pro fighters: 1,800 total.
-- Street fighters: 5,000 total.
-- Amateur fighters: 20,000 total.
-
-`Clubs.ensureClubs`
-- Club count per country is `ceil(total fighters / 30)`.
-- Clubs use country city/gym pools.
+`Utils.createName`
+- Always returns simple `first + surname`.
+- Removes leftover initial suffixes from older generated pools.
 
 `Render`
-- `countryLabel(countryId)` renders flag + country name.
-- Profile career controls are compressed into 3 buttons:
-  - Travel
-  - Weight
-  - Path
-- Each button opens a modal with full process details.
+- `countryDropdown` renders a compact flag dropdown.
+- Ranking uses dropdown for country selection.
+- Career start uses a custom flag dropdown and hidden country input.
+- Pro contract rows show country flags.
 
-`State.setPlayerCountry`
-- Flight is paid.
-- Gym is reset.
-- Fatigue is added.
+`State.ranking`
+- Ranking is driven mainly by record quality:
+  wins, losses, KO count, win rate, activity, titles and awards.
+- OVR is now a small tie-breaker instead of the main ranking driver.

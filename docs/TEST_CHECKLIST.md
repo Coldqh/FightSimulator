@@ -1,4 +1,4 @@
-# Test Checklist 2.0.0
+# Test Checklist 2.0.1
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,13 +7,11 @@ start index.html
 ```
 
 Manual:
-1. Game starts with 100+ countries.
-2. All country labels show flags where countries are displayed.
-3. `assets/flags` contains PNG flags.
-4. Amateur total is 20,000.
-5. Street total is 5,000.
-6. Pro total is 1,800.
-7. Club count depends on total fighters / 30.
-8. Profile tab has only 3 career-management buttons.
-9. Travel opens a modal and costs money.
-10. Low amateur/street opponents are from the current country.
+1. Ranking country filter is a dropdown, not a giant block of buttons.
+2. Career country selection has flags.
+3. Flags are larger than in 2.0.0.
+4. Fighters from China have Chinese names/surnames.
+5. Fighter names are normally simple first name + surname.
+6. Pro contract rows show the opponent country.
+7. Rankings react to records: winning fighters rise, losing fighters drop.
+8. Flags load from `assets/flags/*.png`.

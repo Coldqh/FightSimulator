@@ -1522,3 +1522,75 @@ button, input, select { max-width: 100%; }
     width: 100%;
   }
 }
+
+
+/* 2.0.1 real flags / compact country dropdowns */
+.flag-icon {
+  width: 1.77em !important;
+  height: 1.23em !important;
+  border-radius: 3px;
+}
+
+.country-dropdown {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.country-summary {
+  list-style: none;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.country-summary::-webkit-details-marker {
+  display: none;
+}
+
+.country-summary::after {
+  content: "▾";
+  opacity: .75;
+  font-size: .85em;
+}
+
+.country-dropdown-menu {
+  position: absolute;
+  z-index: 20000;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(360px, 86vw);
+  max-height: 360px;
+  overflow: auto;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(19, 22, 28, .98);
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+}
+
+.country-dropdown-menu .country-choice {
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
+}
+
+.compact-country-filter {
+  overflow: visible;
+}
+
+.start-country-dropdown .country-dropdown-menu {
+  width: min(420px, 88vw);
+}
+
+@media (max-width: 720px) {
+  .flag-icon {
+    width: 1.55em !important;
+    height: 1.08em !important;
+  }
+  .country-dropdown-menu {
+    max-height: 58vh;
+  }
+}

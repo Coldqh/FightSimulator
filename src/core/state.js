@@ -859,7 +859,11 @@
     var kos = Number(record.kos) || 0;
     var total = wins + losses + draws;
     var winRate = total ? wins / total : 0;
-    return wins * 0.24 - losses * 0.22 + draws * 0.04 + kos * 0.10 + winRate * 8;
+    var activity = Math.min(total, fighter.trackId === "pro" ? 60 : 160);
+    var titleBonus = fighter.titles ? Math.min(fighter.titles.length * 18, 72) : 0;
+    var awardBonus = fighter.awards ? Math.min(fighter.awards.length * 8, 40) : 0;
+
+    return wins * 3.2 - losses * 4.6 + draws * 0.6 + kos * 0.55 + winRate * 34 + activity * 0.28 + titleBonus + awardBonus;
   }
 
   function ranking(state, countryId, trackId, weightClassId) {
@@ -882,7 +886,7 @@
         return !fighter.retired && countryOk && fighter.trackId === trackId && weightOk;
       })
       .sort(function (left, right) {
-        return (U.scoreFighter(right) + recordStrengthForRanking(right)) - (U.scoreFighter(left) + recordStrengthForRanking(left));
+        return (recordStrengthForRanking(right) + U.statAverage(right.stats) * 0.08) - (recordStrengthForRanking(left) + U.statAverage(left.stats) * 0.08);
       });
   }
 

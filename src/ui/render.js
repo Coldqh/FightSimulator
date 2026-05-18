@@ -23,14 +23,20 @@
     return "<span class=\"country-label\">" + flagImg(country.id) + "<span>" + U.escapeHtml(country.label) + "</span></span>";
   }
 
+  function countryDropdown(selectedId, buttonAttr, extraClass) {
+    var selected = U.findCountry(selectedId);
+    return "<details class=\"country-dropdown " + (extraClass || "") + "\"><summary class=\"small-btn country-summary\">" + countryLabel(selected.id) + "</summary><div class=\"country-dropdown-menu\">" +
+      Data.countries.map(function (country) {
+        return "<button type=\"button\" class=\"small-btn country-choice " + (selectedId === country.id ? "active" : "") + "\" " + buttonAttr + "=\"" + U.escapeHtml(country.id) + "\">" + countryLabel(country.id) + "</button>";
+      }).join("") +
+    "</div></details>";
+  }
+
   function option(value, label, selectedValue) {
     return "<option value=\"" + U.escapeHtml(value) + "\"" + (value === selectedValue ? " selected" : "") + ">" + U.escapeHtml(label) + "</option>";
   }
 
   function renderStartScreen() {
-    var countryOptions = Data.countries.map(function (country) {
-      return option(country.id, country.label, "russia");
-    }).join("");
     var weightOptions = Data.weightClasses.map(function (weightClass) {
       return option(weightClass.id, weightClass.label + " · " + weightClass.min + "-" + weightClass.max + " кг", "welter");
     }).join("");
@@ -55,7 +61,7 @@
         "<div class=\"start-body\">" +
           "<div class=\"grid two\">" +
             "<label><div class=\"label\">Имя бойца</div><input id=\"careerName\" value=\"Влад\" maxlength=\"32\"></label>" +
-            "<label><div class=\"label\">Страна</div><select id=\"careerCountry\">" + countryOptions + "</select></label>" +
+            "<label><div class=\"label\">Страна</div><input id=\"careerCountry\" type=\"hidden\" value=\"russia\"><div id=\"careerCountryDropdown\">" + countryDropdown("russia", "data-start-country", "start-country-dropdown") + "</div></label>" +
             "<label><div class=\"label\">Весовая категория</div><select id=\"careerWeightClass\">" + weightOptions + "</select></label>" +
           "</div>" +
           "<div class=\"content-card\" style=\"margin-top:14px\"><h3>Архетип карьеры</h3><div class=\"archetype-grid\">" + cards + "</div></div>" +
@@ -311,7 +317,7 @@
 
     function contractRow(contract) {
       var opponent = U.getFighterById(state, contract.opponentId);
-      return opponent ? "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\"><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button><span class=\"pill\">OVR " + U.statAverage(opponent.stats) + "</span><span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span><span class=\"pill gold\">$" + contract.netPurse + "</span><span class=\"pill\">неделя " + contract.fightWeek + "</span><span class=\"pill blue\">" + U.escapeHtml(contract.promoterLabel) + "</span></div><button class=\"primary\" data-pro-contract=\"" + U.escapeHtml(contract.id) + "\">Подписать</button></div>" : "";
+      return opponent ? "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\"><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button><span class=\"pill flag-pill\">" + countryLabel(opponent.countryId) + "</span><span class=\"pill\">OVR " + U.statAverage(opponent.stats) + "</span><span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span><span class=\"pill gold\">$" + contract.netPurse + "</span><span class=\"pill\">неделя " + contract.fightWeek + "</span><span class=\"pill blue\">" + U.escapeHtml(contract.promoterLabel) + "</span></div><button class=\"primary\" data-pro-contract=\"" + U.escapeHtml(contract.id) + "\">Подписать</button></div>" : "";
     }
 
     return "<div class=\"grid two\">" +
@@ -359,10 +365,8 @@
 
   function renderRankingFilters(state) {
     var countryGroup = state.rankingTrackId === "pro" ? "<div class=\"filter-group\"><span class=\"filter-title\">Страна</span><span class=\"pill gold\">Мировой рейтинг</span></div>" :
-      "<div class=\"filter-group\"><span class=\"filter-title\">Страна</span>" +
-      Data.countries.map(function (country) {
-        return "<button class=\"small-btn " + (state.rankingCountryId === country.id ? "active" : "") + "\" data-ranking-country=\"" + country.id + "\">" + countryLabel(country.id) + "</button>";
-      }).join("") +
+      "<div class=\"filter-group compact-country-filter\"><span class=\"filter-title\">Страна</span>" +
+      countryDropdown(state.rankingCountryId, "data-ranking-country", "ranking-country-dropdown") +
       "</div>";
 
     var weightGroup = state.rankingTrackId === "street" ? "<div class=\"filter-group\"><span class=\"filter-title\">Вес</span><span class=\"pill gold\">Без весов</span></div>" :
@@ -444,7 +448,7 @@
         return base + " · " + U.escapeHtml(State.rankForFighter ? State.rankForFighter(fighter).label : "Любитель");
       }
       if (fighter.trackId === "pro") {
-        return base + " · мировой рейтинг";
+        return base + " · " + countryLabel(fighter.countryId) + " · мировой рейтинг";
       }
       return base;
     }
@@ -922,6 +926,7 @@
 
   window.FS.Render = {
     start: renderStartScreen,
-    dashboard: renderDashboard
+    dashboard: renderDashboard,
+    startCountryDropdown: function (countryId) { return countryDropdown(countryId || "russia", "data-start-country", "start-country-dropdown"); }
   };
 }());

@@ -128,7 +128,10 @@
   function createName(country, seed) {
     var firstIndex = Math.abs(seed * 3 + randomInt(0, country.firstNames.length - 1)) % country.firstNames.length;
     var lastIndex = Math.abs(seed * 5 + randomInt(0, country.lastNames.length - 1)) % country.lastNames.length;
-    return country.firstNames[firstIndex] + " " + country.lastNames[lastIndex];
+    var first = String(country.firstNames[firstIndex] || "Alex").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
+    var last = String(country.lastNames[lastIndex] || "Smith").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
+    /* В основной генерации всегда простая форма: имя + фамилия. */
+    return first + " " + last;
   }
 
   function getFighterById(state, fighterId) {
