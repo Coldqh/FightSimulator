@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "fight-balance-mobile-1.8.5",
+    appVersion: "favorites-ui-hotfix-1.8.6",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {

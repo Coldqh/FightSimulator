@@ -300,6 +300,19 @@
     } else if (button.dataset.person) {
       state.modal = { type: "person", personId: button.dataset.person };
       saveAndRender();
+    } else if (button.dataset.favoriteFighter) {
+      state.trackedFighterIds = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+      var favId = button.dataset.favoriteFighter;
+      var favIndex = state.trackedFighterIds.indexOf(favId);
+      if (favIndex === -1) {
+        state.trackedFighterIds.unshift(favId);
+        state.feed = "Боец добавлен в избранные.";
+      } else {
+        state.trackedFighterIds.splice(favIndex, 1);
+        state.feed = "Боец удалён из избранных.";
+      }
+      Storage.save(state);
+      saveAndRender();
     } else if (button.dataset.previewFight) {
       preview = Fight.buildFightPreview(state, button.dataset.previewFight);
       if (preview) {

@@ -131,6 +131,29 @@
     return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
   }
 
+  function isFavoriteFighter(state, fighterId) {
+    return !!(state.trackedFighterIds && state.trackedFighterIds.indexOf(fighterId) !== -1);
+  }
+
+  function favoriteButton(state, fighterId) {
+    var active = isFavoriteFighter(state, fighterId);
+    return "<button class=\"small-btn favorite-btn " + (active ? "active" : "") + "\" data-favorite-fighter=\"" + U.escapeHtml(fighterId) + "\">" + (active ? "★ В избранном" : "☆ В избранные") + "</button>";
+  }
+
+  function renderFavoriteFighters(state) {
+    var ids = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+    var fighters = ids.map(function (id) { return U.getFighterById(state, id); }).filter(function (fighter) { return fighter && !fighter.retired; });
+
+    if (!fighters.length) {
+      return "<div class=\"content-card favorites-card\"><h3>Избранные</h3><div class=\"muted small\">Отмечай бойцов звёздочкой в карточке или во вкладке боёв.</div></div>";
+    }
+
+    return "<div class=\"content-card favorites-card\"><div class=\"split-row\"><h3>Избранные</h3><strong>" + fighters.length + "</strong></div><div class=\"favorite-list\">" + fighters.slice(0, 12).map(function (fighter) {
+      var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
+      return "<div class=\"split-row favorite-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">★ " + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + U.escapeHtml(U.findCountry(fighter.countryId).label) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + (club ? " · " + U.escapeHtml(club.name) : "") + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
+    }).join("") + "</div></div>";
+  }
+
   function renderDashboardTab(state) {
     var p = State.player(state);
     var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
@@ -206,12 +229,14 @@
 
   function renderFightsTab(state) {
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
-    return "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
+    return renderFavoriteFighters(state) +
+      "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
       "<div class=\"offer-list compact-offers\">" + offers.map(function (offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
       if (!opponent || !preview) { return ""; }
       return "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\">" +
+        favoriteButton(state, opponent.id) +
         "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
         "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span>" +
         "<span class=\"pill\">OVR " + preview.opponentRating + "</span>" +
@@ -494,7 +519,7 @@
     var achievementHtml = fighter.trackId === "amateur" ? renderFighterAwards(state, fighter) : renderFighterTitles(state, fighter);
     var weightText = fighter.trackId === "street" ? "без весовых категорий" : U.escapeHtml(U.findWeightClass(fighter.weightClassId).label);
     var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
-    return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(fighter.name) + "</h2><div class=\"muted small\">" + U.escapeHtml(U.findCountry(fighter.countryId).label) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + weightText + (fighter.retired ? " · завершил карьеру" : "") + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Рейтинг</div><div class=\"value\">" + U.statAverage(fighter.stats) + "</div><div class=\"muted small\">Возраст: " + fighter.age + " · ДР: " + (fighter.birthMonth || "—") + "/" + (fighter.birthWeek || "—") + "</div></div><div class=\"stat-card\"><div class=\"label\">Рекорд</div><div class=\"value\" style=\"font-size:18px\">" + U.escapeHtml(U.recordText(fighter.record)) + "</div><div class=\"muted small\">Баланс: $" + (fighter.money || 0) + "</div></div></div>" +
+    return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(fighter.name) + "</h2><div class=\"muted small\">" + U.escapeHtml(U.findCountry(fighter.countryId).label) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + weightText + (fighter.retired ? " · завершил карьеру" : "") + "</div><div class=\"row\" style=\"margin-top:10px\">" + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : "") + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Рейтинг</div><div class=\"value\">" + U.statAverage(fighter.stats) + "</div><div class=\"muted small\">Возраст: " + fighter.age + " · ДР: " + (fighter.birthMonth || "—") + "/" + (fighter.birthWeek || "—") + "</div></div><div class=\"stat-card\"><div class=\"label\">Рекорд</div><div class=\"value\" style=\"font-size:18px\">" + U.escapeHtml(U.recordText(fighter.record)) + "</div><div class=\"muted small\">Баланс: $" + (fighter.money || 0) + "</div></div></div>" +
       "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Зал</div>" + (club ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(club.id) + "\">" + U.escapeHtml(club.name) + "</button><div class=\"muted small\">ур. " + club.level + " · тренер " + U.escapeHtml(club.coach ? club.coach.name : "—") + "</div>" : "<div class=\"muted small\">Без клуба</div>") + "</div>" +
       "<div class=\"skills\" style=\"margin-top:12px\"><div class=\"label\">Навыки</div>" + renderSkillRow("Сила", fighter.stats.power) + renderSkillRow("Техника", fighter.stats.technique) + renderSkillRow("Скорость", fighter.stats.speed) + renderSkillRow("Выносливость", fighter.stats.stamina) + renderSkillRow("Защита", fighter.stats.defense) + "</div>" + renderTrackRecords(fighter) + "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">" + achievementTitle + "</div>" + achievementHtml + "</div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Карьера</div>" + renderCareerLog(fighter, 5) + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
   }

@@ -1,13 +1,8 @@
-# Architecture 1.8.5
+# Architecture 1.8.6
 
-`fight.js`
-- Uses 100 base HP/stamina.
-- Health stat controls HP.
-- Endurance stat controls stamina.
-- Punch costs are doubled.
-- Damage is reduced for amateurs and increased for street/pro.
-- Result logs use action logs.
+Uses existing `state.trackedFighterIds` for favorite fighters.
 
-`app.js` / `styles.css`
-- Mobile auto-collapse is disabled.
-- Mobile layout is compressed and top panel wraps into multiple rows.
+Changed:
+- `render.js`: favorite UI in fights and fighter modal.
+- `app.js`: favorite toggle handler.
+- `styles.css`: z-index fixes and ring background fallback.

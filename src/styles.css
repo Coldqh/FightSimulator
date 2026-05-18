@@ -1260,3 +1260,80 @@ button, input, select { max-width: 100%; }
     padding: 5px;
   }
 }
+
+
+/* 1.8.6 favorites and overlay fixes */
+.modal-backdrop {
+  z-index: 12000 !important;
+}
+
+.fight-fullscreen-backdrop {
+  z-index: 13000 !important;
+}
+
+.topbar.compact-topbar {
+  z-index: 5;
+}
+
+.favorite-btn {
+  border-color: rgba(243, 217, 141, 0.35);
+}
+
+.favorite-btn.active {
+  color: #f3d98d;
+  background: rgba(243, 217, 141, 0.12);
+  border-color: rgba(243, 217, 141, 0.55);
+}
+
+.favorites-card {
+  border-color: rgba(243, 217, 141, 0.22);
+}
+
+.favorite-list {
+  display: grid;
+  gap: 4px;
+}
+
+.favorite-row {
+  padding: 5px 0;
+}
+
+.ring-grid {
+  background-image:
+    linear-gradient(rgba(8, 8, 10, 0.06), rgba(8, 8, 10, 0.06)),
+    url("../ring_top_view.png"),
+    url("ring_top_view.png") !important;
+  background-position: center, center, center !important;
+  background-size: cover, cover, cover !important;
+  background-repeat: no-repeat, no-repeat, no-repeat !important;
+  background-color: #17120d;
+  box-shadow: inset 0 0 0 999px rgba(0,0,0,0.05) !important;
+}
+
+.ring-cell {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+@media (max-width: 720px) {
+  .topbar.compact-topbar {
+    z-index: 5 !important;
+  }
+
+  .modal-backdrop {
+    z-index: 12000 !important;
+  }
+
+  .fight-fullscreen-backdrop {
+    z-index: 13000 !important;
+  }
+
+  .favorites-card {
+    padding: 5px;
+  }
+
+  .favorite-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}

@@ -1,12 +1,9 @@
 # Fight Simulator
 
-Version: `fight-balance-mobile-1.8.5`
+Version: `favorites-ui-hotfix-1.8.6`
 
-- Punch stamina costs are doubled and fight balance is retuned.
-- Base HP and stamina are 100, then grow from stats.
-- Defense is renamed to Health in UI.
-- Health controls HP; endurance controls stamina.
-- Amateur knockdowns are rarer; pro and street fights hit harder.
-- Fight result logs show actual punches instead of round score lines.
-- Hit chances are rounded to clean percentages.
-- Mobile UI no longer adds Hide/Show buttons and top panel wraps into rows.
+- Added favorite fighters.
+- Fight tab now shows a favorites block.
+- Fighter cards and fight rows can toggle favorites.
+- Modal overlays are above the mobile top panel.
+- Ring PNG background is forced through CSS with fallback paths.
