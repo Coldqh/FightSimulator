@@ -237,6 +237,40 @@
     return result;
   }
 
+  function foreignOriginCountry(hostCountry, seed, trackId, index, count) {
+    var chance = trackId === "street" ? 7 : 5;
+    var pool;
+    var origin;
+    if (count >= 12 && index === 0) { chance = Math.max(chance, 100); }
+    if (U.randomInt(1, 100) > chance) { return hostCountry; }
+
+    pool = Data.countries.filter(function (country) {
+      if (country.id === hostCountry.id) { return false; }
+      if (hostCountry.localPoolId && country.localPoolId === hostCountry.localPoolId) { return true; }
+      return country.continentId === hostCountry.continentId;
+    });
+
+    if (!pool.length) {
+      pool = Data.countries.filter(function (country) { return country.id !== hostCountry.id; });
+    }
+
+    origin = pool[Math.abs(seed + index * 17) % pool.length] || hostCountry;
+    return origin;
+  }
+
+  function createHostedFighter(hostCountry, trackId, seed, base, opts, index, count) {
+    var originCountry = foreignOriginCountry(hostCountry, seed, trackId, index || 0, count || 0);
+    var fighter = createFighter(originCountry.id, trackId, seed, base, Object.assign({}, opts || {}, {
+      homeCountryId: originCountry.id,
+      currentCountryId: hostCountry.id
+    }));
+    fighter.countryId = hostCountry.id;
+    fighter.currentCountryId = hostCountry.id;
+    fighter.originCountryId = originCountry.id;
+    fighter.isForeignResident = originCountry.id !== hostCountry.id;
+    return fighter;
+  }
+
   function createRoster(player) {
     var roster = [];
     var countryIndex;
@@ -278,10 +312,10 @@
       for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
         seed = 200000 + countryIndex * 10000 + fighterIndex;
         base = U.clamp(Math.round((fighterIndex / Math.max(1, count - 1)) * 150) + U.randomInt(-6, 6), 0, 150);
-        roster.push(createFighter(countryId, "street", seed, base, {
+        roster.push(createHostedFighter(country, "street", seed, base, {
           weightClassId: "",
           age: U.randomInt(18, 45)
-        }));
+        }, fighterIndex, count));
       }
     }
 
@@ -295,11 +329,11 @@
         base = scaledBaseForAmateurIndex(fighterIndex, count);
         rankId = rankForBaseValue(base);
         weightClassId = Data.weightClasses[(fighterIndex + countryIndex) % Data.weightClasses.length].id;
-        roster.push(createFighter(countryId, "amateur", seed, base, {
+        roster.push(createHostedFighter(country, "amateur", seed, base, {
           weightClassId: weightClassId,
           rankId: rankId,
           age: U.randomInt(18, 30)
-        }));
+        }, fighterIndex, count));
       }
     }
 

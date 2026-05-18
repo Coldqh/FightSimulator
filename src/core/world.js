@@ -75,15 +75,24 @@
     var next;
     if (!p || p.trackId !== "amateur" || !window.FS.Amateur || !window.FS.Amateur.availableCompetitions) { return; }
     if (state.modal && state.modal.type && state.modal.type !== "patchNotes") { return; }
+
     comps = window.FS.Amateur.availableCompetitions(state).filter(function (comp) {
-      return comp.available && ["country", "world", "world_elite"].indexOf(comp.id) !== -1;
+      return comp.available;
+    }).sort(function (a, b) {
+      return (b.rewardRating || 0) - (a.rewardRating || 0);
     });
-    next = comps[(state.week + comps.length) % Math.max(1, comps.length)];
-    if (next && state.week % 12 === 11) {
-      state.world.pendingTournamentInvite = { competitionId: next.id, dueWeek: state.week + 1, accepted: false, ignored: false };
-      state.modal = { type: "tournamentInvite", competitionId: next.id, dueWeek: state.week + 1 };
-      /* Турнирное приглашение показываем окном, но не пишем в новости. */
+
+    next = comps[0];
+    if (!next) { return; }
+
+    if (state.world.lastAvailableTournamentNoticeWeek === state.week &&
+        state.world.lastAvailableTournamentNoticeCompetitionId === next.id) {
+      return;
     }
+
+    state.world.lastAvailableTournamentNoticeWeek = state.week;
+    state.world.lastAvailableTournamentNoticeCompetitionId = next.id;
+    state.modal = { type: "tournamentAvailable", competitionId: next.id, label: next.label, scheduleText: next.scheduleText };
   }
 
   function handleScheduledTournamentStart(state) {
@@ -143,6 +152,12 @@
     return pool[U.randomInt(0, Math.min(9, pool.length - 1))] || pool[0] || null;
   }
 
+  function logNpcCareer(fighter, text, week) {
+    fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    fighter.careerLog.unshift({ week: week, text: text });
+    if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
+  }
+
   function resolveNpcFight(state, a, b) {
     var aScore = U.scoreFighter(a);
     var bScore = U.scoreFighter(b);
@@ -156,8 +171,8 @@
     rememberOpponent(b, a.id);
     if (draw) {
       a.record.draws += 1; b.record.draws += 1;
-      a.careerLog.unshift({ week: state.week, text: "Ничья с " + b.name });
-      b.careerLog.unshift({ week: state.week, text: "Ничья с " + a.name });
+      logNpcCareer(a, "Ничья с " + b.name, state.week);
+      logNpcCareer(b, "Ничья с " + a.name, state.week);
       a.lastFightWeek = state.week; b.lastFightWeek = state.week;
       if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
       return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью." };
@@ -165,8 +180,8 @@
     if (roll <= aChance) { winner = a; loser = b; } else { winner = b; loser = a; }
     ko = U.randomInt(1, 100) <= 20;
     winner.record.wins += 1; loser.record.losses += 1; if (ko) { winner.record.kos += 1; }
-    winner.careerLog.unshift({ week: state.week, text: "Победа над " + loser.name + (ko ? " KO/TKO" : " решением") });
-    loser.careerLog.unshift({ week: state.week, text: "Поражение от " + winner.name });
+    logNpcCareer(winner, "Победа над " + loser.name + (ko ? " KO/TKO" : " решением"), state.week);
+    logNpcCareer(loser, "Поражение от " + winner.name, state.week);
     winner.lastFightWeek = state.week; loser.lastFightWeek = state.week;
     if (winner.trackRecords) { winner.trackRecords[winner.trackId] = State.cloneRecord(winner.record); }
     if (loser.trackRecords) { loser.trackRecords[loser.trackId] = State.cloneRecord(loser.record); }
@@ -200,19 +215,48 @@
     return U.randomInt(2, 5);
   }
 
-  function findProContractOpponent(state, fighter) {
-    var pool = state.roster.filter(function (item) {
-      return !item.isPlayer && item.id !== fighter.id && item.trackId === "pro" && item.weightClassId === fighter.weightClassId && state.week - (item.lastFightWeek || 0) >= 2;
-    });
-    if (!pool.length) { return null; }
-    pool.sort(function (left, right) {
-      return Math.abs(U.scoreFighter(left) - U.scoreFighter(fighter)) - Math.abs(U.scoreFighter(right) - U.scoreFighter(fighter));
-    });
-    return pool[U.randomInt(0, Math.min(6, pool.length - 1))] || pool[0];
+  function findProContractOpponent(state, fighter, weightPool) {
+    var pool = weightPool || [];
+    var index = -1;
+    var candidates = [];
+    var radius;
+    var left;
+    var right;
+    var item;
+    var i;
+
+    if (!pool.length) {
+      for (i = 0; i < (state.roster || []).length; i += 1) {
+        item = state.roster[i];
+        if (item && !item.isPlayer && item.id !== fighter.id && item.trackId === "pro" && item.weightClassId === fighter.weightClassId && state.week - (item.lastFightWeek || 0) >= 2) {
+          candidates.push(item);
+        }
+      }
+      if (!candidates.length) { return null; }
+      candidates.sort(function (a, b) {
+        return Math.abs(U.scoreFighter(a) - U.scoreFighter(fighter)) - Math.abs(U.scoreFighter(b) - U.scoreFighter(fighter));
+      });
+      return candidates[U.randomInt(0, Math.min(6, candidates.length - 1))] || candidates[0];
+    }
+
+    for (i = 0; i < pool.length; i += 1) {
+      if (pool[i].id === fighter.id) { index = i; break; }
+    }
+    if (index < 0) { index = Math.floor(pool.length / 2); }
+
+    for (radius = 1; radius < pool.length && candidates.length < 12; radius += 1) {
+      left = pool[index - radius];
+      right = pool[index + radius];
+      if (left && left.id !== fighter.id && state.week - (left.lastFightWeek || 0) >= 2) { candidates.push(left); }
+      if (right && right.id !== fighter.id && state.week - (right.lastFightWeek || 0) >= 2) { candidates.push(right); }
+    }
+
+    if (!candidates.length) { return null; }
+    return candidates[U.randomInt(0, Math.min(6, candidates.length - 1))] || candidates[0];
   }
 
-  function scheduleProContract(state, fighter) {
-    var opponent = findProContractOpponent(state, fighter);
+  function scheduleProContract(state, fighter, weightPool) {
+    var opponent = findProContractOpponent(state, fighter, weightPool);
     if (!opponent) { return false; }
     fighter.contractOpponentId = opponent.id;
     fighter.nextFightWeek = state.week + contractDelay(fighter);
@@ -221,14 +265,32 @@
   }
 
   function processProContracts(state) {
-    var pros = state.roster.filter(function (fighter) { return !fighter.isPlayer && fighter.trackId === "pro"; });
+    var pros = [];
+    var proBuckets = {};
     var report = [];
-    var i, fighter, opponent, result;
+    var i, fighter, opponent, result, bucketKey;
     var scheduled = 0;
+
+    for (i = 0; i < (state.roster || []).length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.isPlayer || fighter.trackId !== "pro") { continue; }
+      pros.push(fighter);
+      bucketKey = fighter.weightClassId || "open";
+      proBuckets[bucketKey] = proBuckets[bucketKey] || [];
+      proBuckets[bucketKey].push(fighter);
+    }
+
+    Object.keys(proBuckets).forEach(function (key) {
+      proBuckets[key].sort(function (a, b) { return U.scoreFighter(a) - U.scoreFighter(b); });
+    });
+
     for (i = 0; i < pros.length; i += 1) {
       fighter = pros[i];
+      bucketKey = fighter.weightClassId || "open";
       if (!fighter.nextFightWeek || !fighter.contractOpponentId) {
-        if (scheduled < 80 && U.randomInt(1, 100) <= 12) { if (scheduleProContract(state, fighter)) { scheduled += 1; } }
+        if (scheduled < 80 && U.randomInt(1, 100) <= 12) {
+          if (scheduleProContract(state, fighter, proBuckets[bucketKey])) { scheduled += 1; }
+        }
         continue;
       }
       if (fighter.nextFightWeek <= state.week) {
@@ -241,7 +303,7 @@
         fighter.contractOpponentId = "";
         fighter.nextFightWeek = 0;
         fighter.contractLabel = "";
-        scheduleProContract(state, fighter);
+        scheduleProContract(state, fighter, proBuckets[bucketKey]);
       }
     }
     return report;
@@ -285,7 +347,6 @@
 
     report = report.concat(processProContracts(state).slice(0, 8 - report.length));
 
-    if (window.FS.Titles && window.FS.Titles.updateTitles) { window.FS.Titles.updateTitles(state); }
     return report;
   }
 
@@ -372,20 +433,43 @@
 
   function buildNationalTeams(state) {
     var teams = {};
+    var buckets = {};
     var countryIndex;
     var weightIndex;
+    var i;
+    var fighter;
+    var key;
     var country;
     var weight;
     var pool;
     var main;
     var reserve;
     var qualification;
+    var addedReserve;
     var p = State.player(state);
 
     if (!state.world) { state.world = {}; }
     state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
     state.world.reserveAdditions = state.world.reserveAdditions || {};
     state.world.teamCoaches = state.world.teamCoaches || {};
+
+    for (i = 0; i < (state.roster || []).length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.retired || fighter.trackId !== "amateur" || !fighter.weightClassId || U.statAverage(fighter.stats) < 40) { continue; }
+      key = (fighter.homeCountryId || fighter.originCountryId || fighter.countryId) + "|" + fighter.weightClassId;
+      if (!buckets[key]) { buckets[key] = []; }
+      buckets[key].push(fighter);
+    }
+
+    Object.keys(buckets).forEach(function (bucketKey) {
+      buckets[bucketKey].sort(function (left, right) {
+        var leftRecord = left.record || {};
+        var rightRecord = right.record || {};
+        var leftScore = U.statAverage(left.stats) + (leftRecord.wins || 0) * 0.8 - (leftRecord.losses || 0) * 1.1 + (leftRecord.kos || 0) * 0.2;
+        var rightScore = U.statAverage(right.stats) + (rightRecord.wins || 0) * 0.8 - (rightRecord.losses || 0) * 1.1 + (rightRecord.kos || 0) * 0.2;
+        return rightScore - leftScore;
+      });
+    });
 
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       country = Data.countries[countryIndex];
@@ -394,21 +478,19 @@
 
       for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
         weight = Data.weightClasses[weightIndex];
-        pool = State.ranking(state, country.id, "amateur", weight.id).filter(function (fighter) {
-          return !fighter.retired && U.statAverage(fighter.stats) >= 40;
-        });
+        pool = (buckets[country.id + "|" + weight.id] || []).slice();
 
         qualification = state.world.nationalTeamQualification[country.id + "|" + weight.id];
         if (qualification && p && p.id === qualification.fighterId && p.trackId === "amateur" && (p.homeCountryId || p.countryId) === country.id && p.weightClassId === weight.id) {
-          pool = pool.filter(function (fighter) { return fighter.id !== p.id; });
+          pool = pool.filter(function (item) { return item.id !== p.id; });
           pool.unshift(p);
         } else {
-          pool = pool.filter(function (fighter) { return !fighter.isPlayer; });
+          pool = pool.filter(function (item) { return !item.isPlayer; });
         }
 
-        main = main.concat(pool.slice(0, 2).map(function (fighter) { return fighter.id; }));
-        var addedReserve = state.world.reserveAdditions[country.id + "|" + weight.id] || [];
-        reserve = reserve.concat(addedReserve).concat(pool.slice(2, 10).map(function (fighter) { return fighter.id; }));
+        main = main.concat(pool.slice(0, 2).map(function (item) { return item.id; }));
+        addedReserve = state.world.reserveAdditions[country.id + "|" + weight.id] || [];
+        reserve = reserve.concat(addedReserve).concat(pool.slice(2, 10).map(function (item) { return item.id; }));
       }
 
       teams[country.id] = {
@@ -509,7 +591,7 @@
   }
 
   function simulateRetirementsAndNewFighters(state) {
-    var i, fighter, rating, chance, created = 0, parts = State.dateParts(state);
+    var i, fighter, rating, chance, created = 0, parts = State.dateParts(state), needsClubSync = false;
     for (i = 0; i < state.roster.length; i += 1) {
       fighter = state.roster[i];
       if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
@@ -518,14 +600,26 @@
       if (fighter.trackId === "amateur" && fighter.age > 30) {
         if (rating >= 90) { tryMoveFighter(state, fighter, "pro", "перерос любители и ушёл в профи"); }
         else { tryMoveFighter(state, fighter, "street", "перерос любители и ушёл на улицу"); }
+        needsClubSync = true;
         continue;
       }
       chance = fighter.age >= 40 ? 7 : (fighter.age >= 36 ? 3 : (fighter.age >= 32 ? 1 : 0));
-      if (chance && U.randomInt(1, 1000) <= chance) { retireFighter(state, fighter, "возраст"); }
+      if (chance && U.randomInt(1, 1000) <= chance) { retireFighter(state, fighter, "возраст"); needsClubSync = true; }
     }
-    for (i = 0; i < Data.countries.length; i += 1) { createYoungFighter(state, Data.countries[i].id, "amateur", created++); createYoungFighter(state, Data.countries[i].id, "street", created++); }
-    for (i = 0; i < Data.weightClasses.length; i += 1) { createYoungFighter(state, Data.countries[i % Data.countries.length].id, "pro", created++).weightClassId = Data.weightClasses[i].id; }
-    if (window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
+
+    /* Пополнение мира идёт пакетно раз в месяц: годовой поток тот же, но неделя не тратит время на полную пересборку клубов каждый тик. */
+    if (parts.weekOfMonth === 1) {
+      for (i = 0; i < Data.countries.length; i += 1) {
+        createYoungFighter(state, Data.countries[i].id, "amateur", created++);
+        createYoungFighter(state, Data.countries[i].id, "street", created++);
+      }
+      for (i = 0; i < Data.weightClasses.length; i += 1) {
+        createYoungFighter(state, Data.countries[i % Data.countries.length].id, "pro", created++).weightClassId = Data.weightClasses[i].id;
+      }
+      needsClubSync = true;
+    }
+
+    if (needsClubSync && window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
   }
 
 
@@ -539,6 +633,7 @@ function simulateInternationalGymMoves(state) {
     var targetClubs;
     var rating;
     var club;
+    var moved = false;
 
     if (!window.FS.Clubs || !state.clubs || !state.clubs.length) {
       return;
@@ -568,13 +663,16 @@ function simulateInternationalGymMoves(state) {
       }
 
       fighter.countryId = targetCountry.id;
+      fighter.currentCountryId = targetCountry.id;
       fighter.gymId = club.id;
       fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
       fighter.careerLog.unshift({ week: state.week, text: "Переезд в " + targetCountry.label + ", клуб " + club.name + "." });
+      if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
       U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал в " + targetCountry.label + "." }, 120);
+      moved = true;
     }
 
-    window.FS.Clubs.assignFightersToClubs(state);
+    if (moved) { window.FS.Clubs.assignFightersToClubs(state); }
   }
 
   function promoterById(id) {

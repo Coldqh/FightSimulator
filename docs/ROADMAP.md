@@ -1,8 +1,8 @@
-# Roadmap after 2.0.3
+# Roadmap after 2.0.4
 
 Next:
-- Full autonomous tournament simulation with saved medal tables for every national team.
-- Exact champion-change news for street/pro belts.
-- Search inside country/team dropdowns.
-- Rank movement arrows after every fight.
-- More compact fight preview cards for very small mobile screens.
+- Profile `Titles.updateTitles` and optimize belt/ranking recalculation.
+- Profile player offer generation and cache nearby opponent bands.
+- Add exact champion-change news for street/pro.
+- Add search inside country/team dropdowns.
+- Replace lightweight world tournament news with saved autonomous bracket results.

@@ -51,6 +51,30 @@
     return false;
   }
 
+  function dateTextForWeek(week) {
+    var parts = State.dateParts ? State.dateParts({ week: week }) : { year: 1, monthLabel: "месяц", weekOfMonth: 1 };
+    return "год " + parts.year + ", " + parts.monthLabel + ", " + parts.weekOfMonth + " неделя";
+  }
+
+  function isScheduledAtWeek(week, comp) {
+    return isScheduledNow({ week: week }, comp);
+  }
+
+  function nextScheduledWeek(state, comp) {
+    var week = Number(state.week) || 1;
+    var offset;
+    for (offset = 0; offset <= 240; offset += 1) {
+      if (isScheduledAtWeek(week + offset, comp)) { return week + offset; }
+    }
+    return week;
+  }
+
+  function scheduleTextForState(state, comp) {
+    var nextWeek = nextScheduledWeek(state, comp);
+    var left = Math.max(0, nextWeek - (Number(state.week) || 1));
+    return dateTextForWeek(nextWeek) + " · " + (left === 0 ? "на этой неделе" : ("через " + left + " нед."));
+  }
+
   function competitionStatus(state, comp) {
     var p = State.player(state);
     var rating = U.statAverage(p.stats);
@@ -63,7 +87,7 @@
     if (p.trackId !== "amateur") { return { available: false, reason: "Доступно только на любительском пути.", cooldownLeft: cooldownLeft }; }
     if (rating < comp.minRating) { return { available: false, reason: "Нужен OVR " + comp.minRating + "+.", cooldownLeft: cooldownLeft }; }
     if (typeof comp.maxRating === "number" && rating > comp.maxRating) { return { available: false, reason: "OVR выше лимита: максимум " + comp.maxRating + ".", cooldownLeft: cooldownLeft }; }
-    if (!isScheduledNow(state, comp)) { return { available: false, reason: "Дата турнира: " + scheduleText(comp) + ".", cooldownLeft: cooldownLeft }; }
+    if (!isScheduledNow(state, comp)) { return { available: false, reason: "Следующий турнир: " + scheduleTextForState(state, comp) + ".", cooldownLeft: cooldownLeft }; }
     if (cooldownLeft > 0) { return { available: false, reason: "Следующая попытка через " + cooldownLeft + " нед.", cooldownLeft: cooldownLeft }; }
     return { available: true, reason: "Можно заявиться.", cooldownLeft: 0 };
   }
@@ -84,7 +108,7 @@
         rewardRating: comp.rewardRating,
         entryFee: Data.economy && Data.economy.tournamentEntryFees ? (Data.economy.tournamentEntryFees[comp.id] || 0) : 0,
         difficultyId: comp.difficultyId,
-        scheduleText: scheduleText(comp),
+        scheduleText: scheduleTextForState(state, comp),
         available: status.available,
         reason: status.reason,
         cooldownLeft: status.cooldownLeft

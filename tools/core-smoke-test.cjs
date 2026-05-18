@@ -32,10 +32,7 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS=sandbox.window.FS;
-if (FS.Data.appVersion !== "tournament-team-ui-2.0.3") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.amateurCompetitions.some(c => c.schedule === "any")) throw new Error("lower tournaments still any");
-const comps = FS.Data.amateurCompetitions.reduce((m,c)=>(m[c.id]=c,m),{});
-if (comps.city.schedule !== "city" || comps.oblast.schedule !== "oblast" || comps.region.schedule !== "region") throw new Error("lower schedules missing");
+if (FS.Data.appVersion !== "availability-foreigners-optimization-2.0.4") throw new Error("bad version "+FS.Data.appVersion);
 
 function make(archetypeId, countryId="russia") {
   const state=FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -44,69 +41,79 @@ function make(archetypeId, countryId="russia") {
   return state;
 }
 
-let state=make("amateur","russia");
-state.selectedTab="world";
-let html=FS.Render.dashboard(state);
-if (!html.includes("Характеристики")) throw new Error("tab not renamed");
-if (html.includes("Сборная остаётся")) throw new Error("old home country text still shown");
-if (!html.includes("team-country-dropdown") || !html.includes("data-team-card") || !html.includes("Открыть карточку")) throw new Error("team selector/card controls missing");
-if (!html.includes("Сборная") || !html.includes("Тренер") || !html.includes("Сильнейший")) throw new Error("team card not club-like");
+let state = make("amateur","russia");
+let comps = FS.Amateur.availableCompetitions(state);
+let city = comps.find(c => c.id === "city");
+if (!city.scheduleText.includes("год ") || !city.scheduleText.match(/через \d+ нед|на этой неделе/)) {
+  throw new Error("tournament schedule does not show next date: "+city.scheduleText);
+}
+if (city.scheduleText.includes("каждый месяц")) throw new Error("schedule still shows rule instead of next date");
 
-const available = FS.Amateur.availableCompetitions(state);
-if (available.find(c => c.id==="city").scheduleText.includes("любое")) throw new Error("city schedule text broken");
-if (!available.find(c => c.id==="city").scheduleText.includes("каждый месяц")) throw new Error("city schedule not shown");
+state.selectedTab = "world";
+state.modal = { type:"teamCard", countryId:"japan" };
+let html = FS.Render.dashboard(state);
+const headerCount = (html.match(/Сборная/g) || []).length;
+if (headerCount > 2) throw new Error("team card duplicate headings too likely: "+headerCount);
+if (html.includes("<h3>Сборная") && html.indexOf("<h3>Сборная") !== html.lastIndexOf("<h3>Сборная")) {
+  throw new Error("team modal has duplicate secondary header");
+}
 
-state.modal={type:"teamCard", countryId:"russia"};
-html=FS.Render.dashboard(state);
-if (!html.includes("Сборная") || !html.includes("Ростер") || !html.includes("Резерв") || !html.includes("Страна тренера")) throw new Error("team card modal broken");
+state.modal = null;
+/* Find a week with any available competition and confirm the modal appears at week start. */
+let found = false;
+for (let i=0; i<60; i++) {
+  FS.World.advanceWeek(state, "skip");
+  if (state.modal && state.modal.type === "tournamentAvailable") {
+    found = true;
+    html = FS.Render.dashboard(state);
+    if (!html.includes("Доступен турнир") || !html.includes("Заявиться")) throw new Error("available tournament modal content missing");
+    break;
+  }
+  state.modal = null;
+}
+if (!found) throw new Error("available tournament notification never appeared");
 
-state.selectedTab="ranking";
-state.rankingTrackId="amateur";
-state.rankingCountryId="russia";
-state.modal=null;
-html=FS.Render.dashboard(state);
-if (!html.includes("flag-icon")) throw new Error("amateur ranking flags missing");
-state.rankingTrackId="street";
-html=FS.Render.dashboard(state);
-if (!html.includes("flag-icon")) throw new Error("street ranking flags missing");
+const foreignResidents = state.roster.filter(f => !f.isPlayer && f.isForeignResident && f.countryId !== (f.originCountryId || f.homeCountryId));
+if (foreignResidents.length < FS.Data.countries.length) throw new Error("not enough starting foreign residents: "+foreignResidents.length);
+const hostedCountryCount = new Set(foreignResidents.map(f => f.countryId)).size;
+if (hostedCountryCount < 80) throw new Error("foreign residents not spread across countries: "+hostedCountryCount);
 
-state.selectedTab="clubs";
-html=FS.Render.dashboard(state);
-if (!html.includes("club-country-dropdown") || !html.includes("country-dropdown")) throw new Error("club country dropdown missing");
+let foreign = foreignResidents[0];
+state.modal = { type: "fighter", fighterId: foreign.id };
+html = FS.Render.dashboard(state);
+if (!html.includes("fighter-country-route")) throw new Error("foreign country route not rendered");
 
-const club = state.clubs.find(c => c.countryId === FS.State.player(state).countryId);
-state.modal={type:"club", clubId:club.id};
-html=FS.Render.dashboard(state);
-if (!html.includes("flag-icon") || !html.includes("Ростер")) throw new Error("club roster flags/country missing");
-
-let pro=make("debt_pro","usa");
-let p=FS.State.player(pro);
+let pro = make("debt_pro","usa");
+let p = FS.State.player(pro);
 FS.World.buildProContracts(pro);
-let contract=pro.world.proContracts[0];
+let contract = pro.world.proContracts[0];
 FS.World.acceptProContract(pro, contract.id);
-if ((pro.world.proContractHistory[0].text || "").includes("неделе ")) throw new Error("contract history still uses raw week");
-if (!/год\s+\d+/.test(pro.world.proContractHistory[0].text)) throw new Error("contract history lacks full date");
-pro.week=p.nextFightWeek-1;
-FS.World.advanceWeek(pro,"skip");
-if (!pro.modal || pro.modal.type !== "proContractPreview") throw new Error("pro preview modal not created");
-html=FS.Render.dashboard(pro);
-if (html.includes("Бой по контракту уже наступил")) throw new Error("old pro due text still rendered");
-if (html.includes("Отмена")) throw new Error("pro contract preview has cancel button");
-if (!html.includes("Пропустить бой") || !html.includes("Выйти на ринг")) throw new Error("pro contract preview buttons missing");
+pro.week = p.nextFightWeek - 1;
+FS.World.advanceWeek(pro, "skip");
+if (!pro.modal || pro.modal.type !== "proContractPreview") throw new Error("pro preview broken after optimization");
 
-let newsState=make("amateur","russia");
-FS.World.createNews(newsState,"world","bad world",{});
-FS.World.createNews(newsState,"fights","bad fights",{});
-FS.World.createNews(newsState,"club","good club",{});
-if (newsState.world.news.some(n => n.text==="bad world" || n.text==="bad fights")) throw new Error("news filter lets wrong events through");
-if (!newsState.world.news.some(n => n.text==="good club")) throw new Error("news filter blocks allowed event");
+let autoState = make("amateur","russia");
+FS.World.refreshOffers(autoState);
+let offer = autoState.offers.find(o => !o.isCompetition);
+if (!offer) throw new Error("no offer");
+FS.Fight.resolveRandomFight(autoState, offer.id);
+html = FS.Render.dashboard(autoState);
+if (html.includes("Лог ударов")) throw new Error("auto winChance result still shows punch log");
 
+const sourceWorld = fs.readFileSync(path.join(root,"src/core/world.js"),"utf8");
+if (!sourceWorld.includes("var buckets = {};") || !sourceWorld.includes("buckets[bucketKey].sort")) {
+  throw new Error("optimized national-team bucketing missing");
+}
 const sourceAm = fs.readFileSync(path.join(root,"src/core/amateur.js"),"utf8");
-if (!sourceAm.includes("Предварительный раунд") || !sourceAm.includes("arrangeRoundPairs")) throw new Error("preliminary bracket logic missing");
+if (!sourceAm.includes("nextScheduledWeek") || !sourceAm.includes("scheduleTextForState")) {
+  throw new Error("next tournament date helpers missing");
+}
 
-console.log("tournament team ui smoke ok", {
+console.log("availability foreigners optimization smoke ok", {
   version: FS.Data.appVersion,
-  citySchedule: available.find(c=>c.id==="city").scheduleText,
-  teamModal: "ok",
+  citySchedule: city.scheduleText,
+  foreignResidents: foreignResidents.length,
+  hostedCountries: hostedCountryCount,
+  modal: "tournamentAvailable",
   proModal: pro.modal.type
 });

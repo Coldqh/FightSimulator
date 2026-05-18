@@ -1,23 +1,41 @@
-# Architecture 2.0.3
+# Architecture 2.0.4
 
-`Data.amateurCompetitions`
-- `city`, `oblast`, `region` now use scheduled calendar values instead of `any`.
+## Tournament dates
 
-`Amateur`
-- `scheduleText` and `isScheduledNow` now handle lower tournament schedules.
-- Tournament brackets support preliminary rounds:
-  - non-power-of-two participant counts are reduced to the next lower power of two after the first round.
-  - byes are represented internally as empty pair slots.
-- `tournamentRoundsForSize` emits "Предварительный раунд" before the normal 64/32/16 ladder when needed.
+`Amateur.scheduleTextForState(state, comp)` now returns the next actual date:
+- full calendar date
+- weeks left
+- no rule text like "каждый месяц"
 
-`World`
-- News are filtered to strict allowed categories: club, team, tournament, medal, champion.
-- Contract signing text uses full date through `State.dateParts`.
-- Due pro fight opens `proContractPreview`.
+## Tournament availability
 
-`Render`
-- Training tab label is now "Характеристики".
-- Team cards use the same visual language as club cards.
-- Team selector uses dropdown + buttons.
-- Pro contract due preview matches normal fight preview but has no cancel button.
-- Rankings show fighter country for amateur/street/pro.
+`World.scheduleTournamentNotice(state)` now checks currently available competitions at the start of the week.
+It opens:
+
+```js
+{ type: "tournamentAvailable", competitionId, label, scheduleText }
+```
+
+The modal uses existing `data-amateur-competition` flow, so it starts the tournament through the same safe path.
+
+## Foreign residents
+
+`State.createHostedFighter(...)` creates street/amateur fighters with:
+- `homeCountryId`
+- `originCountryId`
+- `currentCountryId`
+- `isForeignResident`
+
+Filtering still uses `countryId` as current country.
+Display uses `fighterCountryLabel(fighter)` so foreign residents can show origin → current country.
+
+## Optimization
+
+Changed without removing simulation systems:
+- National teams: replaced 102 × 6 repeated full rankings with one single-pass bucket build.
+- Club assignment: replaced repeated country-by-country full roster scans with one-pass country buckets.
+- Club assignment is skipped when club rosters are already valid.
+- International gym moves only rebuild club rosters if a move actually happened.
+- NPC career logs are capped to the latest 8 entries to stop thousands of array shifts per week.
+- Pro contract opponent selection now uses weight-class buckets and nearest-neighbor lookup instead of repeated full sorting.
+- Removed duplicate title update from `simulateNpcFights`; title update still runs in the main weekly pipeline.

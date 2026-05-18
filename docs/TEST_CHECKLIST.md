@@ -1,19 +1,18 @@
-# Test Checklist 2.0.3
+# Test Checklist 2.0.4
 
 ```powershell
 cd C:\FightSimulator_GitHub
 node tools\core-smoke-test.cjs
+node tools\week-benchmark.cjs
 start index.html
 ```
 
 Manual:
-1. City/oblast/region tournaments no longer show `дата: любая`.
-2. Tab says `Характеристики`, not `Тренировка`.
-3. Amateur path team cards look like club cards.
-4. National teams are selected from a dropdown.
-5. Rankings show flags for amateur/street fighters.
-6. Pro contract signing shows full date, not raw week.
-7. Due pro fight opens a fight preview without cancel.
-8. News tab contains only meaningful news categories.
-9. 80-player bracket goes to 64 after the preliminary round.
-10. UI is tighter on phone and desktop.
+1. Tournament rows show next exact date and weeks left, not the full rule.
+2. When an available tournament week starts, a modal says `Доступен турнир`.
+3. Team card modal has only one `Сборная ...` heading.
+4. New career has foreign residents in street/amateur scenes across countries.
+5. Foreign residents show origin → current country route.
+6. Mobile tournament row stays in one compact line.
+7. Auto-resolved winChance fights do not show punch logs.
+8. Week tick should be noticeably faster than 2.0.3.
