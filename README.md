@@ -1,10 +1,8 @@
 # Fight Simulator
 
-Version: `pro-schedule-damage-1.9.6`
+Version: `damage-scaling-1.9.7`
 
-- Pro contract waiting time now depends on OVR and champion status.
-- Damage is increased by path: amateur x2, pro x3, street x5 versus 1.9.5 baseline.
-- Damage, hit chance, evasion and stamina now scale more smoothly from stats.
-- Fighters reset to starting corners every new round.
-- Opponent search and rankings now care more about record similarity/quality.
-- National team coach is clickable and opens a profile.
+- Damage scaling is now gradual: 100 power gives about 1.75x damage versus 0 power.
+- HP is now `100 + Health`.
+- Knockdown recovery is now tiered: about 80%, 50%, 30%, 10%, 5%.
+- The top bar no longer repeats KO twice.

@@ -1,7 +1,7 @@
-# Roadmap after 1.9.6
+# Roadmap after 1.9.7
 
 Next:
-- Manually test fight damage after several amateur/pro/street fights.
-- Tune knockdowns after the new damage multipliers.
-- Improve pro contract labels and promoter progression.
-- Add richer national team coach profiles.
+- Manually test 10-20 fights across amateur/pro/street.
+- Tune base punch damage after real gameplay.
+- Add visible knockdown count and post-fight knockdown stats.
+- Continue pro contract balance and title logic.

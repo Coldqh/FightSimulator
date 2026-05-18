@@ -55,13 +55,33 @@
   }
 
   function trackDamageMultiplier(trackId) {
-    if (trackId === "pro") { return 1.77; }
-    if (trackId === "street") { return 3.35; }
-    return 1.64;
+    if (trackId === "pro") { return 0.84; }
+    if (trackId === "street") { return 1.10; }
+    return 0.72;
+  }
+
+  function damageScale(fighter) {
+    return 1 + U.clamp(Number(fighter.stats.power) || 0, 0, 200) * 0.0075;
+  }
+
+  function basePunchDamage(punch) {
+    if (punch.id === "jabHead") { return 6; }
+    if (punch.id === "jabBody") { return 5; }
+    if (punch.id === "hook") { return 9; }
+    if (punch.id === "uppercut") { return 11; }
+    return 6;
+  }
+
+  function knockdownStandChance(previousKnockdowns) {
+    if (previousKnockdowns <= 0) { return 80; }
+    if (previousKnockdowns === 1) { return 50; }
+    if (previousKnockdowns === 2) { return 30; }
+    if (previousKnockdowns === 3) { return 10; }
+    return 5;
   }
 
   function maxHp(fighter) {
-    return Math.round(100 + healthStat(fighter) * 0.72);
+    return Math.round(100 + healthStat(fighter));
   }
 
   function maxStamina(fighter) {
@@ -128,13 +148,11 @@
   }
 
   function punchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var powerGrowth = Math.pow(Math.max(1, attacker.stats.power), 1.08) * 0.135;
-    var techGrowth = Math.max(1, attacker.stats.technique) * 0.07;
-    var raw = powerGrowth + techGrowth + punch.stamina * 0.12 + U.randomInt(0, 4);
-    var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
-    if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.28)); }
+    var variance = U.randomInt(-1, 2);
+    var damage = Math.round((basePunchDamage(punch) + variance) * damageScale(attacker) * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
+    if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.24)); }
     if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.48); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 48 : (attacker.trackId === "pro" ? 57 : 115));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 28 : (attacker.trackId === "pro" ? 34 : 45));
   }
 
   function staminaDamage(attacker, punch, damage, defenderState) {
@@ -144,12 +162,9 @@
   }
 
   function estimatePunchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var powerGrowth = Math.pow(Math.max(1, attacker.stats.power), 1.08) * 0.135;
-    var techGrowth = Math.max(1, attacker.stats.technique) * 0.07;
-    var raw = powerGrowth + techGrowth + punch.stamina * 0.12 + 2;
-    var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
+    var damage = Math.round(basePunchDamage(punch) * damageScale(attacker) * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 48 : (attacker.trackId === "pro" ? 57 : 115));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 28 : (attacker.trackId === "pro" ? 34 : 45));
   }
 
   function punchActionsForModal(player, opponent, session) {
@@ -540,15 +555,14 @@
     var session = modal && modal.session;
     var side;
     var target;
-    var fighter;
+    var previousKnockdowns;
     var standChance;
-    var kdPenalty;
-    var trackPenalty;
 
     if (!session || !session.count) { return false; }
     side = session.count.side;
     target = side === "player" ? session.player : session.opponent;
-    fighter = side === "player" ? State.player(state) : U.getFighterById(state, session.opponentId);
+    previousKnockdowns = Number(target.knockdowns) || 0;
+    standChance = knockdownStandChance(previousKnockdowns);
     session.count.count += 1;
 
     if (session.count.count >= 10) {
@@ -556,18 +570,28 @@
       return finishInteractiveFight(state, session, side === "player" ? "opponent_ko" : "player_ko");
     }
 
-    kdPenalty = (Number(target.knockdowns) || 0) * (fighter && fighter.trackId === "pro" ? 18 : 13);
-    trackPenalty = fighter && fighter.trackId === "pro" ? 18 : (fighter && fighter.trackId === "street" ? 10 : 0);
-    standChance = U.clamp(14 + target.stamina * 0.24 + target.maxHp * 0.025 - session.count.count * 7 - kdPenalty - trackPenalty, 3, fighter && fighter.trackId === "pro" ? 58 : 76);
-    session.log.push("Счёт " + session.count.count + ". Шанс подняться: " + Math.round(standChance) + "%.");
+    if (session.count.count < 8) {
+      session.log.push("Счёт " + session.count.count + ". Боец пытается прийти в себя. Шанс пережить этот нокдаун: " + standChance + "%.");
+      state.modal = buildCountModal(state, session);
+      return true;
+    }
 
-    if (U.randomInt(1, 100) <= standChance) {
-      target.knockdowns += 1;
-      target.hp = Math.max(10, Math.round(target.maxHp * 0.24));
-      target.stamina = Math.max(target.stamina, Math.round(target.maxStamina * 0.10));
-      session.log.push((side === "player" ? "Ты поднимаешься" : "Соперник поднимается") + ". Бой продолжается.");
-      session.count = null;
-      return endTurn(state, session);
+    if (!session.count.rollDone) {
+      session.count.rollDone = true;
+      session.log.push("Счёт " + session.count.count + ". Критический момент. Шанс подняться после нокдауна: " + standChance + "%.");
+
+      if (U.randomInt(1, 100) <= standChance) {
+        target.knockdowns += 1;
+        target.hp = Math.max(10, Math.round(target.maxHp * 0.24));
+        target.stamina = Math.max(target.stamina, Math.round(target.maxStamina * 0.10));
+        session.log.push((side === "player" ? "Ты поднимаешься" : "Соперник поднимается") + ". Бой продолжается.");
+        session.count = null;
+        return endTurn(state, session);
+      }
+
+      session.log.push((side === "player" ? "Ты не успеваешь подняться сразу" : "Соперник не успевает подняться сразу") + ".");
+    } else {
+      session.log.push("Счёт " + session.count.count + ". Боец всё ещё на настиле.");
     }
 
     state.modal = buildCountModal(state, session);

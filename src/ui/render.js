@@ -69,7 +69,6 @@
         (weightText ? "<span class=\"pill\">" + U.escapeHtml(weightText) + "</span>" : "") +
         "<span class=\"pill blue\">OVR " + U.statAverage(p.stats) + "</span>" +
         "<span class=\"pill\">" + U.escapeHtml(U.recordText(p.record)) + "</span>" +
-        "<span class=\"pill\">KO " + (p.record.kos || 0) + "</span>" +
         "<span class=\"pill gold\">$" + (Number(p.money) || 0) + "</span>" +
         "<span class=\"pill red\">Усталость " + (Number(p.fatigue) || 0) + "/100</span>" +
         (status ? "<span class=\"pill green\">" + U.escapeHtml(status) + "</span>" : "") +

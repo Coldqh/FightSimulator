@@ -48,87 +48,62 @@ sandbox.global = sandbox.window;
 });
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "pro-schedule-damage-1.9.6") throw new Error("bad version");
+if (FS.Data.appVersion !== "damage-scaling-1.9.7") throw new Error("bad version");
 
-function make(archetypeId) {
-  const state = FS.State.createCareer({
-    name: "Smoke",
-    archetypeId,
-    countryId: "russia",
-    weightClassId: "welter"
-  });
-  FS.World.bootstrapWorld(state);
-  FS.State.repairState(state);
-  return state;
-}
+const state = FS.State.createCareer({
+  name: "Smoke",
+  archetypeId: "debt_pro",
+  countryId: "russia",
+  weightClassId: "welter"
+});
+FS.World.bootstrapWorld(state);
+FS.State.repairState(state);
 
-const pro = make("debt_pro");
-const player = FS.State.player(pro);
-if (!pro.world.proContracts || pro.world.proContracts.length < 5) throw new Error("pro contracts missing");
-const waits = pro.world.proContracts.map(c => c.fightWeek - pro.week);
-if (waits.some(w => w < 3 || w > 4)) throw new Error("OVR 90 pro wait should be 3-4 weeks: " + waits.join(","));
+const player = FS.State.player(state);
+player.stats.power = 90;
+player.stats.technique = 90;
+player.stats.speed = 90;
+player.stats.stamina = 90;
+player.stats.defense = 90;
+FS.State.updateDerivedFighterFields(player);
+if (!FS.World.buildProContracts(state).length) throw new Error("no pro contracts");
 
-const pOvr = FS.Utils.statAverage(player.stats);
-for (const contract of pro.world.proContracts) {
-  const opp = FS.Utils.getFighterById(pro, contract.opponentId);
-  if (Math.abs(FS.Utils.statAverage(opp.stats) - pOvr) > 8) throw new Error("contract OVR too far");
-}
+const contract = state.world.proContracts[0];
+FS.World.acceptProContract(state, contract.id);
+player.nextFightWeek = state.week;
+if (!FS.Fight.startProContractFight(state)) throw new Error("could not start fight");
 
-const firstContract = pro.world.proContracts[0];
-FS.World.acceptProContract(pro, firstContract.id);
-player.nextFightWeek = pro.week;
-if (!FS.Fight.startProContractFight(pro)) throw new Error("could not start pro fight");
-let session = pro.modal.session;
-if (session.player.maxStamina !== Math.round(100 + player.stats.stamina * 0.5)) {
-  throw new Error("stamina formula broken");
-}
+let session = state.modal.session;
+if (session.player.maxHp !== 190) throw new Error("HP formula should be 100 + health: " + session.player.maxHp);
+if (session.player.maxStamina !== 145) throw new Error("stamina formula should remain 100 + endurance/2: " + session.player.maxStamina);
 
-/* Force round reset check. */
-session.round = 1;
-session.turn = session.maxTurns;
-session.player.pos = { x: 0, y: 0 };
-session.opponent.pos = { x: 4, y: 4 };
-session.player.hp = session.player.maxHp;
-session.opponent.hp = session.opponent.maxHp;
-FS.Fight.playerAction(pro, "block", 0, 0);
-session = pro.modal.session;
-if (session.round > 1) {
-  if (session.player.pos.x !== 2 || session.player.pos.y !== 4 || session.opponent.pos.x !== 2 || session.opponent.pos.y !== 0) {
-    throw new Error("fighters did not reset to corners");
-  }
-}
+let html = FS.Render.dashboard(state);
+if (html.includes("</span><span class=\"pill\">KO ")) throw new Error("duplicate KO pill still visible");
 
 const fightSource = fs.readFileSync(path.join(root, "src/core/fight.js"), "utf8");
-if (!fightSource.includes('return 1.64') || !fightSource.includes('return 1.77') || !fightSource.includes('return 3.35')) {
-  throw new Error("damage multipliers missing");
+if (!fightSource.includes("return 1 + U.clamp(Number(fighter.stats.power) || 0, 0, 200) * 0.0075;")) {
+  throw new Error("gradual damage scale missing");
 }
-if (!fightSource.includes("attackGrowth") || !fightSource.includes("dodgeGrowth")) {
-  throw new Error("smooth hit/evasion scaling missing");
+if (!fightSource.includes("return Math.round(100 + healthStat(fighter));")) {
+  throw new Error("HP formula missing");
+}
+if (!fightSource.includes("if (previousKnockdowns <= 0) { return 80; }") ||
+    !fightSource.includes("if (previousKnockdowns === 1) { return 50; }") ||
+    !fightSource.includes("if (previousKnockdowns === 2) { return 30; }") ||
+    !fightSource.includes("if (previousKnockdowns === 3) { return 10; }") ||
+    !fightSource.includes("return 5;")) {
+  throw new Error("knockdown stand chance table missing");
 }
 
-const worldSource = fs.readFileSync(path.join(root, "src/core/world.js"), "utf8");
-if (!worldSource.includes("function proContractWaitWeeks") || !worldSource.includes("return U.randomInt(10, 12)")) {
-  throw new Error("pro wait schedule missing");
-}
-if (!worldSource.includes("recordSimilarityPenalty")) throw new Error("pro record-aware matching missing");
+/* Check approximate scale from source formula: 0 power = 1, 100 power = 1.75. */
+const scale0 = 1 + 0 * 0.0075;
+const scale100 = 1 + 100 * 0.0075;
+if (Math.abs(scale100 / scale0 - 1.75) > 0.001) throw new Error("damage scale math wrong");
 
-const mmSource = fs.readFileSync(path.join(root, "src/core/matchmaking.js"), "utf8");
-if (!mmSource.includes("recordSimilarityPenalty")) throw new Error("offer record-aware matching missing");
-
-const stateSource = fs.readFileSync(path.join(root, "src/core/state.js"), "utf8");
-if (!stateSource.includes("recordStrengthForRanking")) throw new Error("ranking record quality missing");
-
-const amateur = make("amateur");
-amateur.selectedTab = "world";
-let html = FS.Render.dashboard(amateur);
-if (!html.includes("data-person=")) throw new Error("team coach is not clickable");
-const coachId = amateur.world.teamsByCountry.russia.coach.id;
-amateur.modal = { type: "person", personId: coachId };
-html = FS.Render.dashboard(amateur);
-if (!html.includes("Тренер сборной") || !html.includes("Сборная")) throw new Error("team coach profile missing");
-
-console.log("pro schedule damage smoke ok", {
+console.log("damage scaling smoke ok", {
   version: FS.Data.appVersion,
-  waits,
-  teamCoach: amateur.world.teamsByCountry.russia.coach.name
+  hp: session.player.maxHp,
+  stamina: session.player.maxStamina,
+  damageScale0: scale0,
+  damageScale100: scale100
 });

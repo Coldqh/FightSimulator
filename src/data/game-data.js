@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "pro-schedule-damage-1.9.6",
+    appVersion: "damage-scaling-1.9.7",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
