@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "favorites-tab-ring-1.8.7",
+    appVersion: "pro-career-pack-1.9.4",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -192,6 +192,20 @@
       { id: "pro_world_wba", label: "Чемпион мира WBA", bodyId: "wba", trackId: "pro", scope: "world" },
       { id: "pro_world_wbo", label: "Чемпион мира WBO", bodyId: "wbo", trackId: "pro", scope: "world" },
       { id: "pro_world_ibf", label: "Чемпион мира IBF", bodyId: "ibf", trackId: "pro", scope: "world" }
+    ],
+
+    careerArchetypes: [
+      { id: "rookie", label: "Новичок", age: 16, baseOvr: 0, trackId: "amateur", money: 0, fatigue: 0, description: "16 лет · OVR 0 · любители · до 18 лет расходы $0" },
+      { id: "amateur", label: "Любитель", age: 18, baseOvr: 30, trackId: "amateur", money: 250, fatigue: 8, description: "18 лет · OVR 30 · любители" },
+      { id: "street_kid", label: "Уличный парень", age: 18, baseOvr: 10, trackId: "street", money: 150, fatigue: 12, description: "18 лет · OVR 10 · улица" },
+      { id: "debt_pro", label: "Профессионал с долгами", age: 26, baseOvr: 90, trackId: "pro", money: 0, fatigue: 35, hardModeDebt: true, expenseMultiplier: 2.35, description: "26 лет · OVR 90 · профи · $0 на счёте · максимальные расходы" }
+    ],
+
+    promoters: [
+      { id: "local_hall", label: "Local Hall Promotions", level: 1, cut: 0.08, purseMul: 1.00, weeksMin: 4, weeksMax: 7 },
+      { id: "iron_city", label: "Iron City Boxing", level: 2, cut: 0.12, purseMul: 1.22, weeksMin: 6, weeksMax: 10 },
+      { id: "world_stage", label: "World Stage Promotions", level: 3, cut: 0.16, purseMul: 1.55, weeksMin: 8, weeksMax: 14 },
+      { id: "championship", label: "Championship Boxing", level: 4, cut: 0.20, purseMul: 1.95, weeksMin: 10, weeksMax: 20 }
     ],
 
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],

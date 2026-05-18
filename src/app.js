@@ -24,11 +24,11 @@
   }
 
   function createCareerFromForm() {
+    var archetypeInput = document.querySelector("input[name='careerArchetype']:checked");
     state = State.createCareer({
       name: document.getElementById("careerName").value.trim(),
-      age: Math.max(16, Math.min(40, parseInt(document.getElementById("careerAge").value, 10) || 18)),
+      archetypeId: archetypeInput ? archetypeInput.value : "amateur",
       countryId: document.getElementById("careerCountry").value,
-      trackId: document.getElementById("careerTrack").value,
       weightClassId: document.getElementById("careerWeightClass").value,
       stanceId: ""
     });
@@ -333,6 +333,16 @@
       }
     } else if (button.dataset.acceptTitleChallenge) {
       Fight.resolveTitleChallenge(state, button.dataset.acceptTitleChallenge);
+      saveAndRender();
+    } else if (button.dataset.proContract) {
+      if (World.acceptProContract) { World.acceptProContract(state, button.dataset.proContract); }
+      saveAndRender();
+    } else if (button.dataset.refreshProContracts) {
+      if (World.buildProContracts) { World.buildProContracts(state); }
+      state.feed = "Профи-предложения обновлены.";
+      saveAndRender();
+    } else if (button.dataset.startProContract) {
+      if (Fight.startProContractFight) { Fight.startProContractFight(state); }
       saveAndRender();
     } else if (button.dataset.joinClub) {
       if (window.FS.Clubs && window.FS.Clubs.movePlayerToClub) {

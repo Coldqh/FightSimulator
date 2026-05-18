@@ -465,6 +465,106 @@ function simulateInternationalGymMoves(state) {
     window.FS.Clubs.assignFightersToClubs(state);
   }
 
+  function promoterById(id) {
+    var promoters = Data.promoters || [];
+    return promoters.find(function (item) { return item.id === id; }) || promoters[0] || { id: "local_hall", label: "Local Hall Promotions", cut: 0.1, purseMul: 1, weeksMin: 4, weeksMax: 8 };
+  }
+
+  function proContractType(player, opponent) {
+    var diff = U.statAverage(opponent.stats) - U.statAverage(player.stats);
+    if (diff >= 20) { return "рискованный рейтинговый бой"; }
+    if (diff >= 8) { return "бой с сильным соперником"; }
+    if (diff <= -15) { return "разминочный бой"; }
+    return "ровный контрактный бой";
+  }
+
+  function proContractPurse(player, opponent, promoter) {
+    var ovr = U.statAverage(opponent.stats);
+    var base = 600 + ovr * 18;
+    return Math.round(base * (promoter.purseMul || 1));
+  }
+
+  function buildProContracts(state) {
+    var p = State.player(state);
+    var promoter;
+    var ranking;
+    var contracts = [];
+    var i;
+    var opponent;
+    var weeks;
+    var purse;
+    var type;
+
+    if (!p || p.trackId !== "pro") {
+      state.world.proContracts = [];
+      return [];
+    }
+
+    if (p.contractOpponentId && p.nextFightWeek > state.week) {
+      state.world.proContracts = [];
+      return [];
+    }
+
+    promoter = promoterById(p.promoterId);
+    ranking = State.ranking(state, "world", "pro", p.weightClassId).filter(function (fighter) {
+      var diff = Math.abs(U.statAverage(fighter.stats) - U.statAverage(p.stats));
+      return !fighter.isPlayer && !fighter.retired && diff <= 32;
+    }).slice(0, 80);
+
+    for (i = 0; i < Math.min(4, ranking.length); i += 1) {
+      opponent = ranking[(i * 7 + state.week + (state.offerRefreshSalt || 0)) % ranking.length];
+      if (!opponent || contracts.some(function (contract) { return contract.opponentId === opponent.id; })) { continue; }
+      weeks = U.randomInt(promoter.weeksMin || 4, promoter.weeksMax || 10);
+      purse = proContractPurse(p, opponent, promoter);
+      type = proContractType(p, opponent);
+      contracts.push({
+        id: U.uid("contract"),
+        weekCreated: state.week,
+        fightWeek: state.week + weeks,
+        opponentId: opponent.id,
+        promoterId: promoter.id,
+        promoterLabel: promoter.label,
+        promoterCut: promoter.cut || 0.1,
+        label: type,
+        purse: purse,
+        netPurse: Math.max(0, Math.round(purse * (1 - (promoter.cut || 0.1)))),
+        rounds: U.findTrack("pro").rounds,
+        weightClassId: p.weightClassId,
+        status: "available"
+      });
+    }
+
+    state.world.proContracts = contracts;
+    return contracts;
+  }
+
+  function acceptProContract(state, contractId) {
+    var p = State.player(state);
+    var contract = (state.world.proContracts || []).find(function (item) { return item.id === contractId; });
+    if (!p || !contract || p.trackId !== "pro") { return false; }
+    p.contractOpponentId = contract.opponentId;
+    p.contractLabel = contract.label;
+    p.contractPurse = contract.netPurse;
+    p.contractRounds = contract.rounds;
+    p.contractId = contract.id;
+    p.nextFightWeek = contract.fightWeek;
+    p.promoterId = contract.promoterId;
+    state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
+    state.world.proContractHistory.unshift({ week: state.week, text: "Подписан контракт: " + contract.label + ", бой на неделе " + contract.fightWeek + ".", contract: contract });
+    state.world.proContracts = [];
+    state.feed = "Контракт подписан. Бой назначен на неделю " + contract.fightWeek + ".";
+    return true;
+  }
+
+  function clearProContract(player) {
+    player.contractOpponentId = "";
+    player.contractLabel = "";
+    player.contractPurse = 0;
+    player.contractRounds = 0;
+    player.contractId = "";
+    player.nextFightWeek = 0;
+  }
+
     function advanceWeek(state, action) {
     var npcReport;
     state.week += 1;
@@ -490,6 +590,7 @@ function simulateInternationalGymMoves(state) {
       window.FS.Stories.simulateStories(state);
     }
     refreshOffers(state);
+    buildProContracts(state);
     if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
 
     U.pushLimited(state.world.weekReports, {
@@ -523,6 +624,7 @@ function simulateInternationalGymMoves(state) {
       }
     }
     refreshOffers(state);
+    buildProContracts(state);
     if (!state.world.news.length) {
       createNews(state, "world", "Мир запущен: клубы, титулы, рейтинги, сборные и расписание боёв сформированы.", { type: "bootstrap" });
     }
@@ -536,6 +638,9 @@ function simulateInternationalGymMoves(state) {
     simulateNpcTraining: simulateNpcTraining,
     simulateNpcFights: simulateNpcFights,
     simulateTransitions: simulateTransitions,
-    buildNationalTeams: buildNationalTeams
+    buildNationalTeams: buildNationalTeams,
+    buildProContracts: buildProContracts,
+    acceptProContract: acceptProContract,
+    clearProContract: clearProContract
   };
 }());

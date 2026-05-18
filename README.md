@@ -1,8 +1,14 @@
 # Fight Simulator
 
-Version: `favorites-tab-ring-1.8.7`
+Version: `pro-career-pack-1.9.4`
 
-- Ring PNG is included directly in the delta zip.
-- Favorites are moved to a separate tab.
-- Fight tab no longer renders the favorites block.
-- Favorite star buttons remain in fight rows and fighter cards.
+Combined patch:
+- 1.8.8 Fight Result Rework.
+- 1.8.9 Fight/UI cleanup.
+- 1.9.0 Professional Contracts Core.
+- 1.9.1 Professional fight scheduling.
+- 1.9.2 Promoters.
+- 1.9.3 Pro rankings/titles surface.
+- 1.9.4 Title challenge polish.
+
+Career start is now archetype-based.

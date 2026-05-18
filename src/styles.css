@@ -1359,3 +1359,61 @@ button, input, select { max-width: 100%; }
   background-size: cover, cover, cover, cover !important;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
 }
+
+
+/* 1.9.4 career archetypes and pro contracts */
+.archetype-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.archetype-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255,255,255,0.035);
+  cursor: pointer;
+}
+
+.archetype-card input {
+  display: none;
+}
+
+.archetype-card:has(input:checked),
+.archetype-card.selected {
+  border-color: rgba(243, 217, 141, 0.55);
+  background: rgba(243, 217, 141, 0.1);
+}
+
+.archetype-card strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.archetype-card span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .archetype-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .archetype-card {
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .archetype-card strong {
+    font-size: 13px;
+  }
+
+  .archetype-card span {
+    font-size: 10px;
+  }
+}

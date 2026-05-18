@@ -1,10 +1,15 @@
-# Architecture 1.8.7
+# Architecture 1.9.4
 
-Favorites:
-- Uses existing `state.trackedFighterIds`.
-- `renderFavoritesTab` displays the separate favorites tab.
-- Fight rows and fighter cards only toggle favorites.
+Start flow:
+- `Data.careerArchetypes` defines career starts.
+- `State.createCareer` builds player from selected archetype.
 
-Ring:
-- `ring_top_view.png` is included in delta zip at project root.
-- CSS includes fallback paths for the ring background.
+Professional path:
+- `World.buildProContracts` creates contract offers.
+- `World.acceptProContract` stores scheduled fight on player.
+- `Fight.startProContractFight` opens the scheduled fight.
+- `renderProTab` displays promoter, contracts, title opportunities and contract history.
+
+Cleanup:
+- Result modal now separates summary/statistics/action log.
+- Favorites remain in their own tab.

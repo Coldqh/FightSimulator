@@ -175,6 +175,13 @@
       nextFightWeek: opts.nextFightWeek || 0,
       contractOpponentId: opts.contractOpponentId || "",
       contractLabel: opts.contractLabel || "",
+      contractPurse: Number(opts.contractPurse) || 0,
+      contractRounds: Number(opts.contractRounds) || 0,
+      contractId: opts.contractId || "",
+      promoterId: opts.promoterId || "",
+      expenseMultiplier: Number(opts.expenseMultiplier) || 1,
+      hardModeDebt: !!opts.hardModeDebt,
+      archetypeId: opts.archetypeId || "",
       lastMoveWeek: 1,
       lastFightWeek: 0,
       seed: seed
@@ -252,28 +259,45 @@
     return [];
   }
 
+  function archetypeById(id) {
+    var list = Data.careerArchetypes || [];
+    return list.find(function (item) { return item.id === id; }) || list[1] || { id: "amateur", age: 18, baseOvr: 30, trackId: "amateur", money: 250, fatigue: 8 };
+  }
+
+  function flatStats(value) {
+    var v = Math.max(0, Math.round(Number(value) || 0));
+    return { power: v, technique: v, speed: v, stamina: v, defense: v };
+  }
+
   function createCareer(payload) {
-    var trackId = U.findTrack(payload.trackId).id;
+    var archetype = archetypeById(payload.archetypeId);
+    var trackId = U.findTrack(archetype.trackId || payload.trackId || "amateur").id;
     var countryId = U.findCountry(payload.countryId).id;
     var weightClassId = U.findWeightClass(payload.weightClassId).id;
-    var player = createFighter(countryId, trackId, 777, trackId === "pro" ? 90 : 35, {
+    var startingStats = flatStats(archetype.baseOvr);
+    var player = createFighter(countryId, trackId, 777, archetype.baseOvr, {
       id: "player",
       name: payload.name || "Новый боксёр",
       isPlayer: true,
       known: true,
       weightClassId: trackId === "street" ? "" : weightClassId,
       stanceId: "",
-      age: payload.age || 18,
+      age: archetype.age || 18,
+      stats: startingStats,
       record: emptyRecord(),
       trackRecords: { amateur: emptyRecord(), street: emptyRecord(), pro: emptyRecord() },
       trainingPoints: 0,
-      money: Data.economy ? Data.economy.startingMoney : 650,
-      fatigue: 8,
+      money: Number(archetype.money) || 0,
+      fatigue: Number(archetype.fatigue) || 0,
       equipment: {},
       financeLog: [],
       monthlyExpenseLog: [],
       lastExpenseWeek: 1,
-      careerLog: [{ week: 1, text: "Начало карьеры." }]
+      archetypeId: archetype.id,
+      expenseMultiplier: archetype.expenseMultiplier || 1,
+      hardModeDebt: !!archetype.hardModeDebt,
+      promoterId: archetype.trackId === "pro" ? "local_hall" : "",
+      careerLog: [{ week: 1, text: "Начало карьеры: " + archetype.label + "." }]
     });
 
     var state = {
@@ -294,8 +318,8 @@
       clubs: [],
       titles: {},
       amateurPath: { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 },
-      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [], nationalTeamQualification: {}, reserveAdditions: {} },
-      feed: "Карьера началась. Мир загружен, ближайшие соперники подобраны.",
+      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [], nationalTeamQualification: {}, reserveAdditions: {}, proContracts: [], proContractHistory: [] },
+      feed: "Карьера началась: " + archetype.label + ". Мир загружен.",
       createdAt: new Date().toISOString()
     };
 
@@ -615,13 +639,26 @@
   function monthlyExpenseBreakdown(state) {
     var p = ensurePlayerSystems(state);
     var econ = Data.economy || {};
-    var trackCost = econ.livingCostByTrack ? (econ.livingCostByTrack[p.trackId] || 100) : 100;
-    var food = Number(econ.foodCost) || 70;
-    var medical = Number(econ.medicalReserveCost) || 45;
-    var clubFee = clubMonthlyFee(state);
-    var equipment = equipmentSummary(state).upkeep;
-    var total = Math.round(trackCost + food + medical + clubFee + equipment);
-    return { trackCost: trackCost, food: food, medical: medical, clubFee: clubFee, equipment: equipment, total: total };
+    var trackCost;
+    var food;
+    var medical;
+    var clubFee;
+    var equipment;
+    var multiplier;
+    var total;
+
+    if (p && p.age < 18) {
+      return { trackCost: 0, food: 0, medical: 0, clubFee: 0, equipment: 0, total: 0, freeYouth: true };
+    }
+
+    trackCost = econ.livingCostByTrack ? (econ.livingCostByTrack[p.trackId] || 100) : 100;
+    food = Number(econ.foodCost) || 70;
+    medical = Number(econ.medicalReserveCost) || 45;
+    clubFee = clubMonthlyFee(state);
+    equipment = equipmentSummary(state).upkeep;
+    multiplier = Number(p.expenseMultiplier) || 1;
+    total = Math.round((trackCost + food + medical + clubFee + equipment) * multiplier);
+    return { trackCost: Math.round(trackCost * multiplier), food: Math.round(food * multiplier), medical: Math.round(medical * multiplier), clubFee: Math.round(clubFee * multiplier), equipment: Math.round(equipment * multiplier), total: total, multiplier: multiplier };
   }
 
   function applyMonthlyExpenses(state) {
@@ -817,6 +854,8 @@
     state.world.memorials = state.world.memorials instanceof Array ? state.world.memorials : [];
     state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
     state.world.reserveAdditions = state.world.reserveAdditions || {};
+    state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
+    state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
 
     for (i = 0; i < state.roster.length; i += 1) {
       state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];
@@ -844,6 +883,13 @@
       state.roster[i].nextFightWeek = Number(state.roster[i].nextFightWeek) || 0;
       state.roster[i].contractOpponentId = state.roster[i].contractOpponentId || "";
       state.roster[i].contractLabel = state.roster[i].contractLabel || "";
+      state.roster[i].contractPurse = Number(state.roster[i].contractPurse) || 0;
+      state.roster[i].contractRounds = Number(state.roster[i].contractRounds) || 0;
+      state.roster[i].contractId = state.roster[i].contractId || "";
+      state.roster[i].promoterId = state.roster[i].promoterId || "";
+      state.roster[i].expenseMultiplier = Number(state.roster[i].expenseMultiplier) || 1;
+      state.roster[i].hardModeDebt = !!state.roster[i].hardModeDebt;
+      state.roster[i].archetypeId = state.roster[i].archetypeId || "";
       ensureTrackRecords(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }

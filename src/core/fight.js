@@ -636,7 +636,12 @@
     }
 
     applyFightResult(state, p, opponent, result, method);
-    completeFightEconomy(state, p, opponent, result, session.purse, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18);
+    completeFightEconomy(state, p, opponent, result, session.purse || (p.contractPurse || 0), Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18);
+    if (p.contractOpponentId === opponent.id) {
+      state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
+      state.world.proContractHistory.unshift({ week: state.week, text: "Контрактный бой завершён: " + result + " против " + opponent.name + "." });
+      if (window.FS.World && window.FS.World.clearProContract) { window.FS.World.clearProContract(p); }
+    }
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
     p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method });
@@ -775,6 +780,25 @@
     return true;
   }
 
+  function startProContractFight(state) {
+    var p = State.player(state);
+    var opponent;
+    var offer;
+    var active;
+
+    if (!p || p.trackId !== "pro" || !p.contractOpponentId) { return false; }
+    if (state.week < p.nextFightWeek) { state.feed = "Бой ещё не наступил. Дата: неделя " + p.nextFightWeek + "."; return false; }
+    if (p.fatigue >= 100) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
+
+    opponent = U.getFighterById(state, p.contractOpponentId);
+    if (!opponent) { state.feed = "Соперник по контракту не найден."; return false; }
+
+    offer = { id: "pro_contract_" + (p.contractId || state.week), opponentId: opponent.id, rounds: p.contractRounds || U.findTrack("pro").rounds, purse: p.contractPurse || computePurse(p, opponent), difficultyId: "even" };
+    active = createSession(state, offer, opponent, null);
+    state.modal = buildActiveModal(state, active);
+    return true;
+  }
+
   function resolvePlayerFight(state, offerId) {
     return startInteractiveFight(state, offerId);
   }
@@ -814,6 +838,7 @@
     resolvePlayerFight: resolvePlayerFight,
     startInteractiveFight: startInteractiveFight,
     startTournamentInteractiveFight: startTournamentInteractiveFight,
+    startProContractFight: startProContractFight,
     playerAction: playerAction,
     handleCount: handleCount,
     resolveRandomFight: resolveRandomFight,

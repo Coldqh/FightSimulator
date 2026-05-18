@@ -1,6 +1,8 @@
-# Roadmap after 1.8.7
+# Roadmap after 1.9.4
 
 Next:
-- Polish fight balance.
-- Improve favorites: notes, watched fighters, filter by path/country.
-- Continue mobile fight UI tuning.
+- Tune pro contract generation.
+- Add better promoter progression.
+- Add mandatory defenses and vacant-title fights.
+- Add richer title histories.
+- Split large files after a stability pass.
