@@ -1,8 +1,8 @@
-# Roadmap after 1.9.4
+# Roadmap after 1.9.5
 
 Next:
-- Tune pro contract generation.
-- Add better promoter progression.
-- Add mandatory defenses and vacant-title fights.
-- Add richer title histories.
-- Split large files after a stability pass.
+- Test pro contracts over several in-game months.
+- Add promoter progression after contract balance is stable.
+- Improve national team coach profiles.
+- Tune pro/street damage after manual fight tests.
+- Split fight/UI files after 1.9.x stabilization.

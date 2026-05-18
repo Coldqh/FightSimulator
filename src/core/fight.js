@@ -11,10 +11,10 @@
   var RING_SIZE = 5;
 
   var PUNCHES = {
-    jabHead: { id: "jabHead", label: "Прямой в голову", minDistance: 1, maxDistance: 2, stamina: 14, hp: 0.58, staminaDamage: 0.12, accuracy: 8 },
-    jabBody: { id: "jabBody", label: "Прямой в корпус", minDistance: 1, maxDistance: 2, stamina: 16, hp: 0.42, staminaDamage: 0.34, accuracy: 5 },
-    hook: { id: "hook", label: "Хук", minDistance: 1, maxDistance: 1, stamina: 20, hp: 0.82, staminaDamage: 0.16, accuracy: -2 },
-    uppercut: { id: "uppercut", label: "Апперкот", minDistance: 1, maxDistance: 1, stamina: 24, hp: 0.96, staminaDamage: 0.14, accuracy: -5 }
+    jabHead: { id: "jabHead", label: "Прямой в голову", minDistance: 1, maxDistance: 2, stamina: 28, hp: 0.58, staminaDamage: 0.12, accuracy: 8 },
+    jabBody: { id: "jabBody", label: "Прямой в корпус", minDistance: 1, maxDistance: 2, stamina: 32, hp: 0.42, staminaDamage: 0.34, accuracy: 5 },
+    hook: { id: "hook", label: "Хук", minDistance: 1, maxDistance: 1, stamina: 40, hp: 0.82, staminaDamage: 0.16, accuracy: -2 },
+    uppercut: { id: "uppercut", label: "Апперкот", minDistance: 1, maxDistance: 1, stamina: 48, hp: 0.96, staminaDamage: 0.14, accuracy: -5 }
   };
 
   function resultClass(result) {
@@ -55,8 +55,8 @@
   }
 
   function trackDamageMultiplier(trackId) {
-    if (trackId === "pro") { return 1.18; }
-    if (trackId === "street") { return 1.34; }
+    if (trackId === "pro") { return 0.59; }
+    if (trackId === "street") { return 0.67; }
     return 0.82;
   }
 
@@ -65,7 +65,7 @@
   }
 
   function maxStamina(fighter) {
-    return Math.round(100 + fighter.stats.stamina * 0.72);
+    return Math.round(100 + fighter.stats.stamina * 0.5);
   }
 
   function fighterLabel(fighter, fallback) {
@@ -126,11 +126,11 @@
   }
 
   function punchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.36 + U.randomInt(0, 4);
+    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.18 + U.randomInt(0, 4);
     var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.28)); }
     if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.48); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 38 : 46));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 19 : 23));
   }
 
   function staminaDamage(attacker, punch, damage, defenderState) {
@@ -140,10 +140,10 @@
   }
 
   function estimatePunchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.36 + 2;
+    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.18 + 2;
     var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 38 : 46));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 19 : 23));
   }
 
   function punchActionsForModal(player, opponent, session) {
@@ -532,11 +532,15 @@
     var session = modal && modal.session;
     var side;
     var target;
+    var fighter;
     var standChance;
+    var kdPenalty;
+    var trackPenalty;
 
     if (!session || !session.count) { return false; }
     side = session.count.side;
     target = side === "player" ? session.player : session.opponent;
+    fighter = side === "player" ? State.player(state) : U.getFighterById(state, session.opponentId);
     session.count.count += 1;
 
     if (session.count.count >= 10) {
@@ -544,7 +548,9 @@
       return finishInteractiveFight(state, session, side === "player" ? "opponent_ko" : "player_ko");
     }
 
-    standChance = U.clamp(18 + target.stamina * 0.42 + target.maxHp * 0.04 - session.count.count * 6, 5, 82);
+    kdPenalty = (Number(target.knockdowns) || 0) * (fighter && fighter.trackId === "pro" ? 18 : 13);
+    trackPenalty = fighter && fighter.trackId === "pro" ? 18 : (fighter && fighter.trackId === "street" ? 10 : 0);
+    standChance = U.clamp(14 + target.stamina * 0.24 + target.maxHp * 0.025 - session.count.count * 7 - kdPenalty - trackPenalty, 3, fighter && fighter.trackId === "pro" ? 58 : 76);
     session.log.push("Счёт " + session.count.count + ". Шанс подняться: " + Math.round(standChance) + "%.");
 
     if (U.randomInt(1, 100) <= standChance) {

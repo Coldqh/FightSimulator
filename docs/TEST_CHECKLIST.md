@@ -1,4 +1,4 @@
-# Test Checklist 1.9.4
+# Test Checklist 1.9.5
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,13 +7,13 @@ start index.html
 ```
 
 Manual:
-1. Start screen uses archetypes instead of age/path selectors.
-2. Rookie starts age 16, OVR 0, amateur, expenses $0.
-3. Amateur starts age 18, OVR 30, amateur.
-4. Street kid starts age 18, OVR 10, street.
-5. Debt pro starts age 26, OVR 90, pro, $0, high expenses.
-6. Pro tab shows contract offers for pro careers.
-7. Contract can be signed and scheduled.
-8. On fight week, contract fight can be started.
-9. Pro tab shows title opportunities.
-10. Fight result modal has summary/statistics/action log.
+1. Amateur does not see Pro tab.
+2. Pro does not see Fights or Amateur Path tab.
+3. Street sees neither Pro nor Amateur Path tab.
+4. Pro has 5-10 contracts around player OVR.
+5. Pro title challenges require top-3.
+6. Economy has no equipment block.
+7. Ring floor is white and circles are colored.
+8. Street header does not show "без веса".
+9. National team shows a coach.
+10. Stamina at 100 endurance is 150.

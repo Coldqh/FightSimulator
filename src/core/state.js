@@ -79,6 +79,8 @@
     var maxTotal;
     var total;
     var scale;
+    var minKoRate;
+    var maxKoRate;
 
     if (trackId === "pro") {
       if (rating >= 180) { wins = U.randomInt(28, 45); losses = U.randomInt(0, 2); }
@@ -86,7 +88,8 @@
       else if (rating >= 125) { wins = U.randomInt(14, 30); losses = U.randomInt(1, 7); }
       else if (rating >= 105) { wins = U.randomInt(7, 20); losses = U.randomInt(2, 10); }
       else { wins = U.randomInt(0, 10); losses = U.randomInt(0, 6); }
-      koRate = 0.62;
+      minKoRate = 0.40;
+      maxKoRate = 0.80;
       maxTotal = Math.max(0, (age || 18) - 17) * 8;
     } else if (trackId === "street") {
       if (rating >= 130) { wins = U.randomInt(55, 150); losses = U.randomInt(2, 18); }
@@ -94,7 +97,8 @@
       else if (rating >= 65) { wins = U.randomInt(12, 65); losses = U.randomInt(8, 55); }
       else if (rating >= 30) { wins = U.randomInt(4, 35); losses = U.randomInt(5, 45); }
       else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 22); }
-      koRate = 0.58;
+      minKoRate = 0.50;
+      maxKoRate = 0.90;
       maxTotal = Math.max(12, ((age || 18) - 16) * 18);
     } else {
       if (rankId === "msmk" || rating >= 100) { wins = U.randomInt(75, 165); losses = U.randomInt(3, 25); }
@@ -103,7 +107,8 @@
       else if (rankId === "adult_1" || rating >= 40) { wins = U.randomInt(12, 48); losses = U.randomInt(8, 42); }
       else if (rankId === "adult_2" || rating >= 20) { wins = U.randomInt(4, 28); losses = U.randomInt(5, 34); }
       else { wins = U.randomInt(0, 14); losses = U.randomInt(0, 20); }
-      koRate = 0.28;
+      minKoRate = 0.10;
+      maxKoRate = 0.30;
       maxTotal = Math.max(12, 34 + Math.max(0, (age || 18) - 18) * 18);
     }
 
@@ -117,11 +122,13 @@
       draws = Math.max(0, Math.min(6, maxTotal - wins - losses));
     }
 
+    koRate = U.randomInt(Math.round(minKoRate * 100), Math.round(maxKoRate * 100)) / 100;
+
     return {
       wins: wins,
       losses: losses,
       draws: draws,
-      kos: U.randomInt(0, Math.max(0, Math.min(wins, Math.round(wins * koRate))))
+      kos: Math.max(0, Math.min(wins, Math.round(wins * koRate)))
     };
   }
 
@@ -643,7 +650,7 @@
     var food;
     var medical;
     var clubFee;
-    var equipment;
+    var equipment = 0;
     var multiplier;
     var total;
 
@@ -655,10 +662,9 @@
     food = Number(econ.foodCost) || 70;
     medical = Number(econ.medicalReserveCost) || 45;
     clubFee = clubMonthlyFee(state);
-    equipment = equipmentSummary(state).upkeep;
     multiplier = Number(p.expenseMultiplier) || 1;
     total = Math.round((trackCost + food + medical + clubFee + equipment) * multiplier);
-    return { trackCost: Math.round(trackCost * multiplier), food: Math.round(food * multiplier), medical: Math.round(medical * multiplier), clubFee: Math.round(clubFee * multiplier), equipment: Math.round(equipment * multiplier), total: total, multiplier: multiplier };
+    return { trackCost: Math.round(trackCost * multiplier), food: Math.round(food * multiplier), medical: Math.round(medical * multiplier), clubFee: Math.round(clubFee * multiplier), equipment: 0, total: total, multiplier: multiplier };
   }
 
   function applyMonthlyExpenses(state) {
@@ -854,6 +860,7 @@
     state.world.memorials = state.world.memorials instanceof Array ? state.world.memorials : [];
     state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
     state.world.reserveAdditions = state.world.reserveAdditions || {};
+    state.world.teamCoaches = state.world.teamCoaches || {};
     state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
     state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
 

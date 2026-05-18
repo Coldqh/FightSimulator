@@ -260,6 +260,29 @@
     }
   }
 
+  function createNationalCoach(country, seed) {
+    var record = { wins: U.randomInt(0, 120), losses: U.randomInt(0, 55), draws: U.randomInt(0, 8), kos: 0 };
+    return {
+      id: "team_coach_" + country.id + "_" + seed,
+      name: U.createName(country, seed),
+      countryId: country.id,
+      age: U.randomInt(42, 72),
+      record: record,
+      hiredWeek: seed
+    };
+  }
+
+  function ensureNationalCoach(state, country) {
+    state.world.teamCoaches = state.world.teamCoaches || {};
+    var current = state.world.teamCoaches[country.id];
+    if (!current || (state.week > 1 && state.week % 52 === 1 && U.randomInt(1, 100) <= 24)) {
+      current = createNationalCoach(country, state.week * 100 + country.id.length);
+      state.world.teamCoaches[country.id] = current;
+      U.pushLimited(state.world.transitionLog, { week: state.week, text: "Сборная " + country.label + " получила нового тренера: " + current.name + "." }, 120);
+    }
+    return current;
+  }
+
   function buildNationalTeams(state) {
     var teams = {};
     var countryIndex;
@@ -275,6 +298,7 @@
     if (!state.world) { state.world = {}; }
     state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
     state.world.reserveAdditions = state.world.reserveAdditions || {};
+    state.world.teamCoaches = state.world.teamCoaches || {};
 
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       country = Data.countries[countryIndex];
@@ -302,7 +326,8 @@
 
       teams[country.id] = {
         main: Array.from(new Set(main)).slice(0, 12),
-        reserve: Array.from(new Set(reserve.filter(function (id) { return main.indexOf(id) === -1; }))).slice(0, 48)
+        reserve: Array.from(new Set(reserve.filter(function (id) { return main.indexOf(id) === -1; }))).slice(0, 48),
+        coach: ensureNationalCoach(state, country)
       };
     }
 
@@ -494,6 +519,10 @@ function simulateInternationalGymMoves(state) {
     var weeks;
     var purse;
     var type;
+    var band;
+    var targetCount;
+    var isChampion;
+    var pOvr;
 
     if (!p || p.trackId !== "pro") {
       state.world.proContracts = [];
@@ -506,17 +535,40 @@ function simulateInternationalGymMoves(state) {
     }
 
     promoter = promoterById(p.promoterId);
-    ranking = State.ranking(state, "world", "pro", p.weightClassId).filter(function (fighter) {
-      var diff = Math.abs(U.statAverage(fighter.stats) - U.statAverage(p.stats));
-      return !fighter.isPlayer && !fighter.retired && diff <= 32;
-    }).slice(0, 80);
+    pOvr = U.statAverage(p.stats);
+    isChampion = window.FS.Titles && window.FS.Titles.fighterTitles(state, p.id).some(function (title) {
+      return title.trackId === "pro" && title.weightClassId === p.weightClassId;
+    });
 
-    for (i = 0; i < Math.min(4, ranking.length); i += 1) {
-      opponent = ranking[(i * 7 + state.week + (state.offerRefreshSalt || 0)) % ranking.length];
-      if (!opponent || contracts.some(function (contract) { return contract.opponentId === opponent.id; })) { continue; }
+    ranking = State.ranking(state, "world", "pro", p.weightClassId).filter(function (fighter) {
+      return !fighter.isPlayer && !fighter.retired;
+    });
+
+    if (isChampion) {
+      ranking = ranking.slice(0, 3);
+    } else {
+      band = U.randomInt(5, 8);
+      ranking = ranking.filter(function (fighter) {
+        return Math.abs(U.statAverage(fighter.stats) - pOvr) <= band;
+      });
+      if (ranking.length < 5) {
+        ranking = State.ranking(state, "world", "pro", p.weightClassId).filter(function (fighter) {
+          return !fighter.isPlayer && !fighter.retired && Math.abs(U.statAverage(fighter.stats) - pOvr) <= 8;
+        });
+      }
+      ranking.sort(function (a, b) {
+        return Math.abs(U.statAverage(a.stats) - pOvr) - Math.abs(U.statAverage(b.stats) - pOvr);
+      });
+    }
+
+    targetCount = isChampion ? Math.min(3, ranking.length) : Math.min(ranking.length, U.randomInt(5, 10));
+
+    for (i = 0; i < targetCount; i += 1) {
+      opponent = ranking[i];
+      if (!opponent) { continue; }
       weeks = U.randomInt(promoter.weeksMin || 4, promoter.weeksMax || 10);
       purse = proContractPurse(p, opponent, promoter);
-      type = proContractType(p, opponent);
+      type = isChampion ? "защита титула против топ-3" : proContractType(p, opponent);
       contracts.push({
         id: U.uid("contract"),
         weekCreated: state.week,

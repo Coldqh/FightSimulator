@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "pro-career-pack-1.9.4",
+    appVersion: "path-pro-balance-1.9.5",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -56,8 +56,8 @@
     countries: [
       {
         id: "russia",
-        continentId: "eurasia",
-        continentLabel: "Евразия",
+        continentId: "europe",
+        continentLabel: "Европа",
         label: "Россия",
         city: "Москва",
         firstNames: ["Влад", "Дмитрий", "Артем", "Илья", "Максим", "Никита", "Кирилл", "Егор", "Павел", "Роман", "Алексей", "Сергей", "Олег", "Данил", "Тимур", "Руслан", "Матвей", "Глеб"],
@@ -66,8 +66,8 @@
       },
       {
         id: "mexico",
-        continentId: "americas",
-        continentLabel: "Америка",
+        continentId: "latin_america",
+        continentLabel: "Латинская Америка",
         label: "Мексика",
         city: "Мехико",
         firstNames: ["Diego", "Mateo", "Santiago", "Emilio", "Carlos", "Luis", "Javier", "Miguel", "Rafael", "Andres", "Hector", "Nico", "Marco", "Tomas", "Angel", "Gael", "Oscar", "Julio"],
@@ -76,8 +76,8 @@
       },
       {
         id: "japan",
-        continentId: "eurasia",
-        continentLabel: "Евразия",
+        continentId: "asia",
+        continentLabel: "Азия",
         label: "Япония",
         city: "Токио",
         firstNames: ["Haruto", "Ren", "Sota", "Yuto", "Daiki", "Kaito", "Riku", "Takumi", "Shin", "Hayate", "Akira", "Toma", "Itsuki", "Ryusei", "Kenta", "Naoki", "Yuma", "Hiro"],
@@ -86,8 +86,8 @@
       },
       {
         id: "usa",
-        continentId: "americas",
-        continentLabel: "Америка",
+        continentId: "north_america",
+        continentLabel: "Северная Америка",
         label: "США",
         city: "Нью-Йорк",
         firstNames: ["Marcus", "Andre", "Tyler", "Darnell", "Chris", "Evan", "Jordan", "Malik", "Isaiah", "Caleb", "Brandon", "Derek", "Victor", "Shawn", "Miles", "Cole"],
@@ -96,8 +96,8 @@
       },
       {
         id: "cuba",
-        continentId: "americas",
-        continentLabel: "Америка",
+        continentId: "north_america",
+        continentLabel: "Северная Америка",
         label: "Куба",
         city: "Гавана",
         firstNames: ["Yordan", "Luis", "Ramon", "Ernesto", "Jorge", "Ariel", "Yoel", "Daniel", "Osvaldo", "Rafael", "Lazaro", "Ivan", "Omar", "Felix"],
@@ -106,8 +106,8 @@
       },
       {
         id: "kazakhstan",
-        continentId: "eurasia",
-        continentLabel: "Евразия",
+        continentId: "asia",
+        continentLabel: "Азия",
         label: "Казахстан",
         city: "Алматы",
         firstNames: ["Арман", "Ержан", "Дамир", "Алихан", "Нурлан", "Бекзат", "Тимур", "Руслан", "Самат", "Азамат", "Данияр", "Ислам", "Ерасыл", "Марат"],

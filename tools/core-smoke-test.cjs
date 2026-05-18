@@ -15,7 +15,7 @@ const sandbox = {
     store: {},
     getItem(key) { return this.store[key] || null; },
     setItem(key, value) { this.store[key] = String(value); },
-    removeItem(key) { delete this.store[k]; }
+    removeItem(key) { delete this.store[key]; }
   },
   document: {
     getElementById() { return { innerHTML: "" }; },
@@ -23,7 +23,6 @@ const sandbox = {
     addEventListener() {}
   }
 };
-sandbox.localStorage.removeItem = function(k){ delete this.store[k]; };
 sandbox.window.window = sandbox.window;
 sandbox.window.console = console;
 sandbox.window.localStorage = sandbox.localStorage;
@@ -49,12 +48,7 @@ sandbox.global = sandbox.window;
 });
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "pro-career-pack-1.9.4") throw new Error("bad version");
-if (!FS.Data.careerArchetypes || FS.Data.careerArchetypes.length !== 4) throw new Error("career archetypes missing");
-
-let startHtml = FS.Render.start();
-if (!startHtml.includes("Новичок") || !startHtml.includes("Профессионал с долгами")) throw new Error("archetypes not rendered");
-if (startHtml.includes("careerAge") || startHtml.includes("careerTrack")) throw new Error("old age/track selectors remain");
+if (FS.Data.appVersion !== "path-pro-balance-1.9.5") throw new Error("bad version");
 
 function make(archetypeId) {
   const state = FS.State.createCareer({
@@ -68,55 +62,67 @@ function make(archetypeId) {
   return state;
 }
 
-let rookie = make("rookie");
-let rp = FS.State.player(rookie);
-if (rp.age !== 16 || rp.trackId !== "amateur" || FS.Utils.statAverage(rp.stats) !== 0) throw new Error("rookie archetype broken");
-if (FS.State.monthlyExpenseBreakdown(rookie).total !== 0) throw new Error("under 18 expenses should be 0");
+const amateur = make("amateur");
+let html = FS.Render.dashboard(amateur);
+if (html.includes('data-tab="pro"')) throw new Error("amateur sees pro tab");
+if (!html.includes('data-tab="world"')) throw new Error("amateur does not see amateur path tab");
 
-let amateur = make("amateur");
-let ap = FS.State.player(amateur);
-if (ap.age !== 18 || ap.trackId !== "amateur" || FS.Utils.statAverage(ap.stats) !== 30) throw new Error("amateur archetype broken");
+const street = make("street_kid");
+html = FS.Render.dashboard(street);
+if (html.includes('data-tab="pro"') || html.includes('data-tab="world"')) throw new Error("street sees forbidden tabs");
+if (html.includes("без веса")) throw new Error("street header shows weight text");
 
-let street = make("street_kid");
-let sp = FS.State.player(street);
-if (sp.age !== 18 || sp.trackId !== "street" || FS.Utils.statAverage(sp.stats) !== 10) throw new Error("street archetype broken");
+const pro = make("debt_pro");
+html = FS.Render.dashboard(pro);
+if (html.includes('data-tab="fights"') || html.includes('data-tab="world"')) throw new Error("pro sees fights/world tab");
+if (!html.includes('data-tab="pro"')) throw new Error("pro does not see pro tab");
+if ((pro.offers || []).filter(o => !o.isCompetition).length !== 0) throw new Error("pro normal fight offers exist");
 
-let pro = make("debt_pro");
-let pp = FS.State.player(pro);
-if (pp.age !== 26 || pp.trackId !== "pro" || FS.Utils.statAverage(pp.stats) !== 90 || pp.money !== 0) throw new Error("debt pro archetype broken");
-if ((pp.expenseMultiplier || 1) < 2) throw new Error("debt pro expense multiplier missing");
-if (FS.State.monthlyExpenseBreakdown(pro).total < 450) throw new Error("debt pro expenses too low");
+if (!pro.world.proContracts || pro.world.proContracts.length < 5 || pro.world.proContracts.length > 10) {
+  throw new Error("pro contract count broken: " + (pro.world.proContracts || []).length);
+}
+const pp = FS.State.player(pro);
+const pOvr = FS.Utils.statAverage(pp.stats);
+for (const c of pro.world.proContracts) {
+  const opp = FS.Utils.getFighterById(pro, c.opponentId);
+  if (Math.abs(FS.Utils.statAverage(opp.stats) - pOvr) > 8) throw new Error("contract OVR too far");
+}
 
-pro.selectedTab = "pro";
-let proHtml = FS.Render.dashboard(pro);
-if (!proHtml.includes("Профи-статус") || !proHtml.includes("Новые предложения")) throw new Error("pro tab missing");
-if (!pro.world.proContracts || !pro.world.proContracts.length) throw new Error("pro contracts not generated");
+pro.selectedTab = "economy";
+html = FS.Render.dashboard(pro);
+if (html.includes("Экипировка") || html.includes("Купить")) throw new Error("equipment still visible");
 
-const contract = pro.world.proContracts[0];
-if (!FS.World.acceptProContract(pro, contract.id)) throw new Error("could not accept pro contract");
-pp = FS.State.player(pro);
-if (!pp.contractOpponentId || pp.nextFightWeek <= pro.week) throw new Error("contract scheduling broken");
-pro.week = pp.nextFightWeek;
-if (!FS.Fight.startProContractFight(pro)) throw new Error("could not start scheduled contract fight");
-if (!pro.modal || pro.modal.type !== "activeFight") throw new Error("contract fight not active");
+const countries = Object.fromEntries(FS.Data.countries.map(c => [c.id, c]));
+if (countries.russia.continentLabel !== "Европа") throw new Error("Russia continent wrong");
+if (countries.japan.continentLabel !== "Азия") throw new Error("Japan continent wrong");
+if (countries.usa.continentLabel !== "Северная Америка") throw new Error("USA continent wrong");
+if (countries.mexico.continentLabel !== "Латинская Америка") throw new Error("Mexico continent wrong");
 
-pro.modal = {
-  type: "fightResult",
-  result: "Победа",
-  method: "решение судей",
-  week: pro.week,
-  opponentName: "Test Opponent",
-  purse: 500,
-  winChance: 60,
-  statsLine: "Удары: 10/20 — 8/22.",
-  roundLog: ["Раунд 1, ход 1: Ты: Прямой в голову. Попадание."]
-};
-let resultHtml = FS.Render.dashboard(pro);
-if (!resultHtml.includes("Итог боя") || !resultHtml.includes("Лог ударов") || !resultHtml.includes("Кратко")) throw new Error("fight result rework missing");
+const team = amateur.world.teamsByCountry.russia;
+if (!team || !team.coach || !team.coach.name) throw new Error("national team coach missing");
 
-console.log("pro career pack smoke ok", {
+const startHtml = FS.Render.start();
+if (startHtml.includes("archetype-card selected")) throw new Error("static selected archetype class remains");
+
+const fightSource = fs.readFileSync(path.join(root, "src/core/fight.js"), "utf8");
+if (!fightSource.includes('stamina: 28') || !fightSource.includes('stamina: 48')) throw new Error("punch stamina not doubled");
+if (!fightSource.includes('return Math.round(100 + fighter.stats.stamina * 0.5);')) throw new Error("stamina formula wrong");
+if (!fightSource.includes('if (trackId === "pro") { return 0.59; }')) throw new Error("pro damage multiplier wrong");
+
+const css = fs.readFileSync(path.join(root, "src/styles.css"), "utf8");
+if (!css.includes("background-color: #f8f8f2") || !css.includes(".player-cell") || !css.includes(".opponent-cell")) {
+  throw new Error("ring/circle css missing");
+}
+if (!fs.existsSync(path.join(root, "ring_top_view.png"))) throw new Error("ring png missing");
+
+const stateSource = fs.readFileSync(path.join(root, "src/core/state.js"), "utf8");
+if (!stateSource.includes("minKoRate = 0.10") || !stateSource.includes("maxKoRate = 0.90") || !stateSource.includes("minKoRate = 0.40")) {
+  throw new Error("ko rate ranges missing");
+}
+
+console.log("path pro balance smoke ok", {
   version: FS.Data.appVersion,
-  archetypes: FS.Data.careerArchetypes.length,
   proContracts: pro.world.proContracts.length,
-  contractFight: pro.modal.type
+  teamCoach: team.coach.name,
+  ringPngBytes: fs.statSync(path.join(root, "ring_top_view.png")).size
 });

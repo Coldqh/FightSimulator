@@ -221,6 +221,10 @@
     var i;
     var opponent;
 
+    if (player.trackId === "pro") {
+      return [];
+    }
+
     for (i = 0; i < 10; i += 1) {
       opponent = findOpponent(state, "even", i, used);
 

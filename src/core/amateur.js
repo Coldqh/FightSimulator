@@ -64,12 +64,15 @@
   }
 
   function availableCompetitions(state) {
+    var p = State.player(state);
+    var playerCountry = p ? U.findCountry(p.countryId) : null;
     ensureAmateurState(state);
     return Data.amateurCompetitions.map(function (comp) {
       var status = competitionStatus(state, comp);
+      var label = comp.scope === "continent" && playerCountry ? "Чемпионат " + playerCountry.continentLabel : comp.label;
       return {
         id: comp.id,
-        label: comp.label,
+        label: label,
         awardLabel: comp.awardLabel,
         minRating: comp.minRating,
         maxRating: comp.maxRating,

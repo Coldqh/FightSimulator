@@ -196,8 +196,8 @@
     }
     ranking = window.FS.State.ranking(state, title.scope === "world" ? "world" : title.countryId, title.trackId, title.weightClassId);
     rankIndex = ranking.findIndex(function (fighter) { return fighter.id === p.id; });
-    if (rankIndex < 0 || rankIndex > 10) {
-      return { eligible: false, reason: "Для вызова нужно быть в топ-10 рейтинга." };
+    if (rankIndex < 0 || rankIndex > 2) {
+      return { eligible: false, reason: "Для вызова нужно быть в топ-3 рейтинга." };
     }
     return { eligible: true, reason: "Можно бросить вызов чемпиону.", rank: rankIndex + 1 };
   }

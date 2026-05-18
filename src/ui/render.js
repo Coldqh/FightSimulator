@@ -25,7 +25,7 @@
     }).join("");
     var archetypes = Data.careerArchetypes || [];
     var cards = archetypes.map(function (archetype, index) {
-      return "<label class=\"archetype-card " + (index === 1 ? "selected" : "") + "\">" +
+      return "<label class=\"archetype-card\">" +
         "<input type=\"radio\" name=\"careerArchetype\" value=\"" + U.escapeHtml(archetype.id) + "\"" + (index === 1 ? " checked" : "") + ">" +
         "<strong>" + U.escapeHtml(archetype.label) + "</strong>" +
         "<span>" + U.escapeHtml(archetype.description) + "</span>" +
@@ -57,7 +57,7 @@
   function renderHeader(state) {
     var p = State.player(state);
     var timeText = State.dateText ? State.dateText(state) : ("Неделя " + state.week);
-    var weightText = p.trackId === "street" ? "без веса" : U.findWeightClass(p.weightClassId).label;
+    var weightText = p.trackId === "street" ? "" : U.findWeightClass(p.weightClassId).label;
     var status = State.pathProgress ? State.pathProgress(state, p).badge : "";
 
     return "<header class=\"topbar compact-topbar\">" +
@@ -66,7 +66,7 @@
         "<span class=\"pill gold\">" + U.escapeHtml(p.name) + "</span>" +
         "<span class=\"pill\">" + U.escapeHtml(U.findCountry(p.countryId).label) + "</span>" +
         "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(p.trackId).label) + "</span>" +
-        "<span class=\"pill\">" + U.escapeHtml(weightText) + "</span>" +
+        (weightText ? "<span class=\"pill\">" + U.escapeHtml(weightText) + "</span>" : "") +
         "<span class=\"pill blue\">OVR " + U.statAverage(p.stats) + "</span>" +
         "<span class=\"pill\">" + U.escapeHtml(U.recordText(p.record)) + "</span>" +
         "<span class=\"pill\">KO " + (p.record.kos || 0) + "</span>" +
@@ -83,21 +83,29 @@
   }
 
   function renderTabs(state) {
+    var p = State.player(state);
     var tabs = [
       ["dashboard", "Обзор"],
       ["profile", "Профиль"],
-      ["fights", "Бои"],
       ["favorites", "Избранные"],
-      ["pro", "Профи"],
       ["training", "Тренировка"],
       ["economy", "Экономика"],
       ["ranking", "Рейтинг"],
       ["myclub", "Мой клуб"],
       ["clubs", "Клубы"],
-      ["world", "Любительский путь"],
       ["settings", "Настройки"],
       ["people", "Люди"]
     ];
+
+    if (p.trackId !== "pro") {
+      tabs.splice(2, 0, ["fights", "Бои"]);
+    }
+    if (p.trackId === "pro") {
+      tabs.splice(3, 0, ["pro", "Профи"]);
+    }
+    if (p.trackId === "amateur") {
+      tabs.splice(tabs.length - 2, 0, ["world", "Любительский путь"]);
+    }
 
     return "<div class=\"tabs\">" + tabs.map(function (tab) {
       return "<button class=\"" + (state.selectedTab === tab[0] ? "active" : "") + "\" data-tab=\"" + tab[0] + "\">" + tab[1] + "</button>";
@@ -345,20 +353,14 @@
   function renderEconomyTab(state) {
     var p = State.player(state);
     var breakdown = State.monthlyExpenseBreakdown ? State.monthlyExpenseBreakdown(state) : { total: 0, trackCost: 0, food: 0, medical: 0, clubFee: 0, equipment: 0 };
-    var eq = State.equipmentSummary ? State.equipmentSummary(state) : { owned: [], trainingBonus: 0, fatigueReduction: 0, upkeep: 0 };
-    var equipment = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
 
     return "<div class=\"grid two\">" +
       "<div class=\"content-card\"><h3>Баланс и расходы</h3>" +
         "<div class=\"split-row\"><span>Баланс</span><strong>$" + (p.money || 0) + "</strong></div>" +
         "<div class=\"split-row\"><span>Усталость</span><strong>" + (p.fatigue || 0) + "/100</strong></div>" +
         "<div class=\"split-row\"><span>Ежемесячно</span><strong>$" + breakdown.total + "</strong></div>" +
-        "<div class=\"muted small\">Жизнь $" + breakdown.trackCost + " · питание $" + breakdown.food + " · зал $" + breakdown.clubFee + " · экипировка $" + breakdown.equipment + "</div>" +
+        "<div class=\"muted small\">Жизнь $" + breakdown.trackCost + " · питание $" + breakdown.food + " · мед. резерв $" + breakdown.medical + " · зал $" + breakdown.clubFee + (breakdown.freeYouth ? " · до 18 лет расходы отключены" : "") + "</div>" +
       "</div>" +
-      "<div class=\"content-card\"><h3>Экипировка</h3><div class=\"muted small\">Бонус тренировки: +" + Math.round(eq.trainingBonus * 100) + "% · снижение усталости: " + Math.round(eq.fatigueReduction * 100) + "% · обслуживание $" + eq.upkeep + "/мес</div>" + equipment.map(function (item) {
-        var owned = p.equipment && p.equipment[item.id];
-        return "<div class=\"split-row\"><div><strong>" + U.escapeHtml(item.label) + "</strong><div class=\"muted small\">Цена $" + item.price + " · обслуживание $" + item.upkeep + "</div></div><span>" + (owned ? "<span class=\"pill green\">куплено</span>" : "<button class=\"small-btn\" data-buy-equipment=\"" + U.escapeHtml(item.id) + "\">Купить</button>") + "</span></div>";
-      }).join("") + "</div>" +
     "</div>";
   }
 
@@ -527,10 +529,11 @@
 
   function renderWorldTab(state) {
     var p = State.player(state);
-    var team = state.world.teamsByCountry[p.countryId] || { main: [], reserve: [] };
+    var team = state.world.teamsByCountry[p.countryId] || { main: [], reserve: [], coach: null };
     var comps = window.FS.Amateur ? window.FS.Amateur.availableCompetitions(state) : [];
     var summary = window.FS.Amateur ? window.FS.Amateur.worldSummary(state) : { points: 0, medals: 0, completed: 0, available: 0 };
     var country = U.findCountry(p.countryId);
+    var coach = team.coach || (state.world.teamCoaches ? state.world.teamCoaches[p.countryId] : null);
 
     function renderCompetition(comp) {
       return "<div class=\"split-row tournament-row\"><div><div class=\"name-line\">" + U.escapeHtml(comp.label) + "</div><div class=\"muted small\">OVR " + comp.minRating + "–" + comp.maxRating + " · +" + comp.rewardRating + " · " + U.escapeHtml(comp.reason) + " · дата: " + U.escapeHtml(comp.scheduleText || "—") + "</div></div><span>" + (comp.available ? "<button class=\"small-btn primary\" data-amateur-competition=\"" + U.escapeHtml(comp.id) + "\">Начать турнир</button>" : "<span class=\"pill\">закрыто</span>") + "</span></div>";
@@ -538,7 +541,10 @@
 
     return "<div class=\"grid two\">" +
       "<div class=\"content-card\"><h3>Турнирная лестница</h3><div class=\"pills\"><span class=\"pill gold\">Очки: " + summary.points + "</span><span class=\"pill green\">Медали: " + summary.medals + "</span><span class=\"pill blue\">Доступно: " + summary.available + "</span></div>" + comps.map(renderCompetition).join("") + "</div>" +
-      "<div class=\"content-card\"><h3>Сборная " + U.escapeHtml(country.label) + "</h3><div class=\"muted small\">Основной состав: " + team.main.length + " / 12. Резерв: " + team.reserve.length + " / 48. Игрок попадает в сборную через 1–3 место на чемпионате страны.</div><div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Состав</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Резерв</button></div></div>" +
+      "<div class=\"content-card\"><h3>Сборная " + U.escapeHtml(country.label) + "</h3>" +
+        "<div class=\"split-row\"><span>Континент</span><strong>" + U.escapeHtml(country.continentLabel) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Тренер</span><strong>" + U.escapeHtml(coach ? coach.name : "—") + "</strong></div>" +
+        "<div class=\"muted small\">Основной состав: " + team.main.length + " / 12. Резерв: " + team.reserve.length + " / 48. Игрок попадает в сборную через 1–3 место на чемпионате страны.</div><div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Состав</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Резерв</button></div></div>" +
     "</div>";
   }
 
@@ -562,19 +568,26 @@
   }
 
   function renderMain(state) {
+    var p = State.player(state);
     var content;
-    if (state.selectedTab === "dashboard") { content = renderDashboardTab(state); }
-    else if (state.selectedTab === "profile") { content = renderProfileTab(state); }
-    else if (state.selectedTab === "fights") { content = renderFightsTab(state); }
-    else if (state.selectedTab === "favorites") { content = renderFavoritesTab(state); }
-    else if (state.selectedTab === "pro") { content = renderProTab(state); }
-    else if (state.selectedTab === "training") { content = renderTrainingTab(state); }
-    else if (state.selectedTab === "economy") { content = renderEconomyTab(state); }
-    else if (state.selectedTab === "ranking") { content = renderRankingTab(state); }
-    else if (state.selectedTab === "myclub") { content = renderMyClubTab(state); }
-    else if (state.selectedTab === "clubs") { content = renderClubsTab(state); }
-    else if (state.selectedTab === "world") { content = renderWorldTab(state); }
-    else if (state.selectedTab === "settings") { content = renderSettingsTab(state); }
+    var tab = state.selectedTab || "dashboard";
+
+    if (p.trackId === "pro" && (tab === "fights" || tab === "world")) { tab = "dashboard"; }
+    if (p.trackId === "street" && (tab === "pro" || tab === "world")) { tab = "dashboard"; }
+    if (p.trackId === "amateur" && tab === "pro") { tab = "dashboard"; }
+
+    if (tab === "dashboard") { content = renderDashboardTab(state); }
+    else if (tab === "profile") { content = renderProfileTab(state); }
+    else if (tab === "fights") { content = renderFightsTab(state); }
+    else if (tab === "favorites") { content = renderFavoritesTab(state); }
+    else if (tab === "pro") { content = renderProTab(state); }
+    else if (tab === "training") { content = renderTrainingTab(state); }
+    else if (tab === "economy") { content = renderEconomyTab(state); }
+    else if (tab === "ranking") { content = renderRankingTab(state); }
+    else if (tab === "myclub") { content = renderMyClubTab(state); }
+    else if (tab === "clubs") { content = renderClubsTab(state); }
+    else if (tab === "world") { content = renderWorldTab(state); }
+    else if (tab === "settings") { content = renderSettingsTab(state); }
     else { content = renderPeopleTab(state); }
 
     return "<section class=\"panel\">" + renderTabs(state) + "<div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</section>";
