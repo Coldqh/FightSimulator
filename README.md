@@ -1,9 +1,8 @@
 # Fight Simulator
 
-Version: `favorites-ui-hotfix-1.8.6`
+Version: `favorites-tab-ring-1.8.7`
 
-- Added favorite fighters.
-- Fight tab now shows a favorites block.
-- Fighter cards and fight rows can toggle favorites.
-- Modal overlays are above the mobile top panel.
-- Ring PNG background is forced through CSS with fallback paths.
+- Ring PNG is included directly in the delta zip.
+- Favorites are moved to a separate tab.
+- Fight tab no longer renders the favorites block.
+- Favorite star buttons remain in fight rows and fighter cards.

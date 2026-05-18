@@ -1,6 +1,6 @@
-# Roadmap after 1.8.6
+# Roadmap after 1.8.7
 
 Next:
-- Tune fight balance.
-- Improve favorite fighter tracking: notes, filters, watched fights.
-- Continue mobile UI polish.
+- Polish fight balance.
+- Improve favorites: notes, watched fighters, filter by path/country.
+- Continue mobile fight UI tuning.

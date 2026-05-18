@@ -83,6 +83,7 @@
       ["dashboard", "Обзор"],
       ["profile", "Профиль"],
       ["fights", "Бои"],
+      ["favorites", "Избранные"],
       ["training", "Тренировка"],
       ["economy", "Экономика"],
       ["ranking", "Рейтинг"],
@@ -141,7 +142,7 @@
   }
 
   function renderFavoriteFighters(state) {
-    var ids = state.trackedFighterIds instanceof Array ? state.trackedFighterIds : [];
+    var ids = Array.isArray(state.trackedFighterIds) ? state.trackedFighterIds : [];
     var fighters = ids.map(function (id) { return U.getFighterById(state, id); }).filter(function (fighter) { return fighter && !fighter.retired; });
 
     if (!fighters.length) {
@@ -227,10 +228,33 @@
     }).join("");
   }
 
+  function renderFavoritesTab(state) {
+    var ids = Array.isArray(state.trackedFighterIds) ? state.trackedFighterIds : [];
+    var fighters = ids.map(function (id) { return U.getFighterById(state, id); }).filter(function (fighter) { return fighter && !fighter.retired; });
+
+    if (!fighters.length) {
+      return "<div class=\"content-card\"><h3>Избранные</h3><div class=\"muted small\">Пока пусто. Открой карточку бойца или строку соперника во вкладке “Бои” и нажми ☆.</div></div>";
+    }
+
+    return "<div class=\"content-card\"><div class=\"split-row\"><h3>Избранные</h3><strong>" + fighters.length + "</strong></div><div class=\"favorite-list favorite-tab-list\">" + fighters.map(function (fighter) {
+      var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
+      var weight = fighter.trackId === "street" ? "без веса" : U.findWeightClass(fighter.weightClassId).label;
+      return "<div class=\"offer compact-offer favorite-tab-row\"><div class=\"compact-fight-info\">" +
+        favoriteButton(state, fighter.id) +
+        "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" +
+        "<span class=\"pill\">" + U.escapeHtml(U.findCountry(fighter.countryId).label) + "</span>" +
+        "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + "</span>" +
+        "<span class=\"pill\">" + U.escapeHtml(weight) + "</span>" +
+        "<span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span>" +
+        "<span class=\"pill\">" + U.escapeHtml(U.recordText(fighter.record)) + "</span>" +
+        (club ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(club.id) + "\">" + U.escapeHtml(club.name) + "</button>" : "") +
+      "</div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">Карточка</button></div>";
+    }).join("") + "</div></div>";
+  }
+
   function renderFightsTab(state) {
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
-    return renderFavoriteFighters(state) +
-      "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
+    return "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
       "<div class=\"offer-list compact-offers\">" + offers.map(function (offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
@@ -488,6 +512,7 @@
     if (state.selectedTab === "dashboard") { content = renderDashboardTab(state); }
     else if (state.selectedTab === "profile") { content = renderProfileTab(state); }
     else if (state.selectedTab === "fights") { content = renderFightsTab(state); }
+    else if (state.selectedTab === "favorites") { content = renderFavoritesTab(state); }
     else if (state.selectedTab === "training") { content = renderTrainingTab(state); }
     else if (state.selectedTab === "economy") { content = renderEconomyTab(state); }
     else if (state.selectedTab === "ranking") { content = renderRankingTab(state); }

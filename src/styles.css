@@ -1337,3 +1337,25 @@ button, input, select { max-width: 100%; }
     align-items: center;
   }
 }
+
+
+/* 1.8.7 favorites tab and ring asset fix */
+.favorite-tab-list {
+  display: grid;
+  gap: 6px;
+}
+
+.favorite-tab-row {
+  border-color: rgba(243, 217, 141, 0.18);
+}
+
+.ring-grid {
+  background-image:
+    linear-gradient(rgba(8, 8, 10, 0.02), rgba(8, 8, 10, 0.02)),
+    url("../ring_top_view.png"),
+    url("../../ring_top_view.png"),
+    url("ring_top_view.png") !important;
+  background-position: center, center, center, center !important;
+  background-size: cover, cover, cover, cover !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat !important;
+}

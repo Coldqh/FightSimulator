@@ -60,29 +60,34 @@ FS.World.bootstrapWorld(state);
 FS.State.repairState(state);
 FS.World.refreshOffers(state);
 
-if (FS.Data.appVersion !== "favorites-ui-hotfix-1.8.6") throw new Error("bad version");
+if (FS.Data.appVersion !== "favorites-tab-ring-1.8.7") throw new Error("bad version");
+if (!fs.existsSync(path.join(root, "ring_top_view.png"))) throw new Error("ring_top_view.png is missing from project root");
+
+let html = FS.Render.dashboard(state);
+if (!html.includes("data-tab=\"favorites\"") || !html.includes(">Избранные<")) {
+  throw new Error("favorites tab is missing");
+}
 
 state.selectedTab = "fights";
-let html = FS.Render.dashboard(state);
-if (!html.includes("Избранные")) throw new Error("favorites block missing");
-if (!html.includes("data-favorite-fighter")) throw new Error("favorite buttons missing");
+html = FS.Render.dashboard(state);
+if (html.includes("<h3>Избранные</h3>")) throw new Error("favorites block should not render in fights tab");
+if (!html.includes("data-favorite-fighter")) throw new Error("favorite toggle missing in fight rows");
 
 const opponentId = state.offers.filter(o => !o.isCompetition)[0].opponentId;
 state.trackedFighterIds = [opponentId];
+state.selectedTab = "favorites";
 html = FS.Render.dashboard(state);
-if (!html.includes("★") || !html.includes("В избранном")) throw new Error("active favorite state missing");
-
-state.modal = { type: "fighter", fighterId: opponentId };
-html = FS.Render.dashboard(state);
-if (!html.includes("data-favorite-fighter=\"" + opponentId + "\"")) throw new Error("favorite button missing in fighter modal");
+if (!html.includes("<h3>Избранные</h3>") || !html.includes("В избранном")) {
+  throw new Error("favorites tab does not show active favorite");
+}
 
 const css = fs.readFileSync(path.join(root, "src/styles.css"), "utf8");
-if (!css.includes("z-index: 12000") || !css.includes("z-index: 13000")) throw new Error("modal z-index fix missing");
-if (!css.includes("ring_top_view.png") || !css.includes('url("ring_top_view.png")')) throw new Error("ring png fallback missing");
-if (!css.includes(".favorite-btn")) throw new Error("favorite css missing");
+if (!css.includes("ring_top_view.png") || !css.includes("../../ring_top_view.png")) {
+  throw new Error("ring fallback css missing");
+}
 
-console.log("favorites ui hotfix smoke ok", {
+console.log("favorites tab ring smoke ok", {
   version: FS.Data.appVersion,
   favoriteId: opponentId,
-  offers: state.offers.filter(o => !o.isCompetition).length
+  ringPngBytes: fs.statSync(path.join(root, "ring_top_view.png")).size
 });

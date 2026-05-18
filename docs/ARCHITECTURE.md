@@ -1,8 +1,10 @@
-# Architecture 1.8.6
+# Architecture 1.8.7
 
-Uses existing `state.trackedFighterIds` for favorite fighters.
+Favorites:
+- Uses existing `state.trackedFighterIds`.
+- `renderFavoritesTab` displays the separate favorites tab.
+- Fight rows and fighter cards only toggle favorites.
 
-Changed:
-- `render.js`: favorite UI in fights and fighter modal.
-- `app.js`: favorite toggle handler.
-- `styles.css`: z-index fixes and ring background fallback.
+Ring:
+- `ring_top_view.png` is included in delta zip at project root.
+- CSS includes fallback paths for the ring background.

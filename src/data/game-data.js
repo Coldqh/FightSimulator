@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "favorites-ui-hotfix-1.8.6",
+    appVersion: "favorites-tab-ring-1.8.7",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
