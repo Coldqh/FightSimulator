@@ -1,7 +1,8 @@
-# Roadmap after 1.9.7
+# Roadmap after 2.0.0
 
 Next:
-- Manually test 10-20 fights across amateur/pro/street.
-- Tune base punch damage after real gameplay.
-- Add visible knockdown count and post-fight knockdown stats.
-- Continue pro contract balance and title logic.
+- Tune large-world generation speed.
+- Add country search/filter in ranking and travel modal.
+- Add region-level filters for countries.
+- Improve club name pools gradually with more real gyms.
+- Add richer local identity for amateur tournaments and national teams.

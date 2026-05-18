@@ -1,4 +1,4 @@
-# Test Checklist 1.9.7
+# Test Checklist 2.0.0
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,10 +7,13 @@ start index.html
 ```
 
 Manual:
-1. Equal OVR pro fighters should not usually KO each other in round 1.
-2. Fighter with Health 45 has 145 HP.
-3. Fighter with Health 90 has 190 HP.
-4. Damage at 100 power is about 1.75x damage at 0 power.
-5. First knockdown is survivable around 80%.
-6. Second/third/fourth knockdowns get much harder.
-7. Top bar shows KO only inside record text, not as a separate duplicate pill.
+1. Game starts with 100+ countries.
+2. All country labels show flags where countries are displayed.
+3. `assets/flags` contains PNG flags.
+4. Amateur total is 20,000.
+5. Street total is 5,000.
+6. Pro total is 1,800.
+7. Club count depends on total fighters / 30.
+8. Profile tab has only 3 career-management buttons.
+9. Travel opens a modal and costs money.
+10. Low amateur/street opponents are from the current country.

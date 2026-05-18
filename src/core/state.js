@@ -199,39 +199,83 @@
     return fighter;
   }
 
+  function scaledBaseForAmateurIndex(index, total) {
+    var ratio = total > 1 ? index / (total - 1) : 0;
+    if (ratio > 0.997) { return U.randomInt(100, 120); }
+    if (ratio > 0.985) { return U.randomInt(85, 105); }
+    if (ratio > 0.94) { return U.randomInt(65, 90); }
+    if (ratio > 0.74) { return U.randomInt(42, 68); }
+    if (ratio > 0.42) { return U.randomInt(22, 48); }
+    return U.randomInt(0, 28);
+  }
+
+  function rankForBaseValue(value) {
+    if (value >= 100) { return "msmk"; }
+    if (value >= 85) { return "ms"; }
+    if (value >= 65) { return "kms"; }
+    if (value >= 42) { return "adult_1"; }
+    if (value >= 22) { return "adult_2"; }
+    return "adult_3";
+  }
+
+  function distributeCount(total, buckets) {
+    var result = [];
+    var i;
+    var used = 0;
+    for (i = 0; i < buckets; i += 1) {
+      result[i] = Math.floor(total / buckets);
+      used += result[i];
+    }
+    i = 0;
+    while (used < total) {
+      result[i % buckets] += 1;
+      used += 1;
+      i += 1;
+    }
+    return result;
+  }
+
   function createRoster(player) {
     var roster = [];
     var countryIndex;
     var weightIndex;
-    var rankIndex;
     var fighterIndex;
+    var country;
     var countryId;
     var weightClassId;
-    var rank;
-    var count;
     var seed;
     var base;
+    var count;
+    var perWeight;
+    var rankId;
 
-    /* Профи: 100 в каждом весе, OVR 90-200 */
-    for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
-      weightClassId = Data.weightClasses[weightIndex].id;
-      for (fighterIndex = 0; fighterIndex < 200; fighterIndex += 1) {
-        countryId = Data.countries[fighterIndex % Data.countries.length].id;
-        seed = 100000 + weightIndex * 2000 + fighterIndex;
-        base = U.clamp(90 + Math.round(fighterIndex * 0.56), 90, 200);
-        roster.push(createFighter(countryId, "pro", seed, base, {
-          weightClassId: weightClassId,
-          age: U.randomInt(19, 39)
-        }));
+    /* Профи: 1800 всего, 300 на вес. Страна зависит от итогового распределения Data.countries[].proCount. */
+    for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
+      country = Data.countries[countryIndex];
+      countryId = country.id;
+      perWeight = distributeCount(Number(country.proCount) || 0, Data.weightClasses.length);
+      for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
+        weightClassId = Data.weightClasses[weightIndex].id;
+        for (fighterIndex = 0; fighterIndex < perWeight[weightIndex]; fighterIndex += 1) {
+          seed = 100000 + countryIndex * 10000 + weightIndex * 1000 + fighterIndex;
+          count = Math.max(1, perWeight[weightIndex]);
+          base = U.clamp(90 + Math.round((fighterIndex / count) * 110) + U.randomInt(-5, 5), 90, 200);
+          roster.push(createFighter(countryId, "pro", seed, base, {
+            weightClassId: weightClassId,
+            age: U.randomInt(19, 39)
+          }));
+        }
       }
     }
 
-    /* Улица: 1000 в каждой стране, OVR 0-150, без веса */
+    /* Улица: суммарно до 5000. Количество по стране уже посчитано в Data.countries[].streetCount. */
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
-      countryId = Data.countries[countryIndex].id;
-      for (fighterIndex = 0; fighterIndex < 1000; fighterIndex += 1) {
+      country = Data.countries[countryIndex];
+      countryId = country.id;
+      count = Number(country.streetCount) || 0;
+      for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
         seed = 200000 + countryIndex * 10000 + fighterIndex;
-        base = U.clamp(Math.round(fighterIndex * 0.155), 0, 150);
+        base = U.clamp(Math.round((fighterIndex / Math.max(1, count - 1)) * 150) + U.randomInt(-6, 6), 0, 150);
         roster.push(createFighter(countryId, "street", seed, base, {
           weightClassId: "",
           age: U.randomInt(18, 45)
@@ -239,22 +283,21 @@
       }
     }
 
-    /* Любители: 15 МСМК, 30 МС, 60 КМС, 150 I, 300 II, 500 III в каждой стране */
+    /* Любители: 20000 всего. Распределение по странам — финальное, по популярности/успехам/населению. */
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
-      countryId = Data.countries[countryIndex].id;
-      for (rankIndex = 0; rankIndex < Data.amateurRanks.length; rankIndex += 1) {
-        rank = Data.amateurRanks[rankIndex];
-        count = Data.amateurRankRosterCounts[rank.id] || 50;
-        for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
-          seed = 300000 + countryIndex * 100000 + rankIndex * 10000 + fighterIndex;
-          base = baseForRank(rank.id);
-          weightClassId = Data.weightClasses[(fighterIndex + rankIndex) % Data.weightClasses.length].id;
-          roster.push(createFighter(countryId, "amateur", seed, base, {
-            weightClassId: weightClassId,
-            rankId: rank.id,
-            age: U.randomInt(18, 34)
-          }));
-        }
+      country = Data.countries[countryIndex];
+      countryId = country.id;
+      count = Number(country.amateurCount) || 0;
+      for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
+        seed = 300000 + countryIndex * 100000 + fighterIndex;
+        base = scaledBaseForAmateurIndex(fighterIndex, count);
+        rankId = rankForBaseValue(base);
+        weightClassId = Data.weightClasses[(fighterIndex + countryIndex) % Data.weightClasses.length].id;
+        roster.push(createFighter(countryId, "amateur", seed, base, {
+          weightClassId: weightClassId,
+          rankId: rankId,
+          age: U.randomInt(18, 30)
+        }));
       }
     }
 
@@ -427,21 +470,24 @@
   function setPlayerCountry(state, countryId) {
     var country = U.findCountry(countryId);
     var p = player(state);
-    if (!p) { return; }
+    var cost;
+    if (!p) { return false; }
+    if (p.countryId === country.id) {
+      state.feed = "Ты уже находишься в этой стране.";
+      return false;
+    }
 
-    var cost = Data.economy && Data.economy.travelCosts ? (Data.economy.travelCosts[country.id] || 220) : 220;
-    if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return; }
-    adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
-    var cost = Data.economy && Data.economy.travelCosts ? (Data.economy.travelCosts[country.id] || 220) : 220;
-    if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return; }
+    cost = Data.economy && Data.economy.travelCosts ? (Data.economy.travelCosts[country.id] || 220) : 220;
+    if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return false; }
     adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
     p.countryId = country.id;
     p.gymId = "";
     state.people = [];
     state.rankingCountryId = country.id;
     state.rankingPage = 0;
-    state.feed = "Перелёт: " + country.label + ". Старый зал сброшен, выбери новый во вкладке “Мой клуб”.";
-    p.careerLog.unshift({ week: state.week, text: "Перелёт в страну: " + country.label + "." });
+    state.feed = "Перелёт: " + country.label + " за $" + cost + ". Старый зал сброшен, выбери новый во вкладке “Мой клуб”.";
+    p.careerLog.unshift({ week: state.week, text: "Перелёт в страну: " + country.label + " ($" + cost + ")." });
+    return true;
   }
 
   function setPlayerWeightClass(state, weightClassId) {

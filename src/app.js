@@ -297,6 +297,9 @@
       World.refreshOffers(state);
       state.feed = "Соперники обновлены.";
       saveAndRender();
+    } else if (button.dataset.profileModal) {
+      state.modal = { type: "profileProcess", kind: button.dataset.profileModal };
+      saveAndRender();
     } else if (button.dataset.person) {
       state.modal = { type: "person", personId: button.dataset.person };
       saveAndRender();

@@ -39,8 +39,8 @@
   function emptyRecord() { return { wins: 0, losses: 0, draws: 0 }; }
 
   function clubLabel(country, index) {
-    var cities = citiesByCountry[country.id] || [country.city || country.label];
-    var names = namesByCountry[country.id] || namesByCountry.usa;
+    var cities = country.cities || citiesByCountry[country.id] || [country.city || country.label];
+    var names = country.gymNames || namesByCountry[country.id] || namesByCountry.usa;
     var city = cities[index % cities.length];
     var name = names[index % names.length];
     var district = Math.floor(index / names.length);
@@ -61,14 +61,17 @@
   }
 
   function ensureClubs(state) {
-    var i, j, country, level, band, club, existingById = {}, usedNames = {}, name;
+    var i, j, country, level, band, club, existingById = {}, usedNames = {}, name, totalFighters, targetClubs;
     if (!(state.clubs instanceof Array)) { state.clubs = []; }
     for (i = 0; i < state.clubs.length; i += 1) { existingById[state.clubs[i].id] = state.clubs[i]; }
 
     for (i = 0; i < Data.countries.length; i += 1) {
       country = Data.countries[i];
-      for (j = 0; j < 80; j += 1) {
-        level = 1 + Math.min(5, Math.floor(j / 14));
+      totalFighters = (Number(country.amateurCount) || 0) + (Number(country.streetCount) || 0) + (Number(country.proCount) || 0);
+      targetClubs = Math.max(2, Math.ceil(totalFighters / 30));
+
+      for (j = 0; j < targetClubs; j += 1) {
+        level = 1 + Math.min(5, Math.floor((j / Math.max(1, targetClubs)) * 6));
         band = levelBand(level);
         club = existingById["club_" + country.id + "_" + j] || { id: "club_" + country.id + "_" + j };
         name = clubLabel(country, j);
@@ -86,6 +89,13 @@
         if (!existingById[club.id]) { state.clubs.push(club); existingById[club.id] = club; }
       }
     }
+
+    state.clubs = state.clubs.filter(function (club) {
+      var country = Data.countries.find(function (item) { return item.id === club.countryId; });
+      var total = country ? ((Number(country.amateurCount) || 0) + (Number(country.streetCount) || 0) + (Number(country.proCount) || 0)) : 0;
+      return country && Number(club.id.split("_").pop()) < Math.max(2, Math.ceil(total / 30));
+    });
+
     assignFightersToClubs(state);
   }
 
