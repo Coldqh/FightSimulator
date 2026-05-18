@@ -29,21 +29,26 @@
   }
 
   function scheduleText(comp) {
+    if (comp.schedule === "city") { return "каждый месяц, 2 неделя"; }
+    if (comp.schedule === "oblast") { return "февраль, май, август, ноябрь · 3 неделя"; }
+    if (comp.schedule === "region") { return "март, июль, ноябрь · 4 неделя"; }
     if (comp.schedule === "country") { return "март, 2 неделя и сентябрь, 2 неделя"; }
     if (comp.schedule === "continent") { return "июнь, 2 неделя"; }
     if (comp.schedule === "world") { return "октябрь, 2 неделя"; }
     if (comp.schedule === "olympiad") { return "каждый 4-й год, июль, 2 неделя"; }
-    return "в любое время";
+    return "по расписанию";
   }
 
   function isScheduledNow(state, comp) {
     var parts = State.dateParts ? State.dateParts(state) : { year: 1, month: 1, weekOfMonth: 1 };
-    if (!comp.schedule || comp.schedule === "any") { return true; }
+    if (comp.schedule === "city") { return parts.weekOfMonth === 2; }
+    if (comp.schedule === "oblast") { return [2, 5, 8, 11].indexOf(parts.month) !== -1 && parts.weekOfMonth === 3; }
+    if (comp.schedule === "region") { return [3, 7, 11].indexOf(parts.month) !== -1 && parts.weekOfMonth === 4; }
     if (comp.schedule === "country") { return (parts.month === 3 || parts.month === 9) && parts.weekOfMonth === 2; }
     if (comp.schedule === "continent") { return parts.month === 6 && parts.weekOfMonth === 2; }
     if (comp.schedule === "world") { return parts.month === 10 && parts.weekOfMonth === 2; }
     if (comp.schedule === "olympiad") { return parts.year % 4 === 0 && parts.month === 7 && parts.weekOfMonth === 2; }
-    return true;
+    return false;
   }
 
   function competitionStatus(state, comp) {
@@ -151,21 +156,82 @@
     return copy;
   }
 
+  function lowerPowerOfTwo(value) {
+    var power = 1;
+    while (power * 2 <= value) { power *= 2; }
+    return power;
+  }
+
+  function arrangeRoundPairs(ids) {
+    var clean = (ids || []).filter(function (id) { return !!id; });
+    var count = clean.length;
+    var base;
+    var fightCount;
+    var fightNeeded;
+    var playerIndex;
+    var swap;
+    var fightIds;
+    var byeIds;
+    var arranged = [];
+    var i;
+
+    if (count <= 2 || lowerPowerOfTwo(count) === count) {
+      return clean;
+    }
+
+    base = lowerPowerOfTwo(count);
+    fightCount = count - base;
+    fightNeeded = fightCount * 2;
+
+    playerIndex = clean.indexOf("player");
+    if (playerIndex >= fightNeeded && fightNeeded > 0) {
+      swap = clean[fightNeeded - 1];
+      clean[fightNeeded - 1] = "player";
+      clean[playerIndex] = swap;
+    }
+
+    fightIds = clean.slice(0, fightNeeded);
+    byeIds = clean.slice(fightNeeded);
+
+    for (i = 0; i < fightIds.length; i += 2) {
+      arranged.push(fightIds[i]);
+      arranged.push(fightIds[i + 1] || "");
+    }
+    for (i = 0; i < byeIds.length; i += 1) {
+      arranged.push(byeIds[i]);
+      arranged.push("");
+    }
+
+    return arranged;
+  }
+
+  function prepareCurrentRound(session) {
+    if (session.roundPreparedIndex === session.roundIndex) { return; }
+    session.activeIds = arrangeRoundPairs(session.activeIds || []);
+    session.roundPreparedIndex = session.roundIndex;
+  }
+
   function bracketSize(poolSize) {
     return Math.max(2, Math.min(1024, poolSize));
   }
 
   function tournamentRoundsForSize(size) {
-    var rounds = [];
-    var alive = size;
-    while (alive > 2) {
-      if (alive <= 4) { rounds.push("Полуфинал"); }
-      else if (alive <= 8) { rounds.push("Четвертьфинал"); }
-      else { rounds.push("1/" + Math.ceil(alive / 2)); }
-      alive = Math.ceil(alive / 2);
+    var labels = [];
+    var count = size;
+    var base;
+    if (count > 2 && lowerPowerOfTwo(count) !== count) {
+      base = lowerPowerOfTwo(count);
+      labels.push("Предварительный раунд");
+      count = base;
     }
-    rounds.push("Финал");
-    return rounds;
+    while (count > 2) {
+      if (count === 4) { labels.push("Полуфинал"); }
+      else if (count === 8) { labels.push("Четвертьфинал"); }
+      else { labels.push("1/" + count); }
+      count = Math.floor(count / 2);
+    }
+    labels.push("Финал");
+    return labels;
   }
 
   function summarizeAlive(state, session) {
@@ -183,8 +249,10 @@
   }
 
   function findPlayerOpponent(session) {
-    var ids = session.activeIds || [];
+    var ids;
     var i;
+    prepareCurrentRound(session);
+    ids = session.activeIds || [];
     for (i = 0; i < ids.length; i += 2) {
       if (ids[i] === "player") { return ids[i + 1] || ""; }
       if (ids[i + 1] === "player") { return ids[i] || ""; }
@@ -255,15 +323,22 @@
   }
 
   function advanceBracketAfterPlayerWin(state, session) {
-    var ids = session.activeIds || [];
+    var ids;
     var winners = [];
     var i;
     var a;
     var b;
 
+    prepareCurrentRound(session);
+    ids = session.activeIds || [];
+
     for (i = 0; i < ids.length; i += 2) {
       a = ids[i];
       b = ids[i + 1];
+
+      if (!a && !b) { continue; }
+      if (!b) { winners.push(a); continue; }
+      if (!a) { winners.push(b); continue; }
 
       if (a === "player" || b === "player") {
         winners.push("player");
@@ -274,6 +349,7 @@
 
     session.activeIds = winners;
     session.roundIndex += 1;
+    session.roundPreparedIndex = -1;
     return winners;
   }
 
@@ -365,6 +441,7 @@
   function startTournament(state, compId) {
     var comp = getCompetition(compId);
     var status = competitionStatus(state, comp);
+    var p = State.player(state);
     var pool;
     var selected;
     var size;
@@ -397,6 +474,7 @@
     session = {
       competitionId: comp.id,
       roundIndex: 0,
+      roundPreparedIndex: -1,
       rounds: tournamentRoundsForSize(size),
       activeIds: participants,
       fights: [],

@@ -74,6 +74,7 @@
       id: "coach_" + clubId,
       role: "coach",
       name: U.createName(country, seed),
+      countryId: country.id,
       age: U.randomInt(34, 74),
       clubId: clubId,
       record: emptyRecord(),
@@ -255,13 +256,26 @@
 
   function maybeMoveNpcClubs(state) {
     var attempts = Math.min(180, Math.max(30, Math.floor(state.roster.length / 140)));
-    var i, fighter, eligible, current;
+    var i, fighter, eligible, current, target, pClub, newsDone = false;
+    pClub = playerClub(state);
     for (i = 0; i < attempts; i += 1) {
       fighter = state.roster[U.randomInt(0, state.roster.length - 1)];
       if (!fighter || fighter.isPlayer || fighter.retired || U.randomInt(1, 100) > 13) { continue; }
       eligible = eligibleClubsForFighter(state, fighter, null);
       current = findClub(state, fighter.gymId);
-      if (eligible.length && (!current || eligible[0].level > current.level || U.randomInt(1,100)<=18)) { fighter.gymId = eligible[0].id; }
+      target = eligible[0];
+      if (eligible.length && (!current || target.level > current.level || U.randomInt(1,100)<=18)) {
+        if (!newsDone && pClub && window.FS.World && window.FS.World.createNews) {
+          if (current && current.id === pClub.id && target.id !== pClub.id) {
+            window.FS.World.createNews(state, "club", "Из твоего клуба ушёл " + fighter.name + ".", { fighterId: fighter.id, clubId: pClub.id });
+            newsDone = true;
+          } else if ((!current || current.id !== pClub.id) && target.id === pClub.id) {
+            window.FS.World.createNews(state, "club", "В твой клуб пришёл " + fighter.name + ".", { fighterId: fighter.id, clubId: pClub.id });
+            newsDone = true;
+          }
+        }
+        fighter.gymId = target.id;
+      }
     }
     assignFightersToClubs(state);
   }
@@ -282,6 +296,9 @@
         club.coach = createCoach(country, club.id, 900000 + state.week * 1000 + i);
         if (pClub && pClub.id === club.id) {
           state.modal = { type: "coachEvent", title: "Событие в клубе", text: "Тренер " + oldCoach.name + " " + eventType + ". Новым тренером стал " + club.coach.name + "." };
+          if (window.FS.World && window.FS.World.createNews) {
+            window.FS.World.createNews(state, "club", "В твоём клубе сменился тренер: " + oldCoach.name + " " + eventType + ". Новый тренер — " + club.coach.name + ".", { clubId: club.id });
+          }
         }
         state.feed = "В клубе " + club.name + " сменился тренер.";
       }

@@ -679,6 +679,7 @@
       state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
       state.world.proContractHistory.unshift({ week: state.week, text: "Контрактный бой завершён: " + result + " против " + opponent.name + "." });
       if (window.FS.World && window.FS.World.clearProContract) { window.FS.World.clearProContract(p); }
+      if (state.world) { state.world.pendingProFight = null; }
     }
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
@@ -818,6 +819,33 @@
     return true;
   }
 
+  function skipProContractFight(state) {
+    var p = State.player(state);
+    var opponent;
+    var fakeOffer;
+    var result;
+
+    if (!p || p.trackId !== "pro" || !p.contractOpponentId) { return false; }
+    if (state.week < p.nextFightWeek) { return false; }
+    opponent = U.getFighterById(state, p.contractOpponentId);
+    if (!opponent) { return false; }
+
+    fakeOffer = {
+      id: "pro_contract_skip_" + (p.contractId || state.week),
+      opponentId: opponent.id,
+      rounds: p.contractRounds || U.findTrack("pro").rounds,
+      purse: p.contractPurse || computePurse(p, opponent),
+      difficultyId: "even"
+    };
+
+    state.offers.push(fakeOffer);
+    result = resolveRandomFight(state, fakeOffer.id);
+    state.offers = state.offers.filter(function (offer) { return offer.id !== fakeOffer.id; });
+    if (window.FS.World && window.FS.World.clearProContract) { window.FS.World.clearProContract(p); }
+    if (state.world) { state.world.pendingProFight = null; }
+    return result;
+  }
+
   function startProContractFight(state) {
     var p = State.player(state);
     var opponent;
@@ -877,6 +905,7 @@
     startInteractiveFight: startInteractiveFight,
     startTournamentInteractiveFight: startTournamentInteractiveFight,
     startProContractFight: startProContractFight,
+    skipProContractFight: skipProContractFight,
     playerAction: playerAction,
     handleCount: handleCount,
     resolveRandomFight: resolveRandomFight,

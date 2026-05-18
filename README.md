@@ -1,16 +1,14 @@
 # Fight Simulator
 
-Version: `world-news-calendar-2.0.2`
+Version: `tournament-team-ui-2.0.3`
 
-- Club country filter is now a dropdown.
-- Small countries are grouped into local boxing pools for street/amateur fights and local amateur tournaments.
-- Club name generation removes repeated city/country names.
-- Fight offers and club rosters show fighter country.
-- News tab added.
-- National team remains the player's home country after travel.
-- Amateur path now has a national teams section.
-- Tournament notifications and pro fight due modal added.
-- Pro contract dates now show weeks left and full calendar date.
-- Some trainers can now be foreign coaches.
-- World/elite amateur tournaments pull from national-team main rosters.
-- Continental championship requires national-team main/reserve eligibility.
+- Lower amateur tournaments now have real calendar dates instead of "any date".
+- Training tab renamed to Characteristics.
+- Amateur national teams now use club-like cards with coach, strongest fighter and roster controls.
+- National team selector is now a dropdown with actions.
+- News feed is restricted to meaningful events only.
+- Tournament brackets now use preliminary rounds correctly: e.g. 80 -> 64 -> 32, 287 -> 256 -> 128.
+- Amateur/street rankings show fighter flags/countries.
+- Contract signing uses full calendar date.
+- Pro fight due modal is now a normal fight preview without cancel.
+- Mobile/desktop UI spacing tightened.

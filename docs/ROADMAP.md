@@ -1,8 +1,8 @@
-# Roadmap after 2.0.2
+# Roadmap after 2.0.3
 
 Next:
-- Replace lightweight tournament-news simulation with full autonomous brackets for every scheduled tournament.
-- Add search inside country dropdowns.
-- Add visible rank movement after every fight.
-- Add club transfer news with exact names of arriving/leaving fighters.
-- Add full medal histories for national teams.
+- Full autonomous tournament simulation with saved medal tables for every national team.
+- Exact champion-change news for street/pro belts.
+- Search inside country/team dropdowns.
+- Rank movement arrows after every fight.
+- More compact fight preview cards for very small mobile screens.

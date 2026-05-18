@@ -1,4 +1,4 @@
-# Test Checklist 2.0.2
+# Test Checklist 2.0.3
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,13 +7,13 @@ start index.html
 ```
 
 Manual:
-1. Club country filter opens as dropdown.
-2. Fight offers show opponent country.
-3. Club roster shows fighter country.
-4. News tab exists.
-5. Small-country amateurs/street fighters can get nearby local-pool opponents.
-6. Player travel keeps original national-team affiliation.
-7. Pro fight week opens an unavoidable fight modal.
-8. Tournament invite shows Register/Ignore.
-9. Pro contracts show weeks left and full date.
-10. Continental championship requires national-team reserve/main.
+1. City/oblast/region tournaments no longer show `дата: любая`.
+2. Tab says `Характеристики`, not `Тренировка`.
+3. Amateur path team cards look like club cards.
+4. National teams are selected from a dropdown.
+5. Rankings show flags for amateur/street fighters.
+6. Pro contract signing shows full date, not raw week.
+7. Due pro fight opens a fight preview without cancel.
+8. News tab contains only meaningful news categories.
+9. 80-player bracket goes to 64 after the preliminary round.
+10. UI is tighter on phone and desktop.

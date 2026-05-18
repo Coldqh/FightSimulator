@@ -1594,3 +1594,137 @@ button, input, select { max-width: 100%; }
     max-height: 58vh;
   }
 }
+
+
+/* 2.0.3 compact UI pass */
+.world-grid .content-card,
+.team-card {
+  min-width: 0;
+}
+
+.team-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.news-row {
+  align-items: flex-start;
+}
+
+.compact-offer,
+.tournament-row,
+.ranking-row {
+  gap: 8px;
+}
+
+.fight-preview-modal .stat-card {
+  min-height: 92px;
+}
+
+@media (min-width: 980px) {
+  .layout.single-layout {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .content-card {
+    padding: 14px;
+  }
+
+  .tabs {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar.compact-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    padding: 8px;
+  }
+
+  .top-pills {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .top-pills .pill {
+    justify-content: center;
+    min-width: 0;
+    font-size: 10px;
+    padding: 5px 6px;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .tabs button {
+    min-width: 0;
+    padding: 7px 5px;
+    font-size: 11px;
+  }
+
+  .panel,
+  .content-card {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .grid.two,
+  .world-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .split-row {
+    gap: 8px;
+    padding: 7px 0;
+  }
+
+  .compact-fight-info,
+  .pills,
+  .row,
+  .team-selector-row {
+    gap: 5px;
+  }
+
+  .compact-fight-info .pill,
+  .pills .pill,
+  .small-btn {
+    font-size: 10px;
+    padding: 5px 7px;
+  }
+
+  .modal {
+    width: min(96vw, 720px);
+    max-height: 92vh;
+    overflow: auto;
+    border-radius: 16px;
+  }
+
+  .modal-body {
+    padding: 10px;
+  }
+
+  .modal-actions {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .country-dropdown-menu {
+    max-height: 54vh;
+  }
+}

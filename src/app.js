@@ -369,6 +369,9 @@
       if (World.buildProContracts) { World.buildProContracts(state); }
       state.feed = "Профи-предложения обновлены.";
       saveAndRender();
+    } else if (button.dataset.skipProContract) {
+      if (Fight.skipProContractFight) { Fight.skipProContractFight(state); }
+      saveAndRender();
     } else if (button.dataset.startProContract) {
       if (state.world) { state.world.pendingProFight = null; }
       if (Fight.startProContractFight) { Fight.startProContractFight(state); }
@@ -401,6 +404,12 @@
     } else if (button.dataset.rankingCountry) {
       state.rankingCountryId = button.dataset.rankingCountry;
       state.rankingPage = 0;
+      saveAndRender();
+    } else if (button.dataset.teamCountrySelect) {
+      state.selectedTeamCountryId = button.dataset.teamCountrySelect;
+      saveAndRender();
+    } else if (button.dataset.teamCard) {
+      state.modal = { type: "teamCard", countryId: button.dataset.teamCard };
       saveAndRender();
     } else if (button.dataset.rankingTrack) {
       state.rankingTrackId = button.dataset.rankingTrack;

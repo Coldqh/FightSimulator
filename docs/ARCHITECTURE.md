@@ -1,30 +1,23 @@
-# Architecture 2.0.2
+# Architecture 2.0.3
 
-`Data.countries`
-- Added `localPoolId`.
-- Small countries share local pools such as `small_europe`, `small_asia`, `small_latin_america`.
-
-`Matchmaking`
-- Low-level amateur and street opponents are pulled from the player's local country pool.
-- KMS+ amateurs can still see international opponents.
+`Data.amateurCompetitions`
+- `city`, `oblast`, `region` now use scheduled calendar values instead of `any`.
 
 `Amateur`
-- Local tournaments use the current country/local pool.
-- Continental tournaments use the player's home-country continent.
-- World and Olympic-style tournaments use main national-team rosters.
-- Continental tournament entry requires the player to be in national-team reserve/main.
+- `scheduleText` and `isScheduledNow` now handle lower tournament schedules.
+- Tournament brackets support preliminary rounds:
+  - non-power-of-two participant counts are reduced to the next lower power of two after the first round.
+  - byes are represented internally as empty pair slots.
+- `tournamentRoundsForSize` emits "Предварительный раунд" before the normal 64/32/16 ladder when needed.
 
 `World`
-- Added lightweight scheduled tournament notices/news.
-- Added due-pro-fight modal.
-- News are pushed into `state.world.news`.
+- News are filtered to strict allowed categories: club, team, tournament, medal, champion.
+- Contract signing text uses full date through `State.dateParts`.
+- Due pro fight opens `proContractPreview`.
 
 `Render`
-- Added News tab.
-- Clubs country filter uses dropdown.
-- Club/fight rosters show country flags.
-- Amateur path shows home national team and a national-teams section.
-
-`State`
-- Player has `homeCountryId` and `currentCountryId`.
-- Travel changes current country but keeps home national team.
+- Training tab label is now "Характеристики".
+- Team cards use the same visual language as club cards.
+- Team selector uses dropdown + buttons.
+- Pro contract due preview matches normal fight preview but has no cancel button.
+- Rankings show fighter country for amateur/street/pro.
