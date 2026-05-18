@@ -805,6 +805,17 @@
     }
   }
 
+  function recordStrengthForRanking(fighter) {
+    var record = fighter.record || {};
+    var wins = Number(record.wins) || 0;
+    var losses = Number(record.losses) || 0;
+    var draws = Number(record.draws) || 0;
+    var kos = Number(record.kos) || 0;
+    var total = wins + losses + draws;
+    var winRate = total ? wins / total : 0;
+    return wins * 0.24 - losses * 0.22 + draws * 0.04 + kos * 0.10 + winRate * 8;
+  }
+
   function ranking(state, countryId, trackId, weightClassId) {
     return state.roster
       .filter(function (fighter) {
@@ -825,7 +836,7 @@
         return !fighter.retired && countryOk && fighter.trackId === trackId && weightOk;
       })
       .sort(function (left, right) {
-        return U.scoreFighter(right) - U.scoreFighter(left);
+        return (U.scoreFighter(right) + recordStrengthForRanking(right)) - (U.scoreFighter(left) + recordStrengthForRanking(left));
       });
   }
 

@@ -55,9 +55,9 @@
   }
 
   function trackDamageMultiplier(trackId) {
-    if (trackId === "pro") { return 0.59; }
-    if (trackId === "street") { return 0.67; }
-    return 0.82;
+    if (trackId === "pro") { return 1.77; }
+    if (trackId === "street") { return 3.35; }
+    return 1.64;
   }
 
   function maxHp(fighter) {
@@ -122,15 +122,19 @@
   function hitChance(attacker, defender, punch, attackerState, defenderState) {
     var staminaFactor = attackerState.stamina / attackerState.maxStamina;
     var actionPenalty = repeatPenalty(attackerState, punch.id);
-    return Math.round(U.clamp((39 + attacker.stats.technique * 0.34 + attacker.stats.speed * 0.24 + punch.accuracy + staminaFactor * 9 - defender.stats.speed * 0.18 - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92));
+    var attackGrowth = attacker.stats.technique * 0.38 + attacker.stats.speed * 0.27;
+    var dodgeGrowth = defender.stats.speed * 0.24 + defender.stats.technique * 0.08;
+    return Math.round(U.clamp((36 + attackGrowth + punch.accuracy + staminaFactor * 10 - dodgeGrowth - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92));
   }
 
   function punchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.18 + U.randomInt(0, 4);
+    var powerGrowth = Math.pow(Math.max(1, attacker.stats.power), 1.08) * 0.135;
+    var techGrowth = Math.max(1, attacker.stats.technique) * 0.07;
+    var raw = powerGrowth + techGrowth + punch.stamina * 0.12 + U.randomInt(0, 4);
     var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * (0.42 + (1 - repeatPenalty(defenderState, "block")) * 0.28)); }
     if (attackerState.stamina < punch.stamina) { damage = Math.round(damage * 0.48); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 19 : 23));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 48 : (attacker.trackId === "pro" ? 57 : 115));
   }
 
   function staminaDamage(attacker, punch, damage, defenderState) {
@@ -140,10 +144,12 @@
   }
 
   function estimatePunchDamage(attacker, defender, punch, attackerState, defenderState) {
-    var raw = attacker.stats.power * 0.115 + attacker.stats.technique * 0.055 + punch.stamina * 0.18 + 2;
+    var powerGrowth = Math.pow(Math.max(1, attacker.stats.power), 1.08) * 0.135;
+    var techGrowth = Math.max(1, attacker.stats.technique) * 0.07;
+    var raw = powerGrowth + techGrowth + punch.stamina * 0.12 + 2;
     var damage = Math.round(raw * punch.hp * trackDamageMultiplier(attacker.trackId) * repeatPenalty(attackerState, punch.id));
     if (defenderState.guard === "block") { damage = Math.round(damage * 0.42); }
-    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 24 : (attacker.trackId === "pro" ? 19 : 23));
+    return U.clamp(damage, 1, attacker.trackId === "amateur" ? 48 : (attacker.trackId === "pro" ? 57 : 115));
   }
 
   function punchActionsForModal(player, opponent, session) {
@@ -395,11 +401,13 @@
     session.turn = 1;
     session.player.guard = "";
     session.opponent.guard = "";
+    session.player.pos = { x: 2, y: 4 };
+    session.opponent.pos = { x: 2, y: 0 };
     session.player.turnRecovery = 0;
     session.opponent.turnRecovery = 0;
     recoverPercent(session.player, 0.30);
     recoverPercent(session.opponent, 0.30);
-    session.log.push("Раунд " + session.round + ". Оба бойца восстановили 30% стамины.");
+    session.log.push("Раунд " + session.round + ". Бойцы возвращаются в углы и восстанавливают 30% стамины.");
     state.modal = buildActiveModal(state, session);
     return true;
   }

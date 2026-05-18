@@ -534,6 +534,7 @@
     var summary = window.FS.Amateur ? window.FS.Amateur.worldSummary(state) : { points: 0, medals: 0, completed: 0, available: 0 };
     var country = U.findCountry(p.countryId);
     var coach = team.coach || (state.world.teamCoaches ? state.world.teamCoaches[p.countryId] : null);
+    var coachHtml = coach ? "<button class=\"small-btn\" data-person=\"" + U.escapeHtml(coach.id) + "\">" + U.escapeHtml(coach.name) + "</button>" : "—";
 
     function renderCompetition(comp) {
       return "<div class=\"split-row tournament-row\"><div><div class=\"name-line\">" + U.escapeHtml(comp.label) + "</div><div class=\"muted small\">OVR " + comp.minRating + "–" + comp.maxRating + " · +" + comp.rewardRating + " · " + U.escapeHtml(comp.reason) + " · дата: " + U.escapeHtml(comp.scheduleText || "—") + "</div></div><span>" + (comp.available ? "<button class=\"small-btn primary\" data-amateur-competition=\"" + U.escapeHtml(comp.id) + "\">Начать турнир</button>" : "<span class=\"pill\">закрыто</span>") + "</span></div>";
@@ -543,7 +544,7 @@
       "<div class=\"content-card\"><h3>Турнирная лестница</h3><div class=\"pills\"><span class=\"pill gold\">Очки: " + summary.points + "</span><span class=\"pill green\">Медали: " + summary.medals + "</span><span class=\"pill blue\">Доступно: " + summary.available + "</span></div>" + comps.map(renderCompetition).join("") + "</div>" +
       "<div class=\"content-card\"><h3>Сборная " + U.escapeHtml(country.label) + "</h3>" +
         "<div class=\"split-row\"><span>Континент</span><strong>" + U.escapeHtml(country.continentLabel) + "</strong></div>" +
-        "<div class=\"split-row\"><span>Тренер</span><strong>" + U.escapeHtml(coach ? coach.name : "—") + "</strong></div>" +
+        "<div class=\"split-row\"><span>Тренер</span><strong>" + coachHtml + "</strong></div>" +
         "<div class=\"muted small\">Основной состав: " + team.main.length + " / 12. Резерв: " + team.reserve.length + " / 48. Игрок попадает в сборную через 1–3 место на чемпионате страны.</div><div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Состав</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Резерв</button></div></div>" +
     "</div>";
   }
@@ -759,10 +760,23 @@
       if (!person && coach) {
         person = { id: coach.id, name: coach.name, personType: "coach", role: "coach", clubId: coach.clubId };
       }
+      if (!person && state.world && state.world.teamCoaches) {
+        Object.keys(state.world.teamCoaches).some(function (countryId) {
+          var teamCoach = state.world.teamCoaches[countryId];
+          if (teamCoach && teamCoach.id === modal.personId) {
+            coach = teamCoach;
+            person = { id: teamCoach.id, name: teamCoach.name, personType: "teamCoach", role: "teamCoach", countryId: countryId };
+            return true;
+          }
+          return false;
+        });
+      }
       if (!person) { return ""; }
       if (!coach && window.FS.Clubs && window.FS.Clubs.findCoach) { coach = window.FS.Clubs.findCoach(state, person.id); }
-      var pClub = coach && window.FS.Clubs ? window.FS.Clubs.findClub(state, coach.clubId) : null;
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(person.name) + "</h2><div class=\"muted small\">Тренер</div></div><div class=\"modal-body\"><div class=\"split-row\"><span>Возраст</span><strong>" + (coach ? coach.age : "—") + "</strong></div><div class=\"split-row\"><span>Клуб</span><strong>" + (pClub ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(pClub.id) + "\">" + U.escapeHtml(pClub.name) + "</button>" : "—") + "</strong></div><div class=\"split-row\"><span>Рекорд тренера</span><strong>" + (coach && coach.record ? (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) : "0-0-0") + "</strong></div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+      var pClub = coach && coach.clubId && window.FS.Clubs ? window.FS.Clubs.findClub(state, coach.clubId) : null;
+      var coachCountry = person.countryId ? U.findCountry(person.countryId) : null;
+      var coachRole = person.personType === "teamCoach" ? "Тренер сборной" : "Тренер";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(person.name) + "</h2><div class=\"muted small\">" + coachRole + "</div></div><div class=\"modal-body\"><div class=\"split-row\"><span>Возраст</span><strong>" + (coach ? coach.age : "—") + "</strong></div><div class=\"split-row\"><span>" + (coachCountry ? "Сборная" : "Клуб") + "</span><strong>" + (coachCountry ? U.escapeHtml(coachCountry.label) : (pClub ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(pClub.id) + "\">" + U.escapeHtml(pClub.name) + "</button>" : "—")) + "</strong></div><div class=\"split-row\"><span>Рекорд тренера</span><strong>" + (coach && coach.record ? (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) : "0-0-0") + "</strong></div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "coachEvent") {

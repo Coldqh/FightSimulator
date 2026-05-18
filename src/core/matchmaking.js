@@ -157,6 +157,21 @@
     return penalty;
   }
 
+  function recordTotal(fighter) {
+    var record = fighter.record || {};
+    return (Number(record.wins) || 0) + (Number(record.losses) || 0) + (Number(record.draws) || 0);
+  }
+
+  function recordWinRate(fighter) {
+    var record = fighter.record || {};
+    var total = recordTotal(fighter);
+    return total ? ((Number(record.wins) || 0) / total) : 0;
+  }
+
+  function recordSimilarityPenalty(player, fighter) {
+    return Math.abs(recordTotal(player) - recordTotal(fighter)) * 0.55 + Math.abs(recordWinRate(player) - recordWinRate(fighter)) * 24;
+  }
+
   function findOpponent(state, difficultyId, slotIndex, usedIds) {
     var player = State.player(state);
     var playerOvr = U.statAverage(player.stats);
@@ -189,7 +204,9 @@
     }
 
     candidates.sort(function (left, right) {
-      return Math.abs(U.statAverage(left.stats) - playerOvr) - Math.abs(U.statAverage(right.stats) - playerOvr);
+      var leftScore = Math.abs(U.statAverage(left.stats) - playerOvr) * 1.2 + recordSimilarityPenalty(player, left);
+      var rightScore = Math.abs(U.statAverage(right.stats) - playerOvr) * 1.2 + recordSimilarityPenalty(player, right);
+      return leftScore - rightScore;
     });
 
     offset = candidates.length ? ((Number(state.offerRefreshSalt) || 0) * 11 + slotIndex * 5) % candidates.length : 0;

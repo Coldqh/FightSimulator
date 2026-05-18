@@ -495,6 +495,31 @@ function simulateInternationalGymMoves(state) {
     return promoters.find(function (item) { return item.id === id; }) || promoters[0] || { id: "local_hall", label: "Local Hall Promotions", cut: 0.1, purseMul: 1, weeksMin: 4, weeksMax: 8 };
   }
 
+  function recordTotal(fighter) {
+    var record = fighter.record || {};
+    return (Number(record.wins) || 0) + (Number(record.losses) || 0) + (Number(record.draws) || 0);
+  }
+
+  function recordWinRate(fighter) {
+    var record = fighter.record || {};
+    var total = recordTotal(fighter);
+    return total ? ((Number(record.wins) || 0) / total) : 0;
+  }
+
+  function recordSimilarityPenalty(player, fighter) {
+    return Math.abs(recordTotal(player) - recordTotal(fighter)) * 0.55 + Math.abs(recordWinRate(player) - recordWinRate(fighter)) * 24;
+  }
+
+  function proContractWaitWeeks(player, isChampion) {
+    var rating = U.statAverage(player.stats);
+    if (isChampion) { return U.randomInt(10, 12); }
+    if (rating >= 170) { return U.randomInt(8, 9); }
+    if (rating >= 145) { return U.randomInt(7, 8); }
+    if (rating >= 120) { return U.randomInt(5, 6); }
+    if (rating >= 100) { return U.randomInt(4, 5); }
+    return U.randomInt(3, 4);
+  }
+
   function proContractType(player, opponent) {
     var diff = U.statAverage(opponent.stats) - U.statAverage(player.stats);
     if (diff >= 20) { return "рискованный рейтинговый бой"; }
@@ -557,7 +582,9 @@ function simulateInternationalGymMoves(state) {
         });
       }
       ranking.sort(function (a, b) {
-        return Math.abs(U.statAverage(a.stats) - pOvr) - Math.abs(U.statAverage(b.stats) - pOvr);
+        var aScore = Math.abs(U.statAverage(a.stats) - pOvr) * 1.2 + recordSimilarityPenalty(p, a);
+        var bScore = Math.abs(U.statAverage(b.stats) - pOvr) * 1.2 + recordSimilarityPenalty(p, b);
+        return aScore - bScore;
       });
     }
 
@@ -566,7 +593,7 @@ function simulateInternationalGymMoves(state) {
     for (i = 0; i < targetCount; i += 1) {
       opponent = ranking[i];
       if (!opponent) { continue; }
-      weeks = U.randomInt(promoter.weeksMin || 4, promoter.weeksMax || 10);
+      weeks = proContractWaitWeeks(p, isChampion);
       purse = proContractPurse(p, opponent, promoter);
       type = isChampion ? "защита титула против топ-3" : proContractType(p, opponent);
       contracts.push({

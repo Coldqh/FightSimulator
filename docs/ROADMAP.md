@@ -1,8 +1,7 @@
-# Roadmap after 1.9.5
+# Roadmap after 1.9.6
 
 Next:
-- Test pro contracts over several in-game months.
-- Add promoter progression after contract balance is stable.
-- Improve national team coach profiles.
-- Tune pro/street damage after manual fight tests.
-- Split fight/UI files after 1.9.x stabilization.
+- Manually test fight damage after several amateur/pro/street fights.
+- Tune knockdowns after the new damage multipliers.
+- Improve pro contract labels and promoter progression.
+- Add richer national team coach profiles.

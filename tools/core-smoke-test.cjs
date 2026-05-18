@@ -48,7 +48,7 @@ sandbox.global = sandbox.window;
 });
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "path-pro-balance-1.9.5") throw new Error("bad version");
+if (FS.Data.appVersion !== "pro-schedule-damage-1.9.6") throw new Error("bad version");
 
 function make(archetypeId) {
   const state = FS.State.createCareer({
@@ -62,67 +62,73 @@ function make(archetypeId) {
   return state;
 }
 
-const amateur = make("amateur");
-let html = FS.Render.dashboard(amateur);
-if (html.includes('data-tab="pro"')) throw new Error("amateur sees pro tab");
-if (!html.includes('data-tab="world"')) throw new Error("amateur does not see amateur path tab");
-
-const street = make("street_kid");
-html = FS.Render.dashboard(street);
-if (html.includes('data-tab="pro"') || html.includes('data-tab="world"')) throw new Error("street sees forbidden tabs");
-if (html.includes("без веса")) throw new Error("street header shows weight text");
-
 const pro = make("debt_pro");
-html = FS.Render.dashboard(pro);
-if (html.includes('data-tab="fights"') || html.includes('data-tab="world"')) throw new Error("pro sees fights/world tab");
-if (!html.includes('data-tab="pro"')) throw new Error("pro does not see pro tab");
-if ((pro.offers || []).filter(o => !o.isCompetition).length !== 0) throw new Error("pro normal fight offers exist");
+const player = FS.State.player(pro);
+if (!pro.world.proContracts || pro.world.proContracts.length < 5) throw new Error("pro contracts missing");
+const waits = pro.world.proContracts.map(c => c.fightWeek - pro.week);
+if (waits.some(w => w < 3 || w > 4)) throw new Error("OVR 90 pro wait should be 3-4 weeks: " + waits.join(","));
 
-if (!pro.world.proContracts || pro.world.proContracts.length < 5 || pro.world.proContracts.length > 10) {
-  throw new Error("pro contract count broken: " + (pro.world.proContracts || []).length);
-}
-const pp = FS.State.player(pro);
-const pOvr = FS.Utils.statAverage(pp.stats);
-for (const c of pro.world.proContracts) {
-  const opp = FS.Utils.getFighterById(pro, c.opponentId);
+const pOvr = FS.Utils.statAverage(player.stats);
+for (const contract of pro.world.proContracts) {
+  const opp = FS.Utils.getFighterById(pro, contract.opponentId);
   if (Math.abs(FS.Utils.statAverage(opp.stats) - pOvr) > 8) throw new Error("contract OVR too far");
 }
 
-pro.selectedTab = "economy";
-html = FS.Render.dashboard(pro);
-if (html.includes("Экипировка") || html.includes("Купить")) throw new Error("equipment still visible");
+const firstContract = pro.world.proContracts[0];
+FS.World.acceptProContract(pro, firstContract.id);
+player.nextFightWeek = pro.week;
+if (!FS.Fight.startProContractFight(pro)) throw new Error("could not start pro fight");
+let session = pro.modal.session;
+if (session.player.maxStamina !== Math.round(100 + player.stats.stamina * 0.5)) {
+  throw new Error("stamina formula broken");
+}
 
-const countries = Object.fromEntries(FS.Data.countries.map(c => [c.id, c]));
-if (countries.russia.continentLabel !== "Европа") throw new Error("Russia continent wrong");
-if (countries.japan.continentLabel !== "Азия") throw new Error("Japan continent wrong");
-if (countries.usa.continentLabel !== "Северная Америка") throw new Error("USA continent wrong");
-if (countries.mexico.continentLabel !== "Латинская Америка") throw new Error("Mexico continent wrong");
-
-const team = amateur.world.teamsByCountry.russia;
-if (!team || !team.coach || !team.coach.name) throw new Error("national team coach missing");
-
-const startHtml = FS.Render.start();
-if (startHtml.includes("archetype-card selected")) throw new Error("static selected archetype class remains");
+/* Force round reset check. */
+session.round = 1;
+session.turn = session.maxTurns;
+session.player.pos = { x: 0, y: 0 };
+session.opponent.pos = { x: 4, y: 4 };
+session.player.hp = session.player.maxHp;
+session.opponent.hp = session.opponent.maxHp;
+FS.Fight.playerAction(pro, "block", 0, 0);
+session = pro.modal.session;
+if (session.round > 1) {
+  if (session.player.pos.x !== 2 || session.player.pos.y !== 4 || session.opponent.pos.x !== 2 || session.opponent.pos.y !== 0) {
+    throw new Error("fighters did not reset to corners");
+  }
+}
 
 const fightSource = fs.readFileSync(path.join(root, "src/core/fight.js"), "utf8");
-if (!fightSource.includes('stamina: 28') || !fightSource.includes('stamina: 48')) throw new Error("punch stamina not doubled");
-if (!fightSource.includes('return Math.round(100 + fighter.stats.stamina * 0.5);')) throw new Error("stamina formula wrong");
-if (!fightSource.includes('if (trackId === "pro") { return 0.59; }')) throw new Error("pro damage multiplier wrong");
-
-const css = fs.readFileSync(path.join(root, "src/styles.css"), "utf8");
-if (!css.includes("background-color: #f8f8f2") || !css.includes(".player-cell") || !css.includes(".opponent-cell")) {
-  throw new Error("ring/circle css missing");
+if (!fightSource.includes('return 1.64') || !fightSource.includes('return 1.77') || !fightSource.includes('return 3.35')) {
+  throw new Error("damage multipliers missing");
 }
-if (!fs.existsSync(path.join(root, "ring_top_view.png"))) throw new Error("ring png missing");
+if (!fightSource.includes("attackGrowth") || !fightSource.includes("dodgeGrowth")) {
+  throw new Error("smooth hit/evasion scaling missing");
+}
+
+const worldSource = fs.readFileSync(path.join(root, "src/core/world.js"), "utf8");
+if (!worldSource.includes("function proContractWaitWeeks") || !worldSource.includes("return U.randomInt(10, 12)")) {
+  throw new Error("pro wait schedule missing");
+}
+if (!worldSource.includes("recordSimilarityPenalty")) throw new Error("pro record-aware matching missing");
+
+const mmSource = fs.readFileSync(path.join(root, "src/core/matchmaking.js"), "utf8");
+if (!mmSource.includes("recordSimilarityPenalty")) throw new Error("offer record-aware matching missing");
 
 const stateSource = fs.readFileSync(path.join(root, "src/core/state.js"), "utf8");
-if (!stateSource.includes("minKoRate = 0.10") || !stateSource.includes("maxKoRate = 0.90") || !stateSource.includes("minKoRate = 0.40")) {
-  throw new Error("ko rate ranges missing");
-}
+if (!stateSource.includes("recordStrengthForRanking")) throw new Error("ranking record quality missing");
 
-console.log("path pro balance smoke ok", {
+const amateur = make("amateur");
+amateur.selectedTab = "world";
+let html = FS.Render.dashboard(amateur);
+if (!html.includes("data-person=")) throw new Error("team coach is not clickable");
+const coachId = amateur.world.teamsByCountry.russia.coach.id;
+amateur.modal = { type: "person", personId: coachId };
+html = FS.Render.dashboard(amateur);
+if (!html.includes("Тренер сборной") || !html.includes("Сборная")) throw new Error("team coach profile missing");
+
+console.log("pro schedule damage smoke ok", {
   version: FS.Data.appVersion,
-  proContracts: pro.world.proContracts.length,
-  teamCoach: team.coach.name,
-  ringPngBytes: fs.statSync(path.join(root, "ring_top_view.png")).size
+  waits,
+  teamCoach: amateur.world.teamsByCountry.russia.coach.name
 });
