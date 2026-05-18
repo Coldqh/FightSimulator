@@ -1,12 +1,16 @@
 # Fight Simulator
 
-Version: `real-flags-names-ranking-2.0.1`
+Version: `world-news-calendar-2.0.2`
 
-- Replaced generated/random flags with real country-style flag PNGs.
-- Reworked country name pools so fighters use names/surnames tied to their country instead of broad regional pools.
-- Generated fighter names are now simple `first name + surname`.
-- Ranking country filter is now a compact dropdown instead of a wall of country buttons.
-- Flags are 1.5x larger.
-- Career country selection now uses a flag dropdown.
-- Pro contract rows and pro ranking lines show the fighter country.
-- Rankings now depend much more on actual results than raw OVR.
+- Club country filter is now a dropdown.
+- Small countries are grouped into local boxing pools for street/amateur fights and local amateur tournaments.
+- Club name generation removes repeated city/country names.
+- Fight offers and club rosters show fighter country.
+- News tab added.
+- National team remains the player's home country after travel.
+- Amateur path now has a national teams section.
+- Tournament notifications and pro fight due modal added.
+- Pro contract dates now show weeks left and full calendar date.
+- Some trainers can now be foreign coaches.
+- World/elite amateur tournaments pull from national-team main rosters.
+- Continental championship requires national-team main/reserve eligibility.

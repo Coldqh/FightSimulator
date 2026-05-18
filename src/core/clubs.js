@@ -41,13 +41,35 @@
   function clubLabel(country, index) {
     var cities = country.cities || citiesByCountry[country.id] || [country.city || country.label];
     var names = country.gymNames || namesByCountry[country.id] || namesByCountry.usa;
-    var city = cities[index % cities.length];
-    var name = names[index % names.length];
+    var city = String(cities[index % cities.length] || country.label).trim();
+    var name = String(names[index % names.length] || "Boxing Club").trim();
     var district = Math.floor(index / names.length);
-    return district ? (city + " " + name + " " + (district + 1)) : (city + " " + name);
+    var lowerCity = city.toLowerCase();
+    var lowerName;
+    var output;
+
+    while (name.toLowerCase().indexOf(lowerCity + " " + lowerCity + " ") === 0) {
+      name = name.slice(city.length + 1);
+    }
+
+    lowerName = name.toLowerCase();
+    if (lowerName.indexOf(lowerCity) === 0 || lowerName.indexOf(country.label.toLowerCase()) === 0) {
+      output = district ? (name + " " + (district + 1)) : name;
+    } else {
+      output = district ? (city + " " + name + " " + (district + 1)) : (city + " " + name);
+    }
+
+    while (output.toLowerCase().indexOf(lowerCity + " " + lowerCity + " ") === 0) {
+      output = output.slice(city.length + 1);
+    }
+
+    return output;
   }
 
   function createCoach(country, clubId, seed) {
+    if (U.randomInt(1, 100) <= 9) {
+      country = Data.countries[U.randomInt(0, Data.countries.length - 1)] || country;
+    }
     return {
       id: "coach_" + clubId,
       role: "coach",

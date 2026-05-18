@@ -89,14 +89,21 @@
 
   function countryPool(state, comp) {
     var p = State.player(state);
-    var playerCountry = U.findCountry(p.countryId);
+    var currentCountry = U.findCountry(p.countryId);
+    var homeCountry = U.findCountry(p.homeCountryId || p.countryId);
+
     if (comp.scope === "continent") {
-      return Data.countries.filter(function (country) { return country.continentId === playerCountry.continentId; });
+      return Data.countries.filter(function (country) { return country.continentId === homeCountry.continentId; });
     }
     if (comp.scope === "world" || comp.scope === "world_elite") {
       return Data.countries.slice();
     }
-    return [playerCountry];
+
+    if (currentCountry.localPoolId && currentCountry.localPoolId !== currentCountry.id) {
+      return Data.countries.filter(function (country) { return country.localPoolId === currentCountry.localPoolId; });
+    }
+
+    return [currentCountry];
   }
 
   function candidatePool(state, comp, usedIds) {
@@ -105,12 +112,27 @@
     var min = typeof comp.minRating === "number" ? comp.minRating : 0;
     var max = typeof comp.maxRating === "number" ? comp.maxRating : 120;
     var used = usedIds || {};
+    var teamOnly = comp.scope === "world" || comp.scope === "world_elite";
+    var teamSet = {};
+    var countryId;
+    var team;
+
+    if (teamOnly && state.world && state.world.teamsByCountry) {
+      for (countryId in state.world.teamsByCountry) {
+        if (Object.prototype.hasOwnProperty.call(state.world.teamsByCountry, countryId)) {
+          team = state.world.teamsByCountry[countryId];
+          (team.main || []).forEach(function (id) { teamSet[id] = true; });
+        }
+      }
+    }
+
     return state.roster.filter(function (fighter) {
       var rating = U.statAverage(fighter.stats);
       return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
         fighter.trackId === "amateur" &&
         fighter.weightClassId === p.weightClassId &&
         countries.indexOf(fighter.countryId) !== -1 &&
+        (!teamOnly || teamSet[fighter.id]) &&
         rating >= min && rating <= max;
     });
   }
@@ -130,25 +152,20 @@
   }
 
   function bracketSize(poolSize) {
-    var max = Math.min(128, poolSize);
-    var size = 1;
-    while (size * 2 <= max) { size *= 2; }
-    return Math.max(2, size);
+    return Math.max(2, Math.min(1024, poolSize));
   }
 
   function tournamentRoundsForSize(size) {
-    var all = [
-      { size: 128, label: "1/128" },
-      { size: 64, label: "1/64" },
-      { size: 32, label: "1/32" },
-      { size: 16, label: "1/16" },
-      { size: 8, label: "Четвертьфинал" },
-      { size: 4, label: "Полуфинал" },
-      { size: 2, label: "Финал" }
-    ];
-    var start = all.findIndex(function (stage) { return size >= stage.size; });
-    if (start < 0) { start = all.length - 1; }
-    return all.slice(start).map(function (stage) { return stage.label; });
+    var rounds = [];
+    var alive = size;
+    while (alive > 2) {
+      if (alive <= 4) { rounds.push("Полуфинал"); }
+      else if (alive <= 8) { rounds.push("Четвертьфинал"); }
+      else { rounds.push("1/" + Math.ceil(alive / 2)); }
+      alive = Math.ceil(alive / 2);
+    }
+    rounds.push("Финал");
+    return rounds;
   }
 
   function summarizeAlive(state, session) {
@@ -355,6 +372,15 @@
     var session;
 
     ensureAmateurState(state);
+    if (comp.scope === "continent") {
+      var homeId = p.homeCountryId || p.countryId;
+      var team = state.world && state.world.teamsByCountry ? state.world.teamsByCountry[homeId] : null;
+      var inReserve = team && ((team.reserve || []).indexOf(p.id) !== -1 || (team.main || []).indexOf(p.id) !== -1);
+      if (!inReserve) {
+        state.feed = "Для чемпионата континента нужно быть в резерве или основе сборной своей страны.";
+        return { type: "tournamentFinal", label: comp.label, blocked: true, reason: state.feed, fights: [] };
+      }
+    }
     if (!status.available) { state.feed = status.reason; return { type: "tournamentFinal", label: comp.label, blocked: true, reason: status.reason, fights: [] }; }
     var entryFee = Data.economy && Data.economy.tournamentEntryFees ? (Data.economy.tournamentEntryFees[comp.id] || 0) : 0;
     if (entryFee > 0 && State.spendMoney && !State.spendMoney(state, entryFee, "Заявка: " + comp.label)) {

@@ -289,6 +289,19 @@
         state.modal = window.FS.Amateur.startTournament(state, button.dataset.amateurCompetition);
       }
       saveAndRender();
+    } else if (button.dataset.tournamentInvite) {
+      state.world = state.world || {};
+      state.world.pendingTournamentInvite = state.world.pendingTournamentInvite || {};
+      if (button.dataset.tournamentInvite === "accept") {
+        state.world.pendingTournamentInvite.accepted = true;
+        state.world.pendingTournamentInvite.ignored = false;
+        state.feed = "Заявка принята. Турнир начнётся на следующей неделе.";
+      } else {
+        state.world.pendingTournamentInvite.ignored = true;
+        state.feed = "Турнир проигнорирован.";
+      }
+      state.modal = null;
+      saveAndRender();
     } else if (button.dataset.tournamentFight) {
       if (window.FS.Amateur && window.FS.Amateur.resolveTournamentRound) {
         state.modal = window.FS.Amateur.resolveTournamentRound(state, state.modal);
@@ -357,6 +370,7 @@
       state.feed = "Профи-предложения обновлены.";
       saveAndRender();
     } else if (button.dataset.startProContract) {
+      if (state.world) { state.world.pendingProFight = null; }
       if (Fight.startProContractFight) { Fight.startProContractFight(state); }
       saveAndRender();
     } else if (button.dataset.joinClub) {

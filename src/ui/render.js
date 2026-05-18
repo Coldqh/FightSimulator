@@ -104,13 +104,14 @@
       ["dashboard", "Обзор"],
       ["profile", "Профиль"],
       ["favorites", "Избранные"],
+      ["news", "Новости"],
       ["training", "Тренировка"],
       ["economy", "Экономика"],
       ["ranking", "Рейтинг"],
       ["myclub", "Мой клуб"],
       ["clubs", "Клубы"],
-      ["settings", "Настройки"],
-      ["people", "Люди"]
+      ["people", "Люди"],
+      ["settings", "Настройки"]
     ];
 
     if (p.trackId !== "pro") {
@@ -158,7 +159,7 @@
     if (!fighter) {
       return "<div class=\"muted small\">Пока не выбран.</div>";
     }
-    return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
+    return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + countryLabel(fighter.countryId) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">Рейтинг " + U.statAverage(fighter.stats) + "</span></div>";
   }
 
   function isFavoriteFighter(state, fighterId) {
@@ -180,7 +181,7 @@
 
     return "<div class=\"content-card favorites-card\"><div class=\"split-row\"><h3>Избранные</h3><strong>" + fighters.length + "</strong></div><div class=\"favorite-list\">" + fighters.slice(0, 12).map(function (fighter) {
       var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
-      return "<div class=\"split-row favorite-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">★ " + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + countryLabel(fighter.countryId) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + (club ? " · " + U.escapeHtml(club.name) : "") + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
+      return "<div class=\"split-row favorite-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">★ " + U.escapeHtml(fighter.name) + "</button><div class=\"muted small\">" + countryLabel(fighter.countryId) + " · " + countryLabel(fighter.countryId) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + (club ? " · " + U.escapeHtml(club.name) : "") + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
     }).join("") + "</div></div>";
   }
 
@@ -274,6 +275,7 @@
       return "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\">" +
         favoriteButton(state, opponent.id) +
         "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
+        "<span class=\"pill flag-pill\">" + countryLabel(opponent.countryId) + "</span>" +
         "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span>" +
         "<span class=\"pill\">OVR " + preview.opponentRating + "</span>" +
         "<span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span>" +
@@ -292,6 +294,16 @@
     var ranking = State.ranking(state, "world", "pro", p.weightClassId);
     var rankIndex = ranking.findIndex(function (fighter) { return fighter.id === p.id; });
     var titles = window.FS.Titles ? window.FS.Titles.fighterTitles(state, p.id) : [];
+
+    function futureDateText(week) {
+      var parts = State.dateParts ? State.dateParts({ week: week }) : { year: 1, monthLabel: "месяц", weekOfMonth: 1 };
+      return "год " + parts.year + ", " + parts.monthLabel + ", " + parts.weekOfMonth + " неделя";
+    }
+
+    function weeksLeftText(week) {
+      var left = Math.max(0, Number(week) - Number(state.week));
+      return left === 0 ? "на этой неделе" : ("через " + left + " нед.");
+    }
 
     function proTitleButtons() {
       var output = [];
@@ -317,7 +329,7 @@
 
     function contractRow(contract) {
       var opponent = U.getFighterById(state, contract.opponentId);
-      return opponent ? "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\"><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button><span class=\"pill flag-pill\">" + countryLabel(opponent.countryId) + "</span><span class=\"pill\">OVR " + U.statAverage(opponent.stats) + "</span><span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span><span class=\"pill gold\">$" + contract.netPurse + "</span><span class=\"pill\">неделя " + contract.fightWeek + "</span><span class=\"pill blue\">" + U.escapeHtml(contract.promoterLabel) + "</span></div><button class=\"primary\" data-pro-contract=\"" + U.escapeHtml(contract.id) + "\">Подписать</button></div>" : "";
+      return opponent ? "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\"><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button><span class=\"pill flag-pill\">" + countryLabel(opponent.countryId) + "</span><span class=\"pill\">OVR " + U.statAverage(opponent.stats) + "</span><span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span><span class=\"pill gold\">$" + contract.netPurse + "</span><span class=\"pill\">" + weeksLeftText(contract.fightWeek) + "</span><span class=\"pill\">" + futureDateText(contract.fightWeek) + "</span><span class=\"pill blue\">" + U.escapeHtml(contract.promoterLabel) + "</span></div><button class=\"primary\" data-pro-contract=\"" + U.escapeHtml(contract.id) + "\">Подписать</button></div>" : "";
     }
 
     return "<div class=\"grid two\">" +
@@ -327,7 +339,7 @@
         "<div class=\"split-row\"><span>Мировой рейтинг</span><strong>" + (rankIndex >= 0 ? "#" + (rankIndex + 1) : "—") + "</strong></div>" +
         "<div class=\"split-row\"><span>Пояса</span><strong>" + (titles.length ? titles.map(function (title) { return title.bodyId ? title.bodyId.toUpperCase() : title.label; }).join(", ") : "нет") + "</strong></div>" +
       "</div>" +
-      "<div class=\"content-card\"><h3>Текущий контракт</h3>" + (p.contractOpponentId ? "<div class=\"split-row\"><span>" + U.escapeHtml(p.contractLabel || "Контрактный бой") + "</span><strong>неделя " + p.nextFightWeek + "</strong></div><div class=\"split-row\"><span>Гонорар после комиссии</span><strong>$" + (p.contractPurse || 0) + "</strong></div>" + (state.week >= p.nextFightWeek ? "<button class=\"primary\" data-start-pro-contract=\"1\">Выйти на контрактный бой</button>" : "<div class=\"muted small\">Готовься: бой ещё не наступил.</div>") : "<div class=\"muted small\">Активного контракта нет.</div>") + "</div>" +
+      "<div class=\"content-card\"><h3>Текущий контракт</h3>" + (p.contractOpponentId ? "<div class=\"split-row\"><span>" + U.escapeHtml(p.contractLabel || "Контрактный бой") + "</span><strong>" + weeksLeftText(p.nextFightWeek) + " · " + futureDateText(p.nextFightWeek) + "</strong></div><div class=\"split-row\"><span>Гонорар после комиссии</span><strong>$" + (p.contractPurse || 0) + "</strong></div>" + (state.week >= p.nextFightWeek ? "<button class=\"primary\" data-start-pro-contract=\"1\">Выйти на контрактный бой</button>" : "<div class=\"muted small\">Готовься: бой ещё не наступил.</div>") : "<div class=\"muted small\">Активного контракта нет.</div>") + "</div>" +
       "<div class=\"content-card\" style=\"grid-column:1/-1\"><div class=\"split-row\"><h3>Новые предложения</h3><button class=\"small-btn\" data-refresh-pro-contracts=\"1\">Обновить</button></div>" + (contracts.length ? contracts.map(contractRow).join("") : "<div class=\"muted small\">Нет доступных контрактов. Обнови предложения или подожди неделю.</div>") + "</div>" +
       "<div class=\"content-card\" style=\"grid-column:1/-1\"><h3>История контрактов</h3>" + (history.length ? history.slice(0, 8).map(function (entry) { return "<div class=\"split-row\"><span>Неделя " + entry.week + "</span><strong>" + U.escapeHtml(entry.text) + "</strong></div>"; }).join("") : "<div class=\"muted small\">Пока пусто.</div>") + "</div>" +
     "</div>";
@@ -499,9 +511,9 @@
   }
 
   function renderClubCountryFilters(state) {
-    return "<div class=\"filter-group\"><span class=\"filter-title\">Страна</span>" + Data.countries.map(function (country) {
-      return "<button class=\"small-btn " + (state.rankingCountryId === country.id ? "active" : "") + "\" data-ranking-country=\"" + country.id + "\">" + countryLabel(country.id) + "</button>";
-    }).join("") + "</div>";
+    return "<div class=\"filter-group compact-country-filter\"><span class=\"filter-title\">Страна</span>" +
+      countryDropdown(state.rankingCountryId, "data-ranking-country", "club-country-dropdown") +
+    "</div>";
   }
 
   function renderClubsTab(state) {
@@ -510,7 +522,7 @@
     });
 
     return "<div class=\"content-card\"><h3>Клубы</h3><div class=\"filters\">" + renderClubCountryFilters(state) + "</div><div class=\"grid two\">" + clubs.map(function (club) {
-      return "<div class=\"content-card\"><h3>" + U.escapeHtml(club.name) + "</h3><div class=\"muted small\">" + U.escapeHtml(U.findCountry(club.countryId).label) + " · уровень " + club.level + "</div><div class=\"row\" style=\"margin-top:10px\"><button class=\"small-btn\" data-club=\"" + U.escapeHtml(club.id) + "\">Открыть карточку</button></div></div>";
+      return "<div class=\"content-card\"><h3>" + U.escapeHtml(club.name) + "</h3><div class=\"muted small\">" + countryLabel(club.countryId) + " · уровень " + club.level + "</div><div class=\"row\" style=\"margin-top:10px\"><button class=\"small-btn\" data-club=\"" + U.escapeHtml(club.id) + "\">Открыть карточку</button></div></div>";
     }).join("") + "</div></div>";
   }
 
@@ -526,11 +538,13 @@
 
   function renderWorldTab(state) {
     var p = State.player(state);
-    var team = state.world.teamsByCountry[p.countryId] || { main: [], reserve: [], coach: null };
+    var homeId = p.homeCountryId || p.countryId;
+    var team = state.world.teamsByCountry[homeId] || { main: [], reserve: [], coach: null };
     var comps = window.FS.Amateur ? window.FS.Amateur.availableCompetitions(state) : [];
     var summary = window.FS.Amateur ? window.FS.Amateur.worldSummary(state) : { points: 0, medals: 0, completed: 0, available: 0 };
-    var country = U.findCountry(p.countryId);
-    var coach = team.coach || (state.world.teamCoaches ? state.world.teamCoaches[p.countryId] : null);
+    var country = U.findCountry(homeId);
+    var currentCountry = U.findCountry(p.countryId);
+    var coach = team.coach || (state.world.teamCoaches ? state.world.teamCoaches[homeId] : null);
     var coachHtml = coach ? "<button class=\"small-btn\" data-person=\"" + U.escapeHtml(coach.id) + "\">" + U.escapeHtml(coach.name) + "</button>" : "—";
 
     function renderCompetition(comp) {
@@ -538,12 +552,23 @@
     }
 
     return "<div class=\"grid two\">" +
-      "<div class=\"content-card\"><h3>Турнирная лестница</h3><div class=\"pills\"><span class=\"pill gold\">Очки: " + summary.points + "</span><span class=\"pill green\">Медали: " + summary.medals + "</span><span class=\"pill blue\">Доступно: " + summary.available + "</span></div>" + comps.map(renderCompetition).join("") + "</div>" +
+      "<div class=\"content-card\"><h3>Турнирная лестница</h3><div class=\"muted small\">Локальные турниры проходят в стране, где ты находишься: " + countryLabel(currentCountry.id) + ". Сборная остаётся страной старта: " + countryLabel(country.id) + ".</div><div class=\"pills\"><span class=\"pill gold\">Очки: " + summary.points + "</span><span class=\"pill green\">Медали: " + summary.medals + "</span><span class=\"pill blue\">Доступно: " + summary.available + "</span></div>" + comps.map(renderCompetition).join("") + "</div>" +
       "<div class=\"content-card\"><h3>Сборная " + countryLabel(country.id) + "</h3>" +
         "<div class=\"split-row\"><span>Континент</span><strong>" + U.escapeHtml(country.continentLabel) + "</strong></div>" +
         "<div class=\"split-row\"><span>Тренер</span><strong>" + coachHtml + "</strong></div>" +
-        "<div class=\"muted small\">Основной состав: " + team.main.length + " / 12. Резерв: " + team.reserve.length + " / 48. Игрок попадает в сборную через 1–3 место на чемпионате страны.</div><div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Состав</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(p.countryId) + "\">Резерв</button></div></div>" +
+        "<div class=\"muted small\">Основной состав: " + team.main.length + " / 12. Резерв: " + team.reserve.length + " / 48. Для чемпионата континента нужно попасть в резерв или основу.</div><div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(homeId) + "\">Состав</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(homeId) + "\">Резерв</button></div></div>" +
+      "<div class=\"content-card\" style=\"grid-column:1/-1\"><h3>Сборные</h3><div class=\"country-grid\">" + Data.countries.map(function (c) { var t = state.world.teamsByCountry[c.id] || { main: [], reserve: [], coach: null }; return "<button class=\"small-btn country-choice\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(c.id) + "\">" + countryLabel(c.id) + "<span>" + (t.main.length || 0) + "/" + (t.reserve.length || 0) + "</span></button>"; }).join("") + "</div></div>" +
     "</div>";
+  }
+
+  function renderNewsTab(state) {
+    var news = state.world && state.world.news instanceof Array ? state.world.news : [];
+    if (!news.length) {
+      return "<div class=\"content-card\"><h3>Новости</h3><div class=\"muted small\">Пока новостей нет. Дай миру несколько недель.</div></div>";
+    }
+    return "<div class=\"content-card\"><h3>Новости</h3><div class=\"news-list\">" + news.slice(0, 80).map(function (item) {
+      return "<div class=\"split-row news-row\"><div><strong>Неделя " + item.week + "</strong><div class=\"muted small\">" + U.escapeHtml(item.text) + "</div></div><span class=\"pill\">" + U.escapeHtml(item.tone || "world") + "</span></div>";
+    }).join("") + "</div></div>";
   }
 
   function renderPeopleTab(state) {
@@ -578,6 +603,7 @@
     else if (tab === "profile") { content = renderProfileTab(state); }
     else if (tab === "fights") { content = renderFightsTab(state); }
     else if (tab === "favorites") { content = renderFavoritesTab(state); }
+    else if (tab === "news") { content = renderNewsTab(state); }
     else if (tab === "pro") { content = renderProTab(state); }
     else if (tab === "training") { content = renderTrainingTab(state); }
     else if (tab === "economy") { content = renderEconomyTab(state); }
@@ -600,7 +626,7 @@
       "<div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Тренер</div><div class=\"value\" style=\"font-size:18px\">" + coachButton + "</div><div class=\"muted small\">" + coach.age + " лет · " + (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) + "</div></div>" +
       "<div class=\"stat-card\"><div class=\"label\">Сильнейший</div><div class=\"value\" style=\"font-size:18px\">" + (strongest ? U.escapeHtml(strongest.name) : "—") + "</div><div>" + (strongest ? "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(strongest.id) + "\">Открыть бойца</button>" : "") + "</div></div></div>" +
       "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"split-row\"><span>Ростер</span><strong>" + roster.length + "+</strong></div>" + roster.map(function (fighter) {
-        return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "<div class=\"muted small\">" + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
+        return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "<div class=\"muted small\">" + countryLabel(fighter.countryId) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
       }).join("") + "</div>" +
       "</div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
   }
@@ -807,6 +833,19 @@
 
     if (modal.type === "profileProcess") {
       return renderProfileProcessModal(state, modal.kind);
+    }
+
+    if (modal.type === "eventNotice") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Новость") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+    }
+
+    if (modal.type === "tournamentInvite") {
+      var comp = window.FS.Amateur && window.FS.Amateur.getCompetition ? window.FS.Amateur.getCompetition(modal.competitionId) : { label: "Турнир" };
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Турнир на следующей неделе</h2><div class=\"muted small\">" + U.escapeHtml(comp.label || "Турнир") + " · твоя весовая категория</div></div><div class=\"modal-body\"><div class=\"content-card\">Можно заявиться сейчас или проигнорировать. Если заявишься, турнир начнётся сразу после следующей смены недели.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-tournament-invite=\"accept\">Записаться</button><button data-tournament-invite=\"ignore\">Игнорировать</button></div></div></div>";
+    }
+
+    if (modal.type === "proFightDue") {
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Неделя боя</h2><div class=\"muted small\">Контрактный бой: " + U.escapeHtml(modal.opponentName || "Соперник") + "</div></div><div class=\"modal-body\"><div class=\"content-card\">Бой по контракту уже наступил. Это окно нельзя закрыть, нужно выйти в бой.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-start-pro-contract=\"1\">Начать бой</button></div></div></div>";
     }
 
     if (modal.type === "patchNotes") {

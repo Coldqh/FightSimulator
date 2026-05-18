@@ -1,23 +1,30 @@
-# Architecture 2.0.1
-
-`assets/flags`
-- Contains PNG flags for every country in `Data.countries`.
+# Architecture 2.0.2
 
 `Data.countries`
-- Each country has its own `firstNames` and `lastNames` pools.
-- Big pools are kept at 200+ entries through real repeated name lists rather than fake initials.
+- Added `localPoolId`.
+- Small countries share local pools such as `small_europe`, `small_asia`, `small_latin_america`.
 
-`Utils.createName`
-- Always returns simple `first + surname`.
-- Removes leftover initial suffixes from older generated pools.
+`Matchmaking`
+- Low-level amateur and street opponents are pulled from the player's local country pool.
+- KMS+ amateurs can still see international opponents.
+
+`Amateur`
+- Local tournaments use the current country/local pool.
+- Continental tournaments use the player's home-country continent.
+- World and Olympic-style tournaments use main national-team rosters.
+- Continental tournament entry requires the player to be in national-team reserve/main.
+
+`World`
+- Added lightweight scheduled tournament notices/news.
+- Added due-pro-fight modal.
+- News are pushed into `state.world.news`.
 
 `Render`
-- `countryDropdown` renders a compact flag dropdown.
-- Ranking uses dropdown for country selection.
-- Career start uses a custom flag dropdown and hidden country input.
-- Pro contract rows show country flags.
+- Added News tab.
+- Clubs country filter uses dropdown.
+- Club/fight rosters show country flags.
+- Amateur path shows home national team and a national-teams section.
 
-`State.ranking`
-- Ranking is driven mainly by record quality:
-  wins, losses, KO count, win rate, activity, titles and awards.
-- OVR is now a small tie-breaker instead of the main ranking driver.
+`State`
+- Player has `homeCountryId` and `currentCountryId`.
+- Travel changes current country but keeps home national team.

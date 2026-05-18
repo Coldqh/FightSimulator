@@ -1,4 +1,4 @@
-# Test Checklist 2.0.1
+# Test Checklist 2.0.2
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -7,11 +7,13 @@ start index.html
 ```
 
 Manual:
-1. Ranking country filter is a dropdown, not a giant block of buttons.
-2. Career country selection has flags.
-3. Flags are larger than in 2.0.0.
-4. Fighters from China have Chinese names/surnames.
-5. Fighter names are normally simple first name + surname.
-6. Pro contract rows show the opponent country.
-7. Rankings react to records: winning fighters rise, losing fighters drop.
-8. Flags load from `assets/flags/*.png`.
+1. Club country filter opens as dropdown.
+2. Fight offers show opponent country.
+3. Club roster shows fighter country.
+4. News tab exists.
+5. Small-country amateurs/street fighters can get nearby local-pool opponents.
+6. Player travel keeps original national-team affiliation.
+7. Pro fight week opens an unavoidable fight modal.
+8. Tournament invite shows Register/Ignore.
+9. Pro contracts show weeks left and full date.
+10. Continental championship requires national-team reserve/main.

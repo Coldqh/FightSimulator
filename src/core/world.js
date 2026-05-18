@@ -17,6 +17,85 @@
     }, 90);
   }
 
+  function playerHomeCountryId(state) {
+    var p = State.player(state);
+    return p ? (p.homeCountryId || p.countryId) : "";
+  }
+
+  function pushNews(state, tone, text, meta) {
+    createNews(state, tone, text, meta || {});
+  }
+
+  function samePlayerWeight(state, fighter) {
+    var p = State.player(state);
+    return p && fighter && (p.trackId === "street" || !p.weightClassId || fighter.weightClassId === p.weightClassId);
+  }
+
+  function tournamentNewsLabel(state, kind) {
+    var p = State.player(state);
+    var country = p ? U.findCountry(p.homeCountryId || p.countryId) : Data.countries[0];
+    var weight = p && p.weightClassId ? U.findWeightClass(p.weightClassId).label : "вес";
+    if (kind === "country") { return "Чемпионат страны · " + country.label + " · " + weight; }
+    if (kind === "world") { return "Чемпионат мира · " + weight; }
+    return "Олимпиада · " + weight;
+  }
+
+  function simulateTournamentNews(state) {
+    var kinds = [];
+    var p = State.player(state);
+    if (!p || p.trackId !== "amateur") { return; }
+    if (state.week % 16 === 0) { kinds.push("country"); }
+    if (state.week % 48 === 0) { kinds.push("world"); }
+    if (state.week % 192 === 0) { kinds.push("olympics"); }
+    kinds.forEach(function (kind) {
+      var label = tournamentNewsLabel(state, kind);
+      var pool = State.ranking(state, kind === "country" ? (p.homeCountryId || p.countryId) : "world", "amateur", p.weightClassId)
+        .filter(function (fighter) { return !fighter.retired && !fighter.isPlayer && U.statAverage(fighter.stats) >= (kind === "country" ? 35 : 70); });
+      var winner = pool[0];
+      var text = label + ": " + (winner ? winner.name + " выиграл золото." : "результаты обновлены.");
+      pushNews(state, "tournament", text, { kind: kind, weightClassId: p.weightClassId, winnerId: winner ? winner.id : "" });
+      if (!state.modal) {
+        state.modal = { type: "eventNotice", title: label, text: text };
+      }
+    });
+  }
+
+  function scheduleTournamentNotice(state) {
+    var p = State.player(state);
+    var comps;
+    var next;
+    if (!p || p.trackId !== "amateur" || !window.FS.Amateur || !window.FS.Amateur.availableCompetitions) { return; }
+    if (state.modal && state.modal.type && state.modal.type !== "patchNotes") { return; }
+    comps = window.FS.Amateur.availableCompetitions(state).filter(function (comp) {
+      return comp.available && ["country", "world", "world_elite"].indexOf(comp.id) !== -1;
+    });
+    next = comps[(state.week + comps.length) % Math.max(1, comps.length)];
+    if (next && state.week % 12 === 11) {
+      state.world.pendingTournamentInvite = { competitionId: next.id, dueWeek: state.week + 1, accepted: false, ignored: false };
+      state.modal = { type: "tournamentInvite", competitionId: next.id, dueWeek: state.week + 1 };
+      pushNews(state, "amateur", "На следующей неделе турнир в твоём весе: " + next.label + ".", { competitionId: next.id });
+    }
+  }
+
+  function handleScheduledTournamentStart(state) {
+    var invite = state.world && state.world.pendingTournamentInvite;
+    if (!invite || invite.dueWeek !== state.week || invite.ignored) { return; }
+    if (invite.accepted && window.FS.Amateur && window.FS.Amateur.startTournament) {
+      state.modal = window.FS.Amateur.startTournament(state, invite.competitionId);
+      state.world.pendingTournamentInvite = null;
+    }
+  }
+
+  function handleProFightDue(state) {
+    var p = State.player(state);
+    var opponent;
+    if (!p || p.trackId !== "pro" || !p.contractOpponentId || state.week < p.nextFightWeek) { return; }
+    opponent = U.getFighterById(state, p.contractOpponentId);
+    state.world.pendingProFight = { opponentId: p.contractOpponentId, week: state.week };
+    state.modal = { type: "proFightDue", opponentId: p.contractOpponentId, opponentName: opponent ? opponent.name : "Соперник", week: state.week };
+    pushNews(state, "pro", "Наступила неделя контрактного боя: " + (opponent ? opponent.name : "соперник") + ".", { opponentId: p.contractOpponentId });
+  }
+
   function shuffleList(list) {
     var copy = list.slice();
     var i, j, tmp;
@@ -312,7 +391,7 @@
         });
 
         qualification = state.world.nationalTeamQualification[country.id + "|" + weight.id];
-        if (qualification && p && p.id === qualification.fighterId && p.trackId === "amateur" && p.countryId === country.id && p.weightClassId === weight.id) {
+        if (qualification && p && p.id === qualification.fighterId && p.trackId === "amateur" && (p.homeCountryId || p.countryId) === country.id && p.weightClassId === weight.id) {
           pool = pool.filter(function (fighter) { return fighter.id !== p.id; });
           pool.unshift(p);
         } else {
@@ -646,14 +725,19 @@ function simulateInternationalGymMoves(state) {
 
     function advanceWeek(state, action) {
     var npcReport;
+    var playerClubBefore;
+    var p = State.player(state);
+
     state.week += 1;
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
     if (action === "rest" && State.restPlayer) { State.restPlayer(state); }
     else if (State.adjustFatigue) { State.adjustFatigue(state, -(Data.economy && Data.economy.fatigue ? Data.economy.fatigue.recoveryPerWeek : 6), "Недельное восстановление"); }
+
+    playerClubBefore = p ? p.gymId : "";
     if (window.FS.Clubs) {
       window.FS.Clubs.ensureClubs(state);
-      
     }
+
     simulateRetirementsAndNewFighters(state);
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
@@ -672,12 +756,29 @@ function simulateInternationalGymMoves(state) {
     buildProContracts(state);
     if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
 
+    if (p && p.gymId && playerClubBefore && p.gymId !== playerClubBefore) {
+      pushNews(state, "club", "Изменения в клубе: состав и тренерский штаб обновлены.", { clubId: p.gymId });
+    }
+
+    if (npcReport.length) {
+      npcReport.slice(0, 3).forEach(function (line) { pushNews(state, "fights", line, { week: state.week }); });
+    }
+
+    if (state.week % 16 === 0) {
+      pushNews(state, "amateur", "Обновлены составы сборных. Проверь свою сборную и резерв.", { type: "team-update", countryId: playerHomeCountryId(state) });
+    }
+
     U.pushLimited(state.world.weekReports, {
       id: U.uid("week"),
       week: state.week,
       action: action || "week",
       fights: npcReport.slice(0, 8)
     }, 35);
+
+    simulateTournamentNews(state);
+    handleScheduledTournamentStart(state);
+    handleProFightDue(state);
+    if (!state.modal) { scheduleTournamentNotice(state); }
   }
 
   function bootstrapWorld(state) {

@@ -4,7 +4,7 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "real-flags-names-ranking-2.0.1",
+    appVersion: "world-news-calendar-2.0.2",
     saveKey: "fight_simulator_vertical_slice_v10",
 
     tracks: {
@@ -565,7 +565,8 @@
                   "Los Angeles Wild Card Boxing Club 10",
                   "Las Vegas Mayweather Boxing Club 10",
                   "Philadelphia Church Street Boxing 10"
-            ]
+            ],
+            "localPoolId": "usa"
       },
       {
             "id": "mexico",
@@ -1076,7 +1077,8 @@
                   "Puebla Azteca Boxing Club 9",
                   "Mexico City Romanza Gym 10",
                   "Guadalajara Canelo Team Gym 10"
-            ]
+            ],
+            "localPoolId": "mexico"
       },
       {
             "id": "russia",
@@ -1580,7 +1582,8 @@
                   "Ярославль Динамо Бокс 8",
                   "Казань Спартак Боксинг 8",
                   "Екатеринбург ЦСКА Бокс 8"
-            ]
+            ],
+            "localPoolId": "russia"
       },
       {
             "id": "kazakhstan",
@@ -2084,7 +2087,8 @@
                   "Шымкент Nomad Boxing 8",
                   "Караганда Temir Ring 8",
                   "Актобе Barys Boxing 8"
-            ]
+            ],
+            "localPoolId": "kazakhstan"
       },
       {
             "id": "cuba",
@@ -2588,7 +2592,8 @@
                   "Camagüey Gimnasio Rafael Trejo 8",
                   "Holguín Caribe Boxing 8",
                   "Santa Clara La Finca Boxing 8"
-            ]
+            ],
+            "localPoolId": "cuba"
       },
       {
             "id": "japan",
@@ -3092,7 +3097,8 @@
                   "Yokohama Watanabe Gym 8",
                   "Nagoya Misako Boxing Gym 8",
                   "Fukuoka Kadoebi Gym 8"
-            ]
+            ],
+            "localPoolId": "japan"
       },
       {
             "id": "uk",
@@ -3596,7 +3602,8 @@
                   "Liverpool Finchley ABC 8",
                   "Birmingham Dale Youth ABC 8",
                   "Leeds Rotunda ABC 8"
-            ]
+            ],
+            "localPoolId": "uk"
       },
       {
             "id": "ireland",
@@ -4100,7 +4107,8 @@
                   "Galway Holy Trinity Boxing Club 8",
                   "Limerick Drimnagh Boxing Club 8",
                   "Belfast High Performance Unit 8"
-            ]
+            ],
+            "localPoolId": "ireland"
       },
       {
             "id": "france",
@@ -4604,7 +4612,8 @@
                   "Lyon Le Ring Parisien 8",
                   "Toulouse Apollo Sporting Club 8",
                   "Nice Team Solide 8"
-            ]
+            ],
+            "localPoolId": "france"
       },
       {
             "id": "germany",
@@ -5108,7 +5117,8 @@
                   "Munich Universum Gym 8",
                   "Cologne Boxring Berlin 8",
                   "Frankfurt Kampfsport Hamburg 8"
-            ]
+            ],
+            "localPoolId": "germany"
       },
       {
             "id": "italy",
@@ -5612,7 +5622,8 @@
                   "Naples Pugilistica Padana 8",
                   "Turin Boxe Milano 8",
                   "Palermo Accademia Pugilistica 8"
-            ]
+            ],
+            "localPoolId": "italy"
       },
       {
             "id": "spain",
@@ -6116,7 +6127,8 @@
                   "Valencia Brooklyn Fitboxing 8",
                   "Seville Club Boxing Madrid 8",
                   "Bilbao Boxeo Valencia 8"
-            ]
+            ],
+            "localPoolId": "spain"
       },
       {
             "id": "turkey",
@@ -6620,7 +6632,8 @@
                   "Izmir Istanbul Boxing Academy 8",
                   "Bursa Ankara Boks Kulübü 8",
                   "Antalya Bursa Boks 8"
-            ]
+            ],
+            "localPoolId": "turkey"
       },
       {
             "id": "uzbekistan",
@@ -7124,7 +7137,8 @@
                   "Bukhara Bukhara Ring 8",
                   "Andijan Andijan Boxing Club 8",
                   "Namangan Samarkand Olympic Boxing 8"
-            ]
+            ],
+            "localPoolId": "uzbekistan"
       },
       {
             "id": "ukraine",
@@ -7628,7 +7642,8 @@
                   "Odesa Kyiv Boxing School 8",
                   "Kharkiv Lviv Boxing Academy 8",
                   "Dnipro Odesa Ring 8"
-            ]
+            ],
+            "localPoolId": "ukraine"
       },
       {
             "id": "poland",
@@ -8132,7 +8147,8 @@
                   "Lodz Husaria Boxing 8",
                   "Wroclaw Ring Kraków 8",
                   "Gdansk Wrocław Boxing 8"
-            ]
+            ],
+            "localPoolId": "poland"
       },
       {
             "id": "china",
@@ -8636,7 +8652,8 @@
                   "Guangzhou Beijing Sports Boxing 8",
                   "Shenzhen Dragon Ring 8",
                   "Chengdu Kunlun Boxing 8"
-            ]
+            ],
+            "localPoolId": "china"
       },
       {
             "id": "india",
@@ -9140,7 +9157,8 @@
                   "Kolkata Army Sports Institute 8",
                   "Chennai Olympic Boxing Academy 8",
                   "Bhiwani Mumbai Boxing Club 8"
-            ]
+            ],
+            "localPoolId": "india"
       },
       {
             "id": "philippines",
@@ -9644,7 +9662,8 @@
                   "Davao MP Boxing Gym 8",
                   "Quezon City Wild Card Philippines 8",
                   "General Santos Cebu Boxing Club 8"
-            ]
+            ],
+            "localPoolId": "philippines"
       },
       {
             "id": "thailand",
@@ -10148,7 +10167,8 @@
                   "Phuket Bangkok Boxing Gym 8",
                   "Pattaya Sor Vorapin Gym 8",
                   "Nonthaburi Fairtex Training Center 8"
-            ]
+            ],
+            "localPoolId": "thailand"
       },
       {
             "id": "south_korea",
@@ -10652,7 +10672,8 @@
                   "Incheon Busan Ring 8",
                   "Daegu Champion Boxing Korea 8",
                   "Daejeon Daegu Boxing 8"
-            ]
+            ],
+            "localPoolId": "south_korea"
       },
       {
             "id": "australia",
@@ -11156,7 +11177,8 @@
                   "Brisbane Koori Boxing 8",
                   "Perth No Limit Boxing Gym 8",
                   "Adelaide Melbourne Boxing Academy 8"
-            ]
+            ],
+            "localPoolId": "australia"
       },
       {
             "id": "new_zealand",
@@ -11660,7 +11682,8 @@
                   "Christchurch City Boxing Auckland 8",
                   "Hamilton Wellington Boxing Gym 8",
                   "Dunedin Hamilton Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_oceania"
       },
       {
             "id": "brazil",
@@ -12164,7 +12187,8 @@
                   "Salvador Boxe São Paulo 8",
                   "Brasília Rio Boxing Club 8",
                   "Curitiba Brazilian Boxing Academy 8"
-            ]
+            ],
+            "localPoolId": "brazil"
       },
       {
             "id": "argentina",
@@ -12668,7 +12692,8 @@
                   "Rosario Luna Park Gym 8",
                   "Mendoza Club Atlético Boxing 8",
                   "La Plata Buenos Aires Ring 8"
-            ]
+            ],
+            "localPoolId": "argentina"
       },
       {
             "id": "colombia",
@@ -13172,7 +13197,8 @@
                   "Cali Cartagena Boxing School 8",
                   "Barranquilla Medellín Ring 8",
                   "Cartagena Cali Boxing 8"
-            ]
+            ],
+            "localPoolId": "colombia"
       },
       {
             "id": "venezuela",
@@ -13676,7 +13702,8 @@
                   "Valencia Guantes de Oro 8",
                   "Barquisimeto Maracaibo Boxing 8",
                   "Maracay Valencia Ring 8"
-            ]
+            ],
+            "localPoolId": "venezuela"
       },
       {
             "id": "peru",
@@ -14180,7 +14207,8 @@
                   "Trujillo Arequipa Boxing 8",
                   "Cusco Club de Boxeo Callao 8",
                   "Piura Trujillo Ring 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "chile",
@@ -14684,7 +14712,8 @@
                   "Concepción Valparaíso Boxing 8",
                   "La Serena La Pintana Boxing 8",
                   "Antofagasta Chile Ring 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "ecuador",
@@ -15188,7 +15217,8 @@
                   "Cuenca Ecuador Ring 8",
                   "Santo Domingo Cuenca Boxing 8",
                   "Machala Club Pichincha 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "dominican_republic",
@@ -15692,7 +15722,8 @@
                   "La Romana Club Los Mina 8",
                   "San Pedro La Romana Ring 8",
                   "Puerto Plata Caribe Boxing DR 8"
-            ]
+            ],
+            "localPoolId": "dominican_republic"
       },
       {
             "id": "puerto_rico",
@@ -16196,7 +16227,8 @@
                   "Bayamón San Juan Boxing 8",
                   "Caguas Ponce Boxing Academy 8",
                   "Mayagüez Puerto Rico Ring 8"
-            ]
+            ],
+            "localPoolId": "puerto_rico"
       },
       {
             "id": "canada",
@@ -16700,7 +16732,8 @@
                   "Vancouver Kingsway Boxing 8",
                   "Calgary Eastside Boxing Club 8",
                   "Ottawa Final Round Boxing 8"
-            ]
+            ],
+            "localPoolId": "canada"
       },
       {
             "id": "south_africa",
@@ -17204,7 +17237,8 @@
                   "Durban No Mercy Boxing 8",
                   "Pretoria Johannesburg Boxing 8",
                   "Soweto Cape Town Ring 8"
-            ]
+            ],
+            "localPoolId": "south_africa"
       },
       {
             "id": "nigeria",
@@ -17708,7 +17742,8 @@
                   "Kano Abuja Ring 8",
                   "Ibadan Eko Boxing Club 8",
                   "Port Harcourt Port Harcourt Boxing 8"
-            ]
+            ],
+            "localPoolId": "nigeria"
       },
       {
             "id": "ghana",
@@ -18212,7 +18247,8 @@
                   "Tamale Sea View Boxing Gym 8",
                   "Tema Kumasi Boxing 8",
                   "Cape Coast Accra Ring 8"
-            ]
+            ],
+            "localPoolId": "ghana"
       },
       {
             "id": "morocco",
@@ -18716,7 +18752,8 @@
                   "Marrakesh Atlas Boxing 8",
                   "Fes Marrakech Ring 8",
                   "Tangier Tangier Boxing 8"
-            ]
+            ],
+            "localPoolId": "morocco"
       },
       {
             "id": "algeria",
@@ -19220,7 +19257,8 @@
                   "Constantine Atlas Ring Algeria 8",
                   "Annaba Constantine Boxing 8",
                   "Blida Union Boxing 8"
-            ]
+            ],
+            "localPoolId": "algeria"
       },
       {
             "id": "egypt",
@@ -19724,7 +19762,8 @@
                   "Giza Nile Boxing Club 8",
                   "Mansoura Giza Boxing 8",
                   "Luxor Egypt Olympic Boxing 8"
-            ]
+            ],
+            "localPoolId": "egypt"
       },
       {
             "id": "kenya",
@@ -20228,7 +20267,8 @@
                   "Kisumu Mombasa Ring 8",
                   "Nakuru Kenya Boxing Academy 8",
                   "Eldoret Kisumu Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "uganda",
@@ -20732,7 +20772,8 @@
                   "Jinja Uganda Boxing Academy 8",
                   "Mbarara Jinja Ring 8",
                   "Entebbe Mbarara Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "tanzania",
@@ -21236,7 +21277,8 @@
                   "Arusha Zanzibar Ring 8",
                   "Mwanza Arusha Boxing 8",
                   "Zanzibar Mwanza Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "cameroon",
@@ -21740,7 +21782,8 @@
                   "Bamenda Cameroon Boxing Academy 8",
                   "Bafoussam Bamenda Boxing 8",
                   "Garoua Indomitable Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "senegal",
@@ -22244,7 +22287,8 @@
                   "Thiès Thiès Ring 8",
                   "Saint-Louis Lions Boxing 8",
                   "Kaolack Saint-Louis Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "ethiopia",
@@ -22748,7 +22792,8 @@
                   "Mekelle Dire Dawa Ring 8",
                   "Gondar Hawassa Boxing 8",
                   "Hawassa Gondar Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "iran",
@@ -23252,7 +23297,8 @@
                   "Isfahan Mashhad Ring 8",
                   "Shiraz Isfahan Boxing 8",
                   "Tabriz Tabriz Boxing 8"
-            ]
+            ],
+            "localPoolId": "iran"
       },
       {
             "id": "iraq",
@@ -23756,7 +23802,8 @@
                   "Mosul Iraq Boxing Academy 8",
                   "Erbil Erbil Boxing 8",
                   "Najaf Najaf Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "pakistan",
@@ -24260,7 +24307,8 @@
                   "Islamabad Lahore Ring 8",
                   "Faisalabad Peshawar Boxing 8",
                   "Peshawar Islamabad Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "indonesia",
@@ -24764,7 +24812,8 @@
                   "Bandung Surabaya Ring 8",
                   "Medan Bandung Boxing 8",
                   "Makassar Medan Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "malaysia",
@@ -25268,7 +25317,8 @@
                   "Johor Bahru Penang Ring 8",
                   "Ipoh Johor Boxing 8",
                   "Kota Kinabalu Borneo Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "vietnam",
@@ -25772,7 +25822,8 @@
                   "Da Nang Vietnam Boxing Academy 8",
                   "Hai Phong Da Nang Ring 8",
                   "Can Tho Hai Phong Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "mongolia",
@@ -26276,7 +26327,8 @@
                   "Darkhan Steppe Boxing Club 8",
                   "Choibalsan Erdenet Boxing 8",
                   "Mörön Darkhan Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "azerbaijan",
@@ -26780,7 +26832,8 @@
                   "Sumqayit Ganja Ring 8",
                   "Mingachevir Caspian Boxing 8",
                   "Lankaran Sumqayit Boxing 8"
-            ]
+            ],
+            "localPoolId": "azerbaijan"
       },
       {
             "id": "armenia",
@@ -27284,7 +27337,8 @@
                   "Vanadzor Gyumri Ring 8",
                   "Vagharshapat Vanadzor Boxing 8",
                   "Hrazdan Ararat Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "georgia",
@@ -27788,7 +27842,8 @@
                   "Kutaisi Batumi Ring 8",
                   "Rustavi Kutaisi Boxing 8",
                   "Gori Caucasus Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "romania",
@@ -28292,7 +28347,8 @@
                   "Timișoara Bucharest Ring 8",
                   "Iași Romania Boxing Academy 8",
                   "Constanța Cluj Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "bulgaria",
@@ -28796,7 +28852,8 @@
                   "Varna Plovdiv Ring 8",
                   "Burgas Varna Boxing 8",
                   "Ruse CSKA Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "serbia",
@@ -29300,7 +29357,8 @@
                   "Niš Belgrade Ring 8",
                   "Kragujevac Serbia Boxing Academy 8",
                   "Subotica Novi Sad Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "croatia",
@@ -29804,7 +29862,8 @@
                   "Rijeka Split Ring 8",
                   "Osijek Rijeka Boxing 8",
                   "Zadar Osijek Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "greece",
@@ -30308,7 +30367,8 @@
                   "Patras Olympic Boxing Gym 8",
                   "Heraklion Thessaloniki Ring 8",
                   "Larissa Patras Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "netherlands",
@@ -30812,7 +30872,8 @@
                   "The Hague Rotterdam Boxing 8",
                   "Utrecht Netherlands Boxing Academy 8",
                   "Eindhoven Utrecht Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "belgium",
@@ -31316,7 +31377,8 @@
                   "Ghent Belgium Boxing Academy 8",
                   "Bruges Ghent Boxing 8",
                   "Liège Liège Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "sweden",
@@ -31820,7 +31882,8 @@
                   "Malmö Gothenburg Ring 8",
                   "Uppsala Malmö Boxing 8",
                   "Västerås Uppsala Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "norway",
@@ -32324,7 +32387,8 @@
                   "Trondheim Bergen Ring 8",
                   "Stavanger Trondheim Boxing 8",
                   "Drammen Stavanger Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "denmark",
@@ -32828,7 +32892,8 @@
                   "Odense Aarhus Ring 8",
                   "Aalborg Odense Boxing 8",
                   "Esbjerg Aalborg Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "finland",
@@ -33332,7 +33397,8 @@
                   "Tampere Tampere Ring 8",
                   "Turku Turku Boxing 8",
                   "Oulu Oulu Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "hungary",
@@ -33836,7 +33902,8 @@
                   "Szeged Vasas Boxing 8",
                   "Miskolc Debrecen Ring 8",
                   "Pécs Szeged Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "czechia",
@@ -34340,7 +34407,8 @@
                   "Ostrava Brno Ring 8",
                   "Plzeň Ostrava Boxing 8",
                   "Liberec Plzeň Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "slovakia",
@@ -34844,7 +34912,8 @@
                   "Prešov Košice Ring 8",
                   "Žilina Nitra Boxing 8",
                   "Nitra Prešov Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "lithuania",
@@ -35348,7 +35417,8 @@
                   "Klaipėda Kaunas Ring 8",
                   "Šiauliai Klaipėda Boxing 8",
                   "Panevėžys Šiauliai Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "latvia",
@@ -35852,7 +35922,8 @@
                   "Liepāja Daugavpils Ring 8",
                   "Jelgava Liepāja Boxing 8",
                   "Jūrmala Jelgava Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "estonia",
@@ -36356,7 +36427,8 @@
                   "Narva Tartu Ring 8",
                   "Pärnu Narva Boxing 8",
                   "Kohtla-Järve Pärnu Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "belarus",
@@ -36860,7 +36932,8 @@
                   "Mogilev Dynamo Boxing 8",
                   "Vitebsk Gomel Ring 8",
                   "Grodno Grodno Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "moldova",
@@ -37364,7 +37437,8 @@
                   "Tiraspol Bălți Ring 8",
                   "Bender Cahul Boxing 8",
                   "Cahul Dniester Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_europe"
       },
       {
             "id": "israel",
@@ -37868,7 +37942,8 @@
                   "Haifa Jerusalem Ring 8",
                   "Rishon LeZion Haifa Boxing 8",
                   "Beersheba Maccabi Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "saudi_arabia",
@@ -38372,7 +38447,8 @@
                   "Mecca Jeddah Ring 8",
                   "Medina Dammam Boxing 8",
                   "Dammam Desert Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "uae",
@@ -38876,7 +38952,8 @@
                   "Sharjah Dubai Boxing 8",
                   "Al Ain Abu Dhabi Ring 8",
                   "Ajman Sharjah Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "qatar",
@@ -39380,7 +39457,8 @@
                   "Al Wakrah Al Rayyan Ring 8",
                   "Al Khor Aspire Boxing 8",
                   "Umm Salal Wakrah Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "syria",
@@ -39884,7 +39962,8 @@
                   "Homs Aleppo Ring 8",
                   "Hama Homs Boxing 8",
                   "Latakia Latakia Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "jordan",
@@ -40388,7 +40467,8 @@
                   "Irbid Irbid Ring 8",
                   "Aqaba Aqaba Boxing 8",
                   "Madaba Zarqa Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_asia"
       },
       {
             "id": "tunisia",
@@ -40892,7 +40972,8 @@
                   "Sousse Sfax Ring 8",
                   "Kairouan Sousse Boxing 8",
                   "Bizerte Carthage Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "libya",
@@ -41396,7 +41477,8 @@
                   "Misrata Benghazi Ring 8",
                   "Zawiya Misrata Boxing 8",
                   "Sabha Sabha Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "angola",
@@ -41900,7 +41982,8 @@
                   "Lobito Benguela Ring 8",
                   "Benguela Huambo Boxing 8",
                   "Lubango Lobito Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "mozambique",
@@ -42404,7 +42487,8 @@
                   "Beira Beira Ring 8",
                   "Nampula Nampula Boxing 8",
                   "Chimoio Matola Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "zimbabwe",
@@ -42908,7 +42992,8 @@
                   "Mutare Bulawayo Ring 8",
                   "Gweru Mutare Boxing 8",
                   "Kwekwe Gweru Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "zambia",
@@ -43412,7 +43497,8 @@
                   "Kitwe Copperbelt Boxing 8",
                   "Kabwe Ndola Ring 8",
                   "Livingstone Kitwe Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "drc",
@@ -43916,7 +44002,8 @@
                   "Mbuji-Mayi Lubumbashi Ring 8",
                   "Goma Goma Boxing 8",
                   "Kisangani Leopard Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "ivory_coast",
@@ -44420,7 +44507,8 @@
                   "Bouaké Bouaké Ring 8",
                   "Daloa Daloa Boxing 8",
                   "San-Pédro San-Pédro Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "mali",
@@ -44924,7 +45012,8 @@
                   "Mopti Sikasso Ring 8",
                   "Ségou Ségou Boxing 8",
                   "Kayes Mopti Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "burkina_faso",
@@ -45428,7 +45517,8 @@
                   "Koudougou Bobo Ring 8",
                   "Ouahigouya Koudougou Boxing 8",
                   "Banfora Banfora Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_africa"
       },
       {
             "id": "uruguay",
@@ -45932,7 +46022,8 @@
                   "Paysandú Salto Ring 8",
                   "Las Piedras Paysandú Boxing 8",
                   "Rivera Rivera Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "paraguay",
@@ -46436,7 +46527,8 @@
                   "San Lorenzo Luque Ring 8",
                   "Luque San Lorenzo Boxing 8",
                   "Capiatá Capiatá Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "bolivia",
@@ -46940,7 +47032,8 @@
                   "Cochabamba Santa Cruz Ring 8",
                   "Sucre Cochabamba Boxing 8",
                   "Oruro Oruro Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "costa_rica",
@@ -47444,7 +47537,8 @@
                   "Cartago Alajuela Ring 8",
                   "Heredia Cartago Boxing 8",
                   "Limón Heredia Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "panama",
@@ -47948,7 +48042,8 @@
                   "David Colón Ring 8",
                   "La Chorrera Los Rockeros Gym 8",
                   "Santiago David Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "nicaragua",
@@ -48452,7 +48547,8 @@
                   "Masaya León Ring 8",
                   "Matagalpa Masaya Boxing 8",
                   "Granada Granada Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "honduras",
@@ -48956,7 +49052,8 @@
                   "Choloma San Pedro Ring 8",
                   "La Ceiba La Ceiba Boxing 8",
                   "El Progreso Choloma Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "guatemala",
@@ -49460,7 +49557,8 @@
                   "Villa Nueva Mixco Ring 8",
                   "Quetzaltenango Quetzaltenango Boxing 8",
                   "Escuintla Escuintla Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "el_salvador",
@@ -49964,7 +50062,8 @@
                   "Soyapango Santa Ana Ring 8",
                   "San Miguel Soyapango Boxing 8",
                   "Mejicanos San Miguel Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "haiti",
@@ -50468,7 +50567,8 @@
                   "Carrefour Cap-Haïtien Ring 8",
                   "Jacmel Jacmel Boxing 8",
                   "Les Cayes Carrefour Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "jamaica",
@@ -50972,7 +51072,8 @@
                   "Spanish Town Montego Bay Ring 8",
                   "Portmore Portmore Boxing 8",
                   "Mandeville Mandeville Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       },
       {
             "id": "trinidad_tobago",
@@ -51476,7 +51577,8 @@
                   "Chaguanas San Fernando Ring 8",
                   "Arima Arima Boxing 8",
                   "Point Fortin Chaguanas Boxing 8"
-            ]
+            ],
+            "localPoolId": "small_latin_america"
       }
 ],
 

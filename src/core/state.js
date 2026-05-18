@@ -149,6 +149,8 @@
       id: opts.id || U.uid("fighter"),
       name: opts.name || U.createName(country, seed),
       countryId: countryId,
+      homeCountryId: opts.homeCountryId || countryId,
+      currentCountryId: opts.currentCountryId || countryId,
       trackId: trackId,
       weightClassId: weightClassId,
       stanceId: stanceId,
@@ -330,6 +332,8 @@
       name: payload.name || "Новый боксёр",
       isPlayer: true,
       known: true,
+      homeCountryId: countryId,
+      currentCountryId: countryId,
       weightClassId: trackId === "street" ? "" : weightClassId,
       stanceId: "",
       age: archetype.age || 18,
@@ -368,7 +372,7 @@
       clubs: [],
       titles: {},
       amateurPath: { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 },
-      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [], nationalTeamQualification: {}, reserveAdditions: {}, proContracts: [], proContractHistory: [] },
+      world: { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [], memorials: [], nationalTeamQualification: {}, reserveAdditions: {}, proContracts: [], proContractHistory: [], tournamentCalendar: [], pendingTournamentInvite: null, pendingProFight: null },
       feed: "Карьера началась: " + archetype.label + ". Мир загружен.",
       createdAt: new Date().toISOString()
     };
@@ -481,6 +485,7 @@
     if (!spendMoney(state, cost, "Перелёт: " + country.label)) { return false; }
     adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
     p.countryId = country.id;
+    p.currentCountryId = country.id;
     p.gymId = "";
     state.people = [];
     state.rankingCountryId = country.id;
@@ -556,6 +561,8 @@
   function ensurePlayerSystems(state) {
     var p = player(state);
     if (!p) { return null; }
+    p.homeCountryId = p.homeCountryId || p.countryId;
+    p.currentCountryId = p.countryId;
     p.money = Number(p.money);
     if (!isFinite(p.money)) { p.money = Data.economy ? Data.economy.startingMoney : 650; }
     p.fatigue = U.clamp(Number(p.fatigue) || 0, 0, 100);
@@ -924,6 +931,9 @@
     state.world.teamCoaches = state.world.teamCoaches || {};
     state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
     state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
+    state.world.tournamentCalendar = state.world.tournamentCalendar instanceof Array ? state.world.tournamentCalendar : [];
+    state.world.pendingTournamentInvite = state.world.pendingTournamentInvite || null;
+    state.world.pendingProFight = state.world.pendingProFight || null;
 
     for (i = 0; i < state.roster.length; i += 1) {
       state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];
