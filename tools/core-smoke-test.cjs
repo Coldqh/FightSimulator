@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "career-systems-2.2.0") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 220) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "offline-pwa-2.2.1") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 221) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});

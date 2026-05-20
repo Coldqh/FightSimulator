@@ -69,6 +69,34 @@
     return;
   }
 
+  function registerOfflineApp() {
+    if (!("serviceWorker" in navigator)) {
+      return;
+    }
+
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js")
+        .then(function (registration) {
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          }
+          registration.addEventListener("updatefound", function () {
+            var worker = registration.installing;
+            if (!worker) { return; }
+            worker.addEventListener("statechange", function () {
+              if (worker.state === "installed" && navigator.serviceWorker.controller) {
+                console.log("Fight Simulator offline cache updated.");
+              }
+            });
+          });
+          console.log("Fight Simulator offline cache ready.");
+        })
+        .catch(function (error) {
+          console.warn("Offline cache registration failed:", error);
+        });
+    });
+  }
+
   var fightWindow = null;
 
   function fightModalOpenInWindow() {
@@ -483,5 +511,6 @@
     }
   });
 
+  registerOfflineApp();
   render();
 }());

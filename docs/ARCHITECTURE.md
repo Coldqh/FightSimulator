@@ -72,3 +72,20 @@ Title history now supports:
 - past titles with from/to weeks
 
 `Titles.fighterTitleHistory(state, fighterId)` returns both.
+
+
+## Offline PWA 2.2.1
+
+Files:
+- `sw.js` — service worker
+- `manifest.webmanifest` — install metadata
+- `assets/icons/*` — iPhone / PWA icons
+
+Caching:
+- install step precaches the shell, scripts, CSS, manifest, ring image and all flags
+- navigation requests use network-first with cached `index.html` fallback
+- static requests use cache-first with runtime fill
+
+Save data:
+- career saves remain in `localStorage`
+- service worker only caches app files, not private save data

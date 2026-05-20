@@ -1,10 +1,33 @@
 {
   "name": "Fight Simulator",
   "short_name": "FightSim",
-  "start_url": "./index.html",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0b0b0c",
   "theme_color": "#0b0b0c",
   "lang": "ru",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "description": "Offline boxing career simulator.",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

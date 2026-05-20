@@ -1,24 +1,19 @@
-# Test Checklist 2.2.0
+# Test Checklist 2.2.1 Offline PWA
 
 ```powershell
 cd C:\FightSimulator_GitHub
 node tools\core-smoke-test.cjs
 node tools\week-benchmark.cjs
+node --check sw.js
 start index.html
 ```
 
-Manual:
-1. News has buttons opening fighter profiles.
-2. Training gives exactly 3 characteristic points.
-3. Training gives 20 fatigue.
-4. Fatigue does not rise above 94.
-5. Skipped fight result shows score/KO info and no punch log.
-6. NPC profile history includes fights against the player.
-7. Team roster/reserve shows player with green `Ты`.
-8. Player with OVR 121 moves to pro.
-9. Fighter profile shows both awards and titles.
-10. Past pro/street titles show received/lost week range.
-11. Amateur awards use gold/silver/bronze medals.
-12. International amateur fight offers appear only from MS/MSMK.
-13. Tournament preview chance matches result chance.
-14. Pro fight appears on the contract week.
+Manual iPhone test:
+1. Push to GitHub Pages.
+2. Open the site on iPhone while online.
+3. Wait for the page to fully load.
+4. Add to Home Screen.
+5. Turn on airplane mode.
+6. Open FightSim from the home screen.
+7. Existing save should load from localStorage.
+8. Main UI, flags, ring image and scripts should load offline.
