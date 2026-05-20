@@ -1,7 +1,7 @@
 {
-  "version": "fight-rows-fix-2.3.6",
-  "mode": "fight-rows-fix",
-  "cacheVersion": "fight-simulator-fight-rows-fix-2.3.6",
+  "version": "update-button-hard-reset-2.3.7",
+  "mode": "update-button-hard-reset",
+  "cacheVersion": "fight-simulator-update-button-hard-reset-2.3.7",
   "resetPage": "reset-cache.html",
-  "localCleanPort": 5186
+  "localCleanPort": 5187
 }
