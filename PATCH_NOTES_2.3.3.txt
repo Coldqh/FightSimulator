@@ -1,0 +1,11 @@
+Fight World 2.3.3 — HARD VERSION FIX
+
+Исправлено:
+1. Старый 2.3.0 patch script больше не подключается.
+2. Старые patch files 2.3.0 / 2.3.1 / 2.3.2 удаляются apply_patch.ps1.
+3. Реальный appVersion в src/data/game-data.js обновляется до hard-version-fix-2.3.3.
+4. version.json обновляется до hard-version-fix-2.3.3.
+5. sw.js получает новый CACHE_VERSION и новый precache.
+6. start_host.ps1 открывает страницу с cache-busting параметрами.
+7. verify_patch.ps1 проверяет, что старые хвосты 2.3.0/2.3.1/2.3.2 не остались.
+8. Сохранены правки UI/турниров/новостей/рейтингов из 2.3.x.

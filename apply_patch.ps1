@@ -1,72 +1,75 @@
-# Fight World update button fix + host setup 2.3.2
+# Fight World HARD FIX 2.3.3
 # Запускать из корня репозитория FightSimulator:
+#   cd C:\FightSimulator_GitHub
 #   PowerShell -ExecutionPolicy Bypass -File .\apply_patch.ps1
 
 $ErrorActionPreference = "Stop"
 $PatchRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Version = "hard-version-fix-2.3.3"
+$CacheVersion = "fight-simulator-hard-version-fix-2.3.3"
 
 if (-not (Test-Path ".\index.html") -or -not (Test-Path ".\src\data\game-data.js")) {
   throw "Скрипт нужно запускать из корня репозитория FightSimulator."
 }
 
-Write-Host "== Fight World patch 2.3.2 ==" -ForegroundColor Cyan
+Write-Host "== Fight World HARD FIX 2.3.3 ==" -ForegroundColor Cyan
 
-# 1. Copy patch scripts
+# 1. Remove old runtime patch files that were overriding appVersion/UI.
 New-Item -ItemType Directory -Force ".\src\patches" | Out-Null
-Copy-Item -Force "$PatchRoot\src\patches\tournament-ui-layout-2.3.2.js" ".\src\patches\tournament-ui-layout-2.3.2.js"
-Copy-Item -Force "$PatchRoot\src\patches\update-button-fix-2.3.2.js" ".\src\patches\update-button-fix-2.3.2.js"
-Write-Host "JS-патчи добавлены"
+$OldPatchFiles = @(
+  ".\src\patches\tournament-ui-hotfix-2.3.0.js",
+  ".\src\patches\tournament-ui-layout-2.3.1.js",
+  ".\src\patches\tournament-ui-layout-2.3.2.js",
+  ".\src\patches\update-button-fix-2.3.2.js"
+)
+foreach ($file in $OldPatchFiles) {
+  Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+}
 
-# 2. Update real app version in game-data.js so version.json compare works correctly
-$DataPath = ".\src\data\game-data.js"
-$Data = Get-Content $DataPath -Raw
-$Data = [regex]::Replace($Data, 'appVersion:\s*"[^"]+"', 'appVersion: "update-button-fix-2.3.2"')
-Set-Content -Path $DataPath -Value $Data -Encoding UTF8
-Write-Host "src\data\game-data.js: appVersion обновлён"
+Copy-Item -Force "$PatchRoot\src\patches\hard-fix-2.3.3.js" ".\src\patches\hard-fix-2.3.3.js"
+Write-Host "src\patches очищен от старых 2.3.0/2.3.1/2.3.2 и добавлен hard-fix-2.3.3.js"
 
-# 3. index.html: remove old patch scripts and add 2.3.2 scripts
+# 2. index.html: remove ALL patch scripts and add only hard-fix 2.3.3.
 $IndexPath = ".\index.html"
 $Index = Get-Content $IndexPath -Raw
-$Index = [regex]::Replace($Index, '\s*<script src="src/patches/tournament-ui-hotfix-2\.3\.0\.js"></script>', '')
-$Index = [regex]::Replace($Index, '\s*<script src="src/patches/tournament-ui-layout-2\.3\.1\.js"></script>', '')
-$Index = [regex]::Replace($Index, '\s*<script src="src/patches/tournament-ui-layout-2\.3\.2\.js"></script>', '')
-$Index = [regex]::Replace($Index, '\s*<script src="src/patches/update-button-fix-2\.3\.2\.js"></script>', '')
-
+$Index = [regex]::Replace($Index, '\r?\n\s*<script src="src/patches/[^"]+\.js(?:\?[^"]*)?"></script>', '')
 $Needle = '  <script src="src/ui/render.js"></script>'
-$PatchScripts = '  <script src="src/patches/tournament-ui-layout-2.3.2.js"></script>' + "`r`n" + '  <script src="src/patches/update-button-fix-2.3.2.js"></script>'
+$PatchScript = '  <script src="src/patches/hard-fix-2.3.3.js?v=2.3.3"></script>'
 if ($Index -notmatch [regex]::Escape($Needle)) {
   throw "Не нашёл строку подключения src/ui/render.js в index.html."
 }
-$Index = $Index.Replace($Needle, $Needle + "`r`n" + $PatchScripts)
+$Index = $Index.Replace($Needle, $Needle + "`r`n" + $PatchScript)
 Set-Content -Path $IndexPath -Value $Index -Encoding UTF8
-Write-Host "index.html обновлён"
+Write-Host "index.html теперь подключает только hard-fix-2.3.3"
+
+# 3. Update real appVersion and saveSchemaVersion.
+$DataPath = ".\src\data\game-data.js"
+$Data = Get-Content $DataPath -Raw
+$Data = [regex]::Replace($Data, 'appVersion:\s*"[^"]+"', 'appVersion: "hard-version-fix-2.3.3"')
+$Data = [regex]::Replace($Data, 'saveSchemaVersion:\s*\d+', 'saveSchemaVersion: 233')
+Set-Content -Path $DataPath -Value $Data -Encoding UTF8
+Write-Host "src\data\game-data.js обновлён: appVersion=hard-version-fix-2.3.3, schema=233"
 
 # 4. version.json
 $VersionJson = @'
 {
-  "version": "update-button-fix-2.3.2",
-  "mode": "update-button-fix"
+  "version": "hard-version-fix-2.3.3",
+  "mode": "hard-version-fix"
 }
 '@
 Set-Content -Path ".\version.json" -Value $VersionJson -Encoding UTF8
 Write-Host "version.json обновлён"
 
-# 5. sw.js: cache version + precache patch files
+# 5. sw.js: hard cache reset, remove all old patch precache lines, add only hard-fix.
 $SwPath = ".\sw.js"
 if (Test-Path $SwPath) {
   $Sw = Get-Content $SwPath -Raw
-  $Sw = [regex]::Replace($Sw, 'const CACHE_VERSION = "fight-simulator-[^"]+";', 'const CACHE_VERSION = "fight-simulator-update-button-fix-2.3.2";')
-
-  $Sw = [regex]::Replace($Sw, '\s*"\./src/patches/tournament-ui-hotfix-2\.3\.0\.js",', '')
-  $Sw = [regex]::Replace($Sw, '\s*"\./src/patches/tournament-ui-layout-2\.3\.1\.js",', '')
-  $Sw = [regex]::Replace($Sw, '\s*"\./src/patches/tournament-ui-layout-2\.3\.2\.js",', '')
-  $Sw = [regex]::Replace($Sw, '\s*"\./src/patches/update-button-fix-2\.3\.2\.js",', '')
-
-  $PrecacheLines = '  "./src/patches/tournament-ui-layout-2.3.2.js",' + "`r`n" + '  "./src/patches/update-button-fix-2.3.2.js",'
-  $Sw = $Sw.Replace('  "./src/ui/render.js",', '  "./src/ui/render.js",' + "`r`n" + $PrecacheLines)
-
+  $Sw = [regex]::Replace($Sw, 'const CACHE_VERSION = "fight-simulator-[^"]+";', 'const CACHE_VERSION = "fight-simulator-hard-version-fix-2.3.3";')
+  $Sw = [regex]::Replace($Sw, '\r?\n\s*"\./src/patches/[^"]+\.js(?:\?[^"]*)?",', '')
+  $PrecacheLine = '  "./src/patches/hard-fix-2.3.3.js",'
+  $Sw = $Sw.Replace('  "./src/ui/render.js",', '  "./src/ui/render.js",' + "`r`n" + $PrecacheLine)
   Set-Content -Path $SwPath -Value $Sw -Encoding UTF8
-  Write-Host "sw.js обновлён"
+  Write-Host "sw.js обновлён: CACHE_VERSION=fight-simulator-hard-version-fix-2.3.3"
 }
 
 # 6. GitHub Pages workflow
@@ -76,13 +79,10 @@ Copy-Item -Force "$PatchRoot\.nojekyll" ".\.nojekyll"
 Write-Host "GitHub Pages workflow обновлён"
 
 Write-Host ""
-Write-Host "Готово. Локальная проверка:" -ForegroundColor Green
+Write-Host "HARD FIX применён. Теперь запусти проверку:" -ForegroundColor Green
+Write-Host "  cd C:\FightSimulator_GitHub"
+Write-Host "  PowerShell -ExecutionPolicy Bypass -File .\verify_patch.ps1"
+Write-Host ""
+Write-Host "Локальный хост:"
+Write-Host "  cd C:\FightSimulator_GitHub"
 Write-Host "  PowerShell -ExecutionPolicy Bypass -File .\start_host.ps1"
-Write-Host ""
-Write-Host "Пуш:" -ForegroundColor Green
-Write-Host "  git add ."
-Write-Host "  git commit -m ""Fix visible update button and compact tournament UI 2.3.2"""
-Write-Host "  git push origin main"
-Write-Host ""
-Write-Host "Если старая PWA всё ещё не увидит обновление, один раз открой:"
-Write-Host "  https://coldqh.github.io/FightSimulator/?v=2.3.2"

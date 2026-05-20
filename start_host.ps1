@@ -1,5 +1,6 @@
-# Локальный хост Fight World
-# Запускать из корня репозитория после apply_patch.ps1:
+# Local host Fight World HARD FIX 2.3.3
+# Запускать из корня репозитория:
+#   cd C:\FightSimulator_GitHub
 #   PowerShell -ExecutionPolicy Bypass -File .\start_host.ps1
 
 $ErrorActionPreference = "Stop"
@@ -8,9 +9,9 @@ if (-not (Test-Path ".\index.html")) {
   throw "Запусти скрипт из корня репозитория FightSimulator."
 }
 
-$url = "http://localhost:5173"
-Write-Host "Fight World local host: $url" -ForegroundColor Cyan
-Start-Process $url
+$Url = "http://localhost:5173/index.html?v=2.3.3&hard=1&t=$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
+Write-Host "Fight World local host: $Url" -ForegroundColor Cyan
+Start-Process $Url
 
 if (Get-Command py -ErrorAction SilentlyContinue) {
   py -m http.server 5173
