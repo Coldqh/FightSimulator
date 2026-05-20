@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "technical-core-2.1.4",
+    appVersion: "career-systems-2.2.0",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 214,
+    saveSchemaVersion: 220,
 
     tracks: {
       amateur: {
@@ -51677,13 +51677,13 @@
     legacySaveKeys: ["fight_simulator_season_bundle_v9", "fight_simulator_career_depth_v5", "fight_simulator_ecosystem_v4"],
 
     amateurCompetitions: [
-      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 50, rewardRating: 60, difficultyId: "safe", weekCooldown: 8, scope: "country", minOpponentRating: 0, schedule: "city" },
-      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 60, rewardRating: 100, difficultyId: "safe", weekCooldown: 12, scope: "country", minOpponentRating: 20, schedule: "oblast" },
-      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 70, rewardRating: 150, difficultyId: "even", weekCooldown: 16, scope: "country", minOpponentRating: 35, schedule: "region" },
-      { id: "country", label: "Чемпионат страны", awardLabel: "Призёр чемпионата страны", minRating: 50, maxRating: 80, rewardRating: 230, difficultyId: "hard", weekCooldown: 24, scope: "country", minOpponentRating: 50, schedule: "country" },
-      { id: "continent", label: "Чемпионат континента", awardLabel: "Призёр чемпионата континента", minRating: 65, maxRating: 100, rewardRating: 340, difficultyId: "hard", weekCooldown: 32, scope: "continent", minOpponentRating: 65, schedule: "continent" },
-      { id: "world", label: "Чемпионат мира", awardLabel: "Призёр чемпионата мира", minRating: 80, maxRating: 120, rewardRating: 500, difficultyId: "hard", weekCooldown: 40, scope: "world", minOpponentRating: 80, schedule: "world" },
-      { id: "olympiad", label: "Олимпиада", awardLabel: "Призёр Олимпиады", minRating: 100, maxRating: 120, rewardRating: 750, difficultyId: "hard", weekCooldown: 64, scope: "world_elite", minOpponentRating: 100, schedule: "olympiad" }
+      { id: "city", label: "Чемпионат города", awardLabel: "Чемпион города", minRating: 0, maxRating: 50, rewardRating: 60, difficultyId: "safe", weekCooldown: 4, scope: "country", minOpponentRating: 0, schedule: "city" },
+      { id: "oblast", label: "Чемпионат области", awardLabel: "Чемпион области", minRating: 20, maxRating: 60, rewardRating: 100, difficultyId: "safe", weekCooldown: 6, scope: "country", minOpponentRating: 20, schedule: "oblast" },
+      { id: "region", label: "Чемпионат региона", awardLabel: "Чемпион региона", minRating: 35, maxRating: 70, rewardRating: 150, difficultyId: "even", weekCooldown: 8, scope: "country", minOpponentRating: 35, schedule: "region" },
+      { id: "country", label: "Чемпионат страны", awardLabel: "Призёр чемпионата страны", minRating: 50, maxRating: 80, rewardRating: 230, difficultyId: "hard", weekCooldown: 12, scope: "country", minOpponentRating: 50, schedule: "country" },
+      { id: "continent", label: "Чемпионат континента", awardLabel: "Призёр чемпионата континента", minRating: 65, maxRating: 100, rewardRating: 340, difficultyId: "hard", weekCooldown: 24, scope: "continent", minOpponentRating: 65, schedule: "continent" },
+      { id: "world", label: "Чемпионат мира", awardLabel: "Призёр чемпионата мира", minRating: 80, maxRating: 120, rewardRating: 500, difficultyId: "hard", weekCooldown: 48, scope: "world", minOpponentRating: 80, schedule: "world" },
+      { id: "olympiad", label: "Олимпиада", awardLabel: "Призёр Олимпиады", minRating: 100, maxRating: 120, rewardRating: 750, difficultyId: "hard", weekCooldown: 96, scope: "world_elite", minOpponentRating: 100, schedule: "olympiad" }
     ],
 
     careerStages: {

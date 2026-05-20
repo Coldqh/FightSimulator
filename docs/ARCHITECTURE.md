@@ -1,87 +1,74 @@
-# Architecture 2.1.4
+# Architecture 2.2.0
 
-## Technical core goals
+## News profile links
 
-2.1.x is focused on stability, maintainability and performance:
-- reduce repeated heavy work
-- protect saves from future patches
-- cache rankings safely
-- keep news short and useful
-- document system flow before expanding gameplay
-
-## Ranking cache
-
-`State.ranking(...)` now uses:
+News items can include metadata:
 
 ```js
-state._rankingCache
-state._rankingVersion
-State.invalidateCaches(state)
+{
+  fighterId,
+  fighterIds,
+  firstId,
+  secondId,
+  thirdId
+}
 ```
 
-Cache key:
-- week
-- ranking version
-- country
-- track
-- weight
+`Render.renderNewsTab` renders profile buttons under the news text.
 
-Invalidation happens when:
-- week changes
-- fighter records change
-- fighter moves country
-- player changes country
-- systems explicitly call `State.invalidateCaches(state)`
+## NPC growth
 
-Transient cache fields are never saved.
+NPCs grow from two sources:
 
-## Save schema
+1. Weekly training:
+   - deterministic light growth across the whole roster over time
+   - cheap modulo selection to avoid heavy full updates every week
 
-`Data.saveSchemaVersion = 214`.
+2. Fight result:
+   - winner gains more
+   - loser gains less
+   - draw gives both small development
 
-Storage now has:
-- `cleanTransientFields(state)`
-- `ensureWorldShape(state)`
-- stricter fighter repair fields
-- migration report support
+## Matchmaking
 
-Transient fields excluded from save:
-- `_rankingCache`
-- `_worldIndexes`
-- `_lastRepairVersion`
-- `_lastRepairWeek`
-- `_fullRepairDone`
-- `_migrationReport`
+Player offers now prefer ranking neighborhood over raw OVR.
 
-## Fast repair path
+Low amateur ranks:
+- local country/local pool only
 
-`State.repairState(state)` now stamps:
-- `_fullRepairDone`
-- `_lastRepairVersion`
-- `_lastRepairWeek`
+International amateur opponents:
+- only from `МС` and `МСМК`
 
-If the state was already repaired for the current version/week, render does not loop the whole roster again.
+## Fatigue and progression
 
-## Titles performance
+- Training: +3 characteristic points, +20 fatigue
+- Fight win: +25 fatigue
+- Fight loss: +40 fatigue
+- Fatigue caps at 94
+- Next week action counts as recovery
 
-`Titles.updateTitles(state)` no longer calls full rankings for every title.
+## Autonomous tournaments
 
-Instead it builds title candidates in one pass:
-- pro title key: `pro|world|weight`
-- street title key: `street|country|`
+`World.simulateAutonomousTournaments(state)` runs scheduled amateur tournaments for NPCs.
 
-This keeps champion logic alive while avoiding repeated full ranking scans.
+It awards:
+- gold / silver / bronze
+- city / oblast / region / country
+- continent / world / olympiad
 
-## News pipeline
+NPC awards are stored through `State.addFighterAward(...)`.
 
-Allowed news categories:
-- `club`
-- `team`
-- `tournament`
-- `medal`
-- `champion`
-- `migration`
+## National teams
 
-Migration news is intentionally short:
-- `Иностранец приехал: Name · Origin → Country.`
-- `Соотечественник уехал: Name · From → Country.`
+National teams are now selected by OVR:
+- top 2 per weight -> main team
+- next 8 per weight -> reserve
+- player enters automatically if OVR is high enough
+
+## Titles
+
+Title history now supports:
+- active titles
+- past titles with from/to weeks
+
+`Titles.fighterTitleHistory(state, fighterId)` returns both.

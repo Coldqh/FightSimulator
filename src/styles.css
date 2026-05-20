@@ -1791,3 +1791,32 @@ button, input, select { max-width: 100%; }
     gap: 0.18em;
   }
 }
+
+
+/* 2.2.0 career systems UI */
+.news-row-card {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+
+.news-row-card:last-child {
+  border-bottom: 0;
+}
+
+.news-profile-row {
+  margin-top: 6px;
+  gap: 6px;
+}
+
+.pill.green {
+  border-color: rgba(63, 185, 80, .45);
+  color: #7ee787;
+  background: rgba(46, 160, 67, .14);
+}
+
+@media (max-width: 720px) {
+  .news-profile-row {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}

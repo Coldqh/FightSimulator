@@ -137,7 +137,7 @@
 
     oldVersion = state.version || "";
     state.version = Data.appVersion;
-    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 214);
+    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 220);
     state.week = Math.max(1, Number(state.week) || 1);
     state.selectedTab = state.selectedTab || "dashboard";
     state.rankingCountryId = state.rankingCountryId || "russia";
@@ -205,7 +205,7 @@
         return;
       }
       state.version = Data.appVersion;
-      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 214;
+      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 220;
       safe = cleanTransientFields(state);
       localStorage.setItem(Data.saveKey, JSON.stringify(safe));
     } catch (error) {

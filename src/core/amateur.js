@@ -29,25 +29,26 @@
   }
 
   function scheduleText(comp) {
-    if (comp.schedule === "city") { return "каждый месяц, 2 неделя"; }
-    if (comp.schedule === "oblast") { return "февраль, май, август, ноябрь · 3 неделя"; }
-    if (comp.schedule === "region") { return "март, июль, ноябрь · 4 неделя"; }
-    if (comp.schedule === "country") { return "март, 2 неделя и сентябрь, 2 неделя"; }
-    if (comp.schedule === "continent") { return "июнь, 2 неделя"; }
-    if (comp.schedule === "world") { return "октябрь, 2 неделя"; }
-    if (comp.schedule === "olympiad") { return "каждый 4-й год, июль, 2 неделя"; }
+    if (comp.schedule === "city") { return "12 раз в год"; }
+    if (comp.schedule === "oblast") { return "8 раз в год"; }
+    if (comp.schedule === "region") { return "6 раз в год"; }
+    if (comp.schedule === "country") { return "4 раза в год"; }
+    if (comp.schedule === "continent") { return "2 раза в год"; }
+    if (comp.schedule === "world") { return "1 раз в год"; }
+    if (comp.schedule === "olympiad") { return "1 раз в 2 года"; }
     return "по расписанию";
   }
 
   function isScheduledNow(state, comp) {
-    var parts = State.dateParts ? State.dateParts(state) : { year: 1, month: 1, weekOfMonth: 1 };
-    if (comp.schedule === "city") { return parts.weekOfMonth === 2; }
-    if (comp.schedule === "oblast") { return [2, 5, 8, 11].indexOf(parts.month) !== -1 && parts.weekOfMonth === 3; }
-    if (comp.schedule === "region") { return [3, 7, 11].indexOf(parts.month) !== -1 && parts.weekOfMonth === 4; }
-    if (comp.schedule === "country") { return (parts.month === 3 || parts.month === 9) && parts.weekOfMonth === 2; }
-    if (comp.schedule === "continent") { return parts.month === 6 && parts.weekOfMonth === 2; }
-    if (comp.schedule === "world") { return parts.month === 10 && parts.weekOfMonth === 2; }
-    if (comp.schedule === "olympiad") { return parts.year % 4 === 0 && parts.month === 7 && parts.weekOfMonth === 2; }
+    var w = Math.max(1, Number(state.week) || 1);
+    var idx = (w - 1) % 96;
+    if (comp.schedule === "city") { return idx % 4 === 1; }       /* 12 раз в год */
+    if (comp.schedule === "oblast") { return idx % 6 === 2; }     /* 8 раз в год */
+    if (comp.schedule === "region") { return idx % 8 === 3; }     /* 6 раз в год */
+    if (comp.schedule === "country") { return idx % 12 === 5; }   /* 4 раза в год */
+    if (comp.schedule === "continent") { return idx % 24 === 9; } /* 2 раза в год */
+    if (comp.schedule === "world") { return idx % 48 === 13; }    /* 1 раз в год */
+    if (comp.schedule === "olympiad") { return idx % 96 === 25; } /* 1 раз в 2 года */
     return false;
   }
 
@@ -456,7 +457,7 @@
       opponentRecord: U.recordText(opponent.record),
       opponentRating: U.statAverage(opponent.stats),
       playerRating: U.statAverage(p.stats),
-      winChance: chanceFor(p, opponent),
+      winChance: window.FS.Fight && window.FS.Fight.estimateWinChance ? window.FS.Fight.estimateWinChance(p, opponent) : chanceFor(p, opponent),
       alive: summarizeAlive(state, session),
       session: session
     };
@@ -521,10 +522,12 @@
 
   function awardPlacement(state, comp, place, result) {
     var p = State.player(state);
-    var awardLabel = comp.awardLabel + " · " + place;
+    var medal = place === "1 место" ? "gold" : (place === "2 место" ? "silver" : (place === "3 место" ? "bronze" : ""));
+    var prefix = place === "1 место" ? "Победитель" : (place === "2 место" ? "Серебро" : (place === "3 место" ? "Бронза" : "Участник"));
+    var awardLabel = prefix + " · " + comp.label;
     var moneyReward = tournamentMoneyReward(comp, place);
-    var already = state.amateurPath.medals.some(function (medal) {
-      return medal.competitionId === comp.id && medal.place === place && medal.week === state.week;
+    var already = state.amateurPath.medals.some(function (medalItem) {
+      return medalItem.competitionId === comp.id && medalItem.place === place && medalItem.week === state.week;
     });
 
     if (already) { return; }
@@ -540,31 +543,16 @@
       awardLabel: awardLabel,
       place: place,
       result: result,
+      medal: medal,
       moneyReward: moneyReward
     });
 
-    if (state.amateurPath.medals.length > 30) {
-      state.amateurPath.medals.length = 30;
+    if (state.amateurPath.medals.length > 40) {
+      state.amateurPath.medals.length = 40;
     }
 
     if (State.addFighterAward) {
-      State.addFighterAward(state, p, awardLabel, "amateur");
-    }
-
-    if (comp.id === "country" && ["1 место", "2 место", "3 место"].indexOf(place) !== -1) {
-      var teamKey = p.countryId + "|" + p.weightClassId;
-      var reservePool = State.ranking(state, p.countryId, "amateur", p.weightClassId).filter(function (fighter) {
-        return !fighter.isPlayer && !fighter.retired;
-      }).slice(10, 13).map(function (fighter) { return fighter.id; });
-
-      state.world.nationalTeamQualification[teamKey] = {
-        fighterId: p.id,
-        countryId: p.countryId,
-        weightClassId: p.weightClassId,
-        place: place,
-        week: state.week
-      };
-      state.world.reserveAdditions[teamKey] = reservePool;
+      State.addFighterAward(state, p, awardLabel, "amateur", { medal: medal, competitionId: comp.id, place: place });
     }
 
     if (p && p.careerLog) {
@@ -614,7 +602,9 @@
       opponentName: opponent.name,
       opponentRating: U.statAverage(opponent.stats),
       winChance: chance,
-      result: result
+      result: result,
+      method: method,
+      scoreLine: scoreLine
     });
 
     isFinal = session.specialRound === "third" || session.roundIndex >= session.rounds.length - 1;

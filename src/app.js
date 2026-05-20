@@ -398,6 +398,9 @@
         clubId: button.dataset.club
       };
       saveAndRender();
+    } else if (button.dataset.pathRankInfo) {
+      state.modal = { type: "pathRankInfo", trackId: button.dataset.pathRankInfo };
+      saveAndRender();
     } else if (button.dataset.fighter) {
       state.modal = {
         type: "fighter",

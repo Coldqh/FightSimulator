@@ -1,71 +1,39 @@
-# System Flow 2.1.4
+# System Flow 2.2.0
 
-## Career start
+## Weekly tick additions
 
-1. Player chooses archetype.
-2. `State.createCareer(...)` creates player and world state.
-3. `World.bootstrapWorld(state)` creates:
-   - clubs
-   - titles
-   - national teams
-   - fight offers
-   - pro contracts when relevant
-4. Save is written through `Storage.save(state)`.
+After national teams are rebuilt:
 
-## Render
+1. Autonomous tournaments run.
+2. NPC medal awards are written.
+3. Relevant tournament news can be created.
+4. Titles update.
+5. Pro fight due check happens before new contracts are generated.
 
-1. `State.repairState(state)` runs.
-2. Fast path skips full roster repair if the same version/week was already repaired.
-3. Normal offers are refreshed only when missing.
-4. `Render.dashboard(state)` draws UI.
+## Fight skip
 
-## Weekly tick
+Skipped fight now:
+1. calculates winChance
+2. rolls result
+3. rolls KO/TKO with track-specific KO profile
+4. writes round score / KO round
+5. hides punch log
+6. applies fatigue and XP
+7. writes opponent career log
 
-`World.advanceWeek(state, action)`:
+## National team selection
 
-1. Increase week.
-2. Invalidate ranking cache.
-3. Apply expenses/rest/recovery.
-4. Ensure clubs.
-5. Handle retirements/new fighters.
-6. Run NPC training.
-7. Run NPC fights.
-8. Run transitions.
-9. Run club moves.
-10. Run international moves.
-11. Run coach life.
-12. Build national teams.
-13. Update titles.
-14. Simulate stories.
-15. Refresh player offers.
-16. Build pro contracts.
-17. Check debt.
-18. Push valid news.
-19. Handle tournament and pro fight notifications.
+On rebuild:
+1. all amateur fighters are bucketed by home country + weight
+2. buckets are sorted by OVR
+3. top 2 are main
+4. next 8 are reserve
+5. player is included automatically if OVR qualifies
 
-## Fight result
+## Automatic pro transition
 
-Player fight:
-1. Apply record changes.
-2. Update track records.
-3. Update derived ratings.
-4. Update club record.
-5. Invalidate ranking cache.
-6. Apply economy/fatigue.
-7. Update titles when needed.
-
-NPC fight:
-1. Resolve winner/draw.
-2. Update records.
-3. Cap career log to recent entries.
-4. Update derived ratings.
-5. Update club record.
-6. Invalidate ranking cache.
-
-## Migration news
-
-When an NPC changes country:
-- if a foreign fighter arrives in player's current country: news
-- if player's compatriot leaves to another country: news
-
-Text stays short and factual.
+If amateur player reaches OVR 121:
+1. track changes to pro
+2. career log records automatic transition
+3. ranking cache invalidates
+4. selected tab switches to pro

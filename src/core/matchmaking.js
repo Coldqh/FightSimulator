@@ -175,7 +175,7 @@
   function localOpponentCountryIds(player) {
     var home = U.findCountry(player.countryId);
     var rank = window.FS.State && window.FS.State.rankForFighter ? window.FS.State.rankForFighter(player).id : "";
-    var usePool = player.trackId === "street" || (player.trackId === "amateur" && rank !== "kms" && rank !== "ms" && rank !== "msmk");
+    var usePool = player.trackId === "street" || (player.trackId === "amateur" && rank !== "ms" && rank !== "msmk");
     if (!usePool) { return null; }
     if (home.localPoolId && home.localPoolId !== home.id) {
       return Data.countries.filter(function (country) { return country.localPoolId === home.localPoolId; }).map(function (country) { return country.id; });
@@ -183,55 +183,63 @@
     return [home.id];
   }
 
+  function rankingWindowCandidates(state, player, localCountries, used) {
+    var rankingCountry = player.trackId === "pro" ? "world" : (localCountries && localCountries.length === 1 ? localCountries[0] : player.countryId);
+    var rankingWeight = player.trackId === "street" ? "" : player.weightClassId;
+    var list = State.ranking(state, rankingCountry, player.trackId, rankingWeight).filter(function (fighter) {
+      return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
+        (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
+        (!localCountries || localCountries.indexOf(fighter.countryId) !== -1);
+    });
+    var playerPos = State.playerRank ? State.playerRank(state, rankingCountry, player.trackId, rankingWeight) : 0;
+    var center = Math.max(0, (playerPos || Math.floor(list.length / 2)) - 1);
+    var radius = 8;
+    var sliced = list.slice(Math.max(0, center - radius), Math.min(list.length, center + radius + 1));
+    return sliced.length ? sliced : list.slice(0, 24);
+  }
+
   function findOpponent(state, difficultyId, slotIndex, usedIds) {
     var player = State.player(state);
     var playerOvr = U.statAverage(player.stats);
     var used = usedIds || {};
     var playerRank = player.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(player) : null;
-    var internationalAmateur = player.trackId === "amateur" && ["kms", "ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
+    var internationalAmateur = player.trackId === "amateur" && ["ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
     var localCountries = localOpponentCountryIds(player);
     var candidates;
     var selected;
     var offset;
     window.FS.__currentStateWeek = state.week;
 
-    candidates = state.roster.filter(function (fighter) {
-      var fRank = fighter.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(fighter) : null;
-      var ovr = U.statAverage(fighter.stats);
-      return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
-        (player.trackId === "pro" || internationalAmateur || !localCountries || localCountries.indexOf(fighter.countryId) !== -1) &&
-        fighter.trackId === player.trackId &&
-        (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
-        (!internationalAmateur || ["kms", "ms", "msmk"].indexOf(fRank ? fRank.id : "") !== -1) &&
-        ovr >= playerOvr - 10 && ovr <= playerOvr + 10;
-    });
+    candidates = rankingWindowCandidates(state, player, localCountries, used);
 
     if (!candidates.length) {
       candidates = state.roster.filter(function (fighter) {
+        var fRank = fighter.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(fighter) : null;
         return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
-          (player.trackId === "pro" || !localCountries || localCountries.indexOf(fighter.countryId) !== -1) &&
+          (player.trackId === "pro" || internationalAmateur || !localCountries || localCountries.indexOf(fighter.countryId) !== -1) &&
           fighter.trackId === player.trackId &&
-          (player.trackId === "street" || fighter.weightClassId === player.weightClassId);
+          (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
+          (!internationalAmateur || ["ms", "msmk"].indexOf(fRank ? fRank.id : "") !== -1);
       });
     }
 
     candidates.sort(function (left, right) {
-      var leftScore = Math.abs(U.statAverage(left.stats) - playerOvr) * 1.2 + recordSimilarityPenalty(player, left);
-      var rightScore = Math.abs(U.statAverage(right.stats) - playerOvr) * 1.2 + recordSimilarityPenalty(player, right);
+      var leftRankPenalty = Math.abs(recordTotal(player) - recordTotal(left)) * 0.25;
+      var rightRankPenalty = Math.abs(recordTotal(player) - recordTotal(right)) * 0.25;
+      var leftScore = leftRankPenalty + Math.abs(U.statAverage(left.stats) - playerOvr) * 0.32 + recordSimilarityPenalty(player, left) * 0.55;
+      var rightScore = rightRankPenalty + Math.abs(U.statAverage(right.stats) - playerOvr) * 0.32 + recordSimilarityPenalty(player, right) * 0.55;
       return leftScore - rightScore;
     });
 
     offset = candidates.length ? ((Number(state.offerRefreshSalt) || 0) * 11 + slotIndex * 5) % candidates.length : 0;
-    selected = candidates[offset] || candidates[slotIndex] || candidates[0] || null;
+    selected = candidates[offset] || candidates[0];
 
     if (!selected) {
-      selected = State.createFighter(player.countryId, player.trackId, 12000 + state.week * 20 + slotIndex + (state.offerRefreshSalt || 0) * 1000, playerOvr + U.randomInt(-10, 10), {
-        weightClassId: player.trackId === "street" ? "" : player.weightClassId,
+      selected = State.createFighter(player.countryId, player.trackId, 9000 + state.week * 10 + slotIndex, playerOvr + U.randomInt(-4, 4), {
+        weightClassId: player.weightClassId,
         gymId: player.gymId
       });
-      normalizeRecordForFighter(selected);
       state.roster.push(selected);
-      if (window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
     }
 
     used[selected.id] = true;

@@ -34,8 +34,11 @@
   function estimateWinChance(player, opponent) {
     var playerScore = U.statAverage(player.stats) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
     var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
-    var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 7);
-    return U.clamp(50 + Math.round((playerScore - opponentScore) * 2.55) - fatiguePenalty, 8, 90);
+    var diff = playerScore - opponentScore;
+    var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 8);
+    var underdogHelp = diff < 0 ? Math.min(8, Math.round(Math.abs(diff) * 0.22)) : 0;
+    var favoriteHelp = diff > 0 ? Math.min(6, Math.round(diff * 0.15)) : 0;
+    return U.clamp(54 + Math.round(diff * 2.25) + underdogHelp + favoriteHelp - fatiguePenalty, 12, 94);
   }
 
   function computePurse(player, opponent) {
@@ -599,22 +602,29 @@
   }
 
   function applyFightResult(state, p, opponent, result, method) {
+    var oppLine;
     if (result === "Ничья") {
       p.record.draws += 1;
       opponent.record.draws += 1;
+      oppLine = "Ничья с " + p.name + " решением.";
     } else if (result === "Победа") {
       p.record.wins += 1;
       opponent.record.losses += 1;
       if (method === "KO/TKO") { p.record.kos += 1; }
+      oppLine = "Поражение от " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     } else {
       p.record.losses += 1;
       opponent.record.wins += 1;
       if (method === "KO/TKO") { opponent.record.kos += 1; }
+      oppLine = "Победа над " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     }
     if (p.trackRecords) { p.trackRecords[p.trackId] = window.FS.State.cloneRecord(p.record); }
     if (opponent.trackRecords) { opponent.trackRecords[opponent.trackId] = window.FS.State.cloneRecord(opponent.record); }
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
+    opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
+    opponent.careerLog.unshift({ week: state.week, text: oppLine });
+    if (opponent.careerLog.length > 8) { opponent.careerLog.length = 8; }
     p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
     opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
     p.recentOpponentIds.unshift(opponent.id); opponent.recentOpponentIds.unshift(p.id);
@@ -630,10 +640,12 @@
   function completeFightEconomy(state, p, opponent, result, purse, fatigue) {
     var pointMod = 1;
     var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
+    var gained;
     if (club) { pointMod = Number(club.trainingModifier) || 1; }
-    p.trainingPoints = (Number(p.trainingPoints) || 0) + Math.max(1, Math.round((result === "Победа" ? 4 : (result === "Ничья" ? 2 : 1)) * pointMod));
+    gained = result === "Победа" ? 7 : (result === "Ничья" ? 4 : 3);
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + Math.max(1, Math.round(gained * pointMod));
     if (State.addMoney) { State.addMoney(state, purse, "Гонорар за бой"); } else { p.money = (Number(p.money) || 0) + purse; }
-    if (State.adjustFatigue) { State.adjustFatigue(state, fatigue, "Бой"); }
+    if (State.adjustFatigue) { State.adjustFatigue(state, typeof fatigue === "number" ? fatigue : (result === "Победа" ? 25 : 40), "Бой"); }
     if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id); }
   }
 
@@ -780,6 +792,24 @@
     };
   }
 
+  function autoKoChance(fighter, opponent) {
+    var track = fighter.trackId || "amateur";
+    var powerEdge = U.clamp((Number(fighter.stats.power) || 0) - (Number(opponent.stats.defense || opponent.stats.health || 0) || 0), -60, 80);
+    var base;
+    if (track === "street") { base = 50 + U.randomInt(0, 25); }
+    else if (track === "pro") { base = 34 + U.randomInt(0, 22); }
+    else { base = 8 + U.randomInt(0, 16); }
+    return U.clamp(Math.round(base + powerEdge * 0.18), track === "amateur" ? 6 : 18, track === "street" ? 90 : (track === "pro" ? 80 : 30));
+  }
+
+  function autoDecisionScore(result, rounds) {
+    var r = rounds || 3;
+    if (result === "Ничья") { return Math.floor(r / 2) + ":" + Math.floor(r / 2); }
+    if (r <= 3) { return result === "Победа" ? "2:1" : "1:2"; }
+    if (r <= 8) { return result === "Победа" ? U.randomInt(Math.ceil(r/2)+1, r) + ":" + U.randomInt(0, Math.floor(r/2)) : U.randomInt(0, Math.floor(r/2)) + ":" + U.randomInt(Math.ceil(r/2)+1, r); }
+    return result === "Победа" ? "116:112" : "112:116";
+  }
+
   function resolveRandomFight(state, offerId) {
     var offer = findOffer(state, offerId);
     var p = State.player(state);
@@ -788,19 +818,25 @@
     var result;
     var method;
     var purse;
+    var koChance;
+    var scoreLine;
+    var rounds;
     if (!offer || !p) { return false; }
-    if (p.fatigue >= 100) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
+    if (p.fatigue >= 94) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
     opponent = U.getFighterById(state, offer.opponentId);
     if (!opponent) { return false; }
     chance = estimateWinChance(p, opponent);
     result = U.randomInt(1, 100) <= chance ? "Победа" : "Поражение";
-    method = U.randomInt(1, 100) <= 18 ? "KO/TKO" : "решение судей";
+    koChance = result === "Победа" ? autoKoChance(p, opponent) : autoKoChance(opponent, p);
+    method = U.randomInt(1, 100) <= koChance ? "KO/TKO" : "решение судей";
+    rounds = offer.rounds || U.findTrack(p.trackId).rounds;
+    scoreLine = method === "KO/TKO" ? ("KO/TKO, раунд " + U.randomInt(1, Math.max(1, rounds))) : ("решение " + autoDecisionScore(result, rounds));
     purse = computePurse(p, opponent);
     applyFightResult(state, p, opponent, result, method);
-    completeFightEconomy(state, p, opponent, result, purse, Math.round((Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18) * 0.75));
+    completeFightEconomy(state, p, opponent, result, purse, result === "Победа" ? 25 : 40);
     state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
     World.advanceWeek(state, "fight");
-    state.modal = { type: "fightResult", result: result, method: method, scoreLine: "бой пропущен · шанс " + chance + "%", opponentName: opponent.name, week: state.week, playerRating: U.statAverage(p.stats), opponentRating: U.statAverage(opponent.stats), purse: purse, winChance: chance, roundLog: ["Бой пропущен. Результат решён через winChance: " + chance + "% ."], knockdown: null, statsLine: "Бой решён автоматически." };
+    state.modal = { type: "fightResult", result: result, method: method, scoreLine: scoreLine + " · шанс " + chance + "%", opponentName: opponent.name, week: state.week, playerRating: U.statAverage(p.stats), opponentRating: U.statAverage(opponent.stats), purse: purse, winChance: chance, roundLog: [], knockdown: method === "KO/TKO" ? { round: 1, by: result === "Победа" ? "player" : "opponent" } : null, statsLine: "Бой решён автоматически." };
     return true;
   }
 

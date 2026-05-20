@@ -1,57 +1,36 @@
-# Technical Audit 2.1.x
+# Technical Audit 2.2.0
 
-## Fixed / improved
+## Touched systems
 
-### Ranking
-Before:
-- repeated full roster filtering/sorting across render, titles and player rank checks
+- `State`
+- `World`
+- `Fight`
+- `Amateur`
+- `Matchmaking`
+- `Titles`
+- `Render`
+- `App`
 
-Now:
-- cache by week/version/filter
-- explicit invalidation
-- no cache in save
+## Main risks handled
 
-### Save stability
-Before:
-- new fields could rely too heavily on scattered repair code
-- transient fields risked leaking into saved JSON
+### News profile links
 
-Now:
-- schema version
-- central world shape repair
-- transient save cleaning
-- migration report
+Uses metadata IDs instead of parsing names from text.
+This keeps text short and avoids fragile string matching.
 
-### Repair cost
-Before:
-- render could repair every fighter every render
+### Tournament chance mismatch
 
-Now:
-- repair is stamped by version/week
-- same-week re-render returns fast
+Tournament preview now uses the same `Fight.estimateWinChance(...)` as resolution.
 
-### Titles
-Before:
-- `updateTitles` called `State.ranking` for every title
+### NPC history
 
-Now:
-- one-pass title candidate map
-- champion changes still happen
-- relevant champion changes can enter news
+Player fights are written into opponent career logs.
 
-### News
-Before:
-- news categories were too narrow for migration events
+### Title history
 
-Now:
-- migration category added
-- migration text is short and factual
-- no long generic descriptions
+Old champions receive `pastTitles` entries during title transfer.
 
-## Still worth profiling next
+### Performance
 
-- `Matchmaking.buildPlayerOffers`
-- `Render.dashboard` large modal/list sections
-- `Amateur.availableCompetitions`
-- long save JSON size after 5+ in-game years
-- exact title-change history size
+Autonomous tournaments use country/weight buckets.
+Weekly benchmark stayed fast on 27k fighters.

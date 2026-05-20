@@ -1,43 +1,27 @@
-# Roadmap after 2.1.4
+# Roadmap after 2.2.0
 
-## 2.1.5 — offer cache and matchmaking speed
+## 2.2.1 — autonomous tournament depth
 
-Goal:
-- make fight offer refresh cheaper
+- store tournament history tables
+- show past winners by country/tournament
+- add filters in fighter awards
+- show medal counts in national team cards
 
-Plan:
-- cache candidate pools by track/country/weight
+## 2.2.2 — ranking movement
+
+- show arrows up/down/new
+- store last rank snapshot
+- add profile fields: best rank, current rank, rank delta
+
+## 2.2.3 — offer cache
+
+- cache rank-neighborhood candidates
 - rebuild only after fight/move/week
-- avoid repeated full roster scans for 10 offers
+- reduce offer refresh cost further
 
-## 2.1.6 — save size and long-career stability
+## 2.3.0 — fight engine polish
 
-Goal:
-- keep 10-year careers light
-
-Plan:
-- cap old transition logs
-- cap title histories
-- cap old finance logs
-- add save size warning in debug docs
-
-## 2.1.7 — news filters UI
-
-Goal:
-- make news tab easier to read
-
-Plan:
-- filters: all, club, team, tournament, champion, migration
-- keep texts short
-- no generated filler
-
-## 2.2.0 — fight stabilization
-
-Goal:
-- make the turn-based ring the main gameplay system
-
-Plan:
-- tune stamina/HP/damage
-- improve NPC action choice
-- improve judges and round scoring
-- keep UI compact on phone
+- better judge scoring
+- better NPC action choices
+- more readable round cards
+- stable balance between amateur/pro/street

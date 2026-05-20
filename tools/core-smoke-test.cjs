@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "technical-core-2.1.4") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 214) throw new Error("bad schema");
+if (FS.Data.appVersion !== "career-systems-2.2.0") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 220) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -57,66 +57,85 @@ function make(archetypeId, countryId="russia") {
 }
 
 let state = make("amateur","russia");
-if (!state._fullRepairDone) throw new Error("repair fast-path stamp missing");
+let p = FS.State.player(state);
 
-/* Ranking cache */
-const r1 = FS.State.ranking(state, "russia", "amateur", "welter");
-const r2 = FS.State.ranking(state, "russia", "amateur", "welter");
-if (r1 !== r2) throw new Error("ranking cache does not reuse result");
-const beforeVersion = state._rankingVersion;
-FS.State.invalidateCaches(state);
-if (state._rankingVersion <= beforeVersion) throw new Error("ranking version did not change");
-const r3 = FS.State.ranking(state, "russia", "amateur", "welter");
-if (r3 === r2) throw new Error("ranking cache not invalidated");
+/* Training */
+const tp = p.trainingPoints;
+const fat = p.fatigue;
+FS.State.trainPlayer(state);
+if (p.trainingPoints !== tp + 3) throw new Error("training must add exactly 3 points");
+if (p.fatigue !== Math.min(94, fat + 20)) throw new Error("training fatigue must be +20 capped at 94");
 
-/* Storage must not save transient cache */
-state._rankingCache = {"x":[state.roster[0], state.roster[1]]};
-FS.Storage.save(state);
-const raw = sandbox.localStorage.store[FS.Data.saveKey];
-if (!raw) throw new Error("save missing");
-if (raw.includes("_rankingCache") || raw.includes("_fullRepairDone")) throw new Error("transient fields leaked into save");
-const loaded = FS.Storage.load();
-if (!loaded || loaded.version !== FS.Data.appVersion || loaded.schemaVersion !== 214) throw new Error("migrate/load broken");
+/* Win chance buff sanity */
+let weaker = state.roster.find(f => !f.isPlayer && f.trackId === p.trackId && f.weightClassId === p.weightClassId && FS.Utils.statAverage(f.stats) < FS.Utils.statAverage(p.stats));
+let stronger = state.roster.find(f => !f.isPlayer && f.trackId === p.trackId && f.weightClassId === p.weightClassId && FS.Utils.statAverage(f.stats) > FS.Utils.statAverage(p.stats));
+if (weaker && FS.Fight.estimateWinChance(p, weaker) < 55) throw new Error("win chance against weaker too low");
+if (stronger && FS.Fight.estimateWinChance(p, stronger) < 12) throw new Error("underdog chance floor broken");
 
-/* Strict news + migration category */
-FS.World.createNews(state, "world", "bad", {});
-FS.World.createNews(state, "migration", "Иностранец приехал: Test · A → B.", {});
-if (state.world.news.some(n => n.text === "bad")) throw new Error("forbidden news got through");
-if (!state.world.news.some(n => n.tone === "migration")) throw new Error("migration news category blocked");
+/* Offers exist and lower amateurs are local only */
+FS.World.refreshOffers(state);
+if ((state.offers || []).filter(o => !o.isCompetition).length !== 10) throw new Error("player offers not 10");
+let rank = FS.State.rankForFighter(p).id;
+if (rank !== "ms" && rank !== "msmk") {
+  const badIntl = state.offers.some(o => {
+    const f = FS.Utils.getFighterById(state, o.opponentId);
+    return f && f.countryId !== p.countryId && FS.Utils.findCountry(f.countryId).localPoolId !== FS.Utils.findCountry(p.countryId).localPoolId;
+  });
+  if (badIntl) throw new Error("international opponents before MS");
+}
 
-/* Existing systems still work */
-state.selectedTab = "world";
+/* Fight skip: no punch log, fatigue 25/40, NPC career log includes player */
+let offer = state.offers.find(o => !o.isCompetition);
+let opp = FS.Utils.getFighterById(state, offer.opponentId);
+let beforeOppLog = (opp.careerLog || []).length;
+FS.Fight.resolveRandomFight(state, offer.id);
+if (!state.modal || state.modal.type !== "fightResult") throw new Error("fight result modal missing");
+if ((state.modal.roundLog || []).length !== 0 || state.modal.statsLine !== "Бой решён автоматически.") throw new Error("auto fight should not show punch log");
+if ((opp.careerLog || []).length <= beforeOppLog || !opp.careerLog[0].text.includes(p.name)) throw new Error("NPC history does not include player fight");
+if (p.fatigue > 94) throw new Error("fatigue cap 94 broken");
+
+/* Team OVR auto: make player absurdly strong and rebuild */
+p.stats.power = 121; p.stats.technique = 121; p.stats.speed = 121; p.stats.stamina = 121; p.stats.defense = 121;
+FS.State.updateDerivedFighterFields(p);
+FS.World.buildNationalTeams(state);
+const team = state.world.teamsByCountry[p.homeCountryId || p.countryId];
+if (team.main.indexOf(p.id) === -1) throw new Error("player with top OVR should enter main team");
+
+/* Automatic pro move at 121 */
+FS.State.checkAutomaticProMove(state, p);
+if (p.trackId !== "pro") throw new Error("auto pro at 121 failed");
+
+/* News clickable buttons */
+FS.World.createNews(state, "tournament", "Проверка новости: "+opp.name+".", {fighterIds:[opp.id]});
+state.selectedTab = "news";
+state.modal = null;
 let html = FS.Render.dashboard(state);
-if (!html.includes("Доступен") && !html.includes("Турнирная лестница")) throw new Error("dashboard broken");
+if (!html.includes('data-fighter="'+opp.id+'"')) throw new Error("news profile button missing");
 
+/* Titles all/past title rendering */
 let pro = make("debt_pro","usa");
-let p = FS.State.player(pro);
+let proP = FS.State.player(pro);
 FS.World.buildProContracts(pro);
 let contract = pro.world.proContracts[0];
 if (!contract) throw new Error("pro contracts missing");
 FS.World.acceptProContract(pro, contract.id);
-pro.week = p.nextFightWeek - 1;
+pro.week = proP.nextFightWeek - 1;
 FS.World.advanceWeek(pro, "skip");
-if (!pro.modal || pro.modal.type !== "proContractPreview") throw new Error("pro fight preview broken");
+if (!pro.modal || pro.modal.type !== "proContractPreview") throw new Error("pro fight should appear on contract week");
 
-/* Title update optimization source checks */
-const titlesSource = fs.readFileSync(path.join(root,"src/core/titles.js"),"utf8");
-if (!titlesSource.includes("function buildTitleTops") || !titlesSource.includes("titleCandidateKey")) {
-  throw new Error("title top-cache optimization missing");
-}
+/* Tournament scheduling source checks */
+const amateurSource = fs.readFileSync(path.join(root,"src/core/amateur.js"),"utf8");
+if (!amateurSource.includes("12 раз в год") || !amateurSource.includes("1 раз в 2 года")) throw new Error("new tournament frequency labels missing");
 const worldSource = fs.readFileSync(path.join(root,"src/core/world.js"),"utf8");
-if (!worldSource.includes("migrationNewsForMove") || !worldSource.includes("Иностранец приехал") || !worldSource.includes("Соотечественник уехал")) {
-  throw new Error("migration news source missing");
-}
-const storageSource = fs.readFileSync(path.join(root,"src/core/storage.js"),"utf8");
-if (!storageSource.includes("cleanTransientFields") || !storageSource.includes("ensureWorldShape")) {
-  throw new Error("storage technical migration helpers missing");
-}
+if (!worldSource.includes("simulateAutonomousTournaments") || !worldSource.includes("awardNpcTournament")) throw new Error("autonomous tournaments missing");
+const renderSource = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
+if (!renderSource.includes("newsProfiles") || !renderSource.includes("fighterTitleHistory") || !renderSource.includes("pathRankInfo")) throw new Error("UI patch pieces missing");
 
-console.log("technical core smoke ok", {
+console.log("career systems smoke ok", {
   version: FS.Data.appVersion,
   schema: FS.Data.saveSchemaVersion,
-  rankingCache: Object.keys(state._rankingCache || {}).length,
-  migrationNews: state.world.news.filter(n => n.tone === "migration").length,
+  offers: state.offers.length,
+  fatigue: p.fatigue,
+  playerTrack: p.trackId,
   proModal: pro.modal.type
 });

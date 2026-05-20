@@ -639,9 +639,9 @@
   function adjustFatigue(state, amount, reason) {
     var p = ensurePlayerSystems(state);
     if (!p) { return 0; }
-    p.fatigue = U.clamp(Math.round((Number(p.fatigue) || 0) + (Number(amount) || 0)), 0, 100);
+    p.fatigue = U.clamp(Math.round((Number(p.fatigue) || 0) + (Number(amount) || 0)), 0, 94);
     if (reason && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/100." });
+      p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/94." });
     }
     return p.fatigue;
   }
@@ -806,37 +806,42 @@
     return true;
   }
 
+  function checkAutomaticProMove(state, fighter) {
+    var target = fighter || player(state);
+    if (!target || target.trackId !== "amateur") { return false; }
+    if (U.statAverage(target.stats) >= 121) {
+      switchFighterTrack(state, target, "pro", "автоматический переход по OVR");
+      target.weightClassId = target.weightClassId || "welter";
+      if (target.isPlayer) {
+        state.selectedTab = "pro";
+        state.feed = "OVR 121. Автоматический переход в профессионалы.";
+        target.careerLog.unshift({ week: state.week, text: "Автоматический переход в профи при OVR 121." });
+      }
+      invalidateCaches(state);
+      return true;
+    }
+    return false;
+  }
+
   function trainPlayer(state, statKey) {
     var p = ensurePlayerSystems(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var cap;
-    var club;
-    var mod = 1;
-    var fatiguePenalty;
-    var eq;
-    var points;
-    var fatigueGain;
 
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
-    if (p.fatigue >= 100) {
-      state.feed = "Усталость 100/100. Можно только отдыхать.";
+    if (p.fatigue >= 94) {
+      state.feed = "Усталость 94/94. Можно только отдыхать.";
       state.modal = { type: "fatigueLock", fatigue: p.fatigue };
       return;
     }
 
     if (!statKey) {
-      club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
-      eq = equipmentSummary(state);
-      mod = club ? (Number(club.trainingModifier) || 1) : 1;
-      fatiguePenalty = p.fatigue >= 80 ? 0.55 : (p.fatigue >= 60 ? 0.75 : 1);
-      points = Math.max(1, Math.round(5 * mod * (1 + eq.trainingBonus) * fatiguePenalty));
-      fatigueGain = Math.max(5, (Data.economy && Data.economy.fatigue ? Data.economy.fatigue.trainingWeek : 12) - eq.fatigueReduction);
-      p.trainingPoints += points;
-      adjustFatigue(state, fatigueGain, "Тренировочная неделя");
-      p.careerLog.unshift({ week: state.week, text: "Тренировка: +" + points + " очков прокачки, усталость " + p.fatigue + "/100." });
-      state.feed = "Тренировка: +" + points + " очков. Усталость " + p.fatigue + "/100.";
+      p.trainingPoints += 3;
+      adjustFatigue(state, 20, "Тренировка");
+      p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/94." });
+      state.feed = "Тренировка: +3 очка характеристик. Усталость " + p.fatigue + "/94.";
       updateDebtStatus(state, "training");
       return;
     }
@@ -847,6 +852,8 @@
     p.trainingPoints -= 1;
     p.stats[statKey] = U.clamp(p.stats[statKey] + 1, 1, cap);
     updateDerivedFighterFields(p);
+    checkAutomaticProMove(state, p);
+    invalidateCaches(state);
     p.careerLog.unshift({ week: state.week, text: "Прокачка: +" + U.getStatLabel(statKey) + "." });
     state.feed = "Потрачено 1 очко. Улучшен навык: " + U.getStatLabel(statKey) + ".";
   }
@@ -880,16 +887,22 @@
     return result;
   }
 
-  function addFighterAward(state, fighter, awardLabel, source) {
+  function addFighterAward(state, fighter, awardLabel, source, meta) {
+    var data = meta || {};
     if (!fighter || !awardLabel) { return; }
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
 
-    if (!fighter.awards.some(function (award) { return award.label === awardLabel; })) {
-      fighter.awards.unshift({ id: U.uid("award"), week: state.week, label: awardLabel, source: source || "career" });
-    }
-
-    if (fighter.awards.length > 24) {
-      fighter.awards.length = 24;
+    if (!fighter.awards.some(function (award) { return award.label === awardLabel && award.source === (source || "award"); })) {
+      fighter.awards.unshift({
+        id: U.uid("award"),
+        week: state.week,
+        label: awardLabel,
+        source: source || "award",
+        medal: data.medal || "",
+        competitionId: data.competitionId || "",
+        place: data.place || ""
+      });
+      if (fighter.awards.length > 40) { fighter.awards.length = 40; }
     }
   }
 
@@ -1172,6 +1185,7 @@
     fatigueLockedModal: fatigueLockedModal,
     debtWeeksLeft: debtWeeksLeft,
     updateDebtStatus: updateDebtStatus,
-    invalidateCaches: invalidateCaches
+    invalidateCaches: invalidateCaches,
+    checkAutomaticProMove: checkAutomaticProMove
   };
 }());

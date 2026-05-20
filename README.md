@@ -1,19 +1,21 @@
 # Fight Simulator
 
-Version: `technical-core-2.1.4`
+Version: `career-systems-2.2.0`
 
-Technical core bundle for the 2.1.x line.
+Large career systems patch.
 
 Included:
-- 2.1.0 architecture audit documentation
-- 2.1.1 ranking cache and invalidation layer
-- 2.1.2 stricter news pipeline plus migration news
-- 2.1.3 save schema and migration hardening
-- 2.1.4 weekly performance pass
-
-Main gameplay change:
-- Short migration news can now appear:
-  - foreign fighter arrives in the player's country
-  - fighter from the player's home country leaves abroad
-
-No long AI-style descriptions. News remain short and factual.
+- clickable fighter profiles in news
+- NPC OVR growth over time and after fights
+- fight offers more based on ranking position
+- higher XP from fights
+- fatigue rebalance
+- next week as recovery
+- adjusted tournament calendar
+- autonomous country/continent/world/olympic tournament results for NPC
+- national teams by OVR
+- skipped fight score/KO logic
+- full award/title display
+- past title history
+- automatic pro move at OVR 121
+- path-rank info modal

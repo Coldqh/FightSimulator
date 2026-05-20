@@ -154,9 +154,20 @@
 
     if (oldChampion) {
       oldChampion.titles = oldChampion.titles.filter(function (id) { return id !== title.id; });
+      oldChampion.pastTitles = oldChampion.pastTitles instanceof Array ? oldChampion.pastTitles : [];
+      oldChampion.pastTitles.unshift({
+        titleId: title.id,
+        label: title.label,
+        bodyId: title.bodyId || "",
+        weightClassId: title.weightClassId || "",
+        fromWeek: title.currentChampionFromWeek || (title.history[0] ? title.history[0].week : state.week),
+        toWeek: state.week
+      });
+      if (oldChampion.pastTitles.length > 30) { oldChampion.pastTitles.length = 30; }
     }
 
     title.championId = newChampion.id;
+    title.currentChampionFromWeek = state.week;
     title.defenses = 0;
     title.history.unshift({ week: state.week, fighterId: newChampion.id, text: text || (newChampion.name + " забрал титул: " + title.label) });
     if (window.FS.World && window.FS.World.createNews) {
@@ -295,6 +306,22 @@
     return result;
   }
 
+  function fighterTitleHistory(state, fighterId) {
+    var fighter = U.getFighterById(state, fighterId);
+    var active = fighterTitles(state, fighterId).map(function (title) {
+      return {
+        active: true,
+        label: title.label,
+        bodyId: title.bodyId || "",
+        weightClassId: title.weightClassId || "",
+        fromWeek: title.currentChampionFromWeek || (title.history && title.history[0] ? title.history[0].week : 0),
+        toWeek: 0
+      };
+    });
+    var past = fighter && fighter.pastTitles instanceof Array ? fighter.pastTitles : [];
+    return active.concat(past);
+  }
+
   function titleCrownText(state, fighter) {
     var titles = fighterTitles(state, fighter.id);
     if (!titles.length) { return ""; }
@@ -313,6 +340,7 @@
     listVisibleTitles: listVisibleTitles,
     normalizeFighterTitles: normalizeFighterTitles,
     removeAmateurTitles: removeAmateurTitles,
-    titleCrownText: titleCrownText
+    titleCrownText: titleCrownText,
+    fighterTitleHistory: fighterTitleHistory
   };
 }());

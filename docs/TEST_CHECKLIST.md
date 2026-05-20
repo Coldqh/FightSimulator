@@ -1,4 +1,4 @@
-# Test Checklist 2.1.4
+# Test Checklist 2.2.0
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -8,11 +8,17 @@ start index.html
 ```
 
 Manual:
-1. Old save loads without breaking.
-2. Version shows `technical-core-2.1.4`.
-3. Rankings still open.
-4. Fight result updates ranking after win/loss.
-5. News tab can show short migration news.
-6. Week switch should feel at least as fast as 2.0.4.
-7. Pro contract preview still appears on fight week.
-8. No huge duplicate data appears in exported save.
+1. News has buttons opening fighter profiles.
+2. Training gives exactly 3 characteristic points.
+3. Training gives 20 fatigue.
+4. Fatigue does not rise above 94.
+5. Skipped fight result shows score/KO info and no punch log.
+6. NPC profile history includes fights against the player.
+7. Team roster/reserve shows player with green `Ты`.
+8. Player with OVR 121 moves to pro.
+9. Fighter profile shows both awards and titles.
+10. Past pro/street titles show received/lost week range.
+11. Amateur awards use gold/silver/bronze medals.
+12. International amateur fight offers appear only from MS/MSMK.
+13. Tournament preview chance matches result chance.
+14. Pro fight appears on the contract week.
