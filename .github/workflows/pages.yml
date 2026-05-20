@@ -1,19 +1,15 @@
 name: Deploy Fight World to GitHub Pages
-
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: fight-world-pages
   cancel-in-progress: true
-
 jobs:
   deploy:
     environment:

@@ -1,7 +1,5 @@
 {
-  "version": "update-button-hard-reset-2.3.7",
-  "mode": "update-button-hard-reset",
-  "cacheVersion": "fight-simulator-update-button-hard-reset-2.3.7",
-  "resetPage": "reset-cache.html",
-  "localCleanPort": 5187
+  "version": "gameplay-update-fix-2.3.8",
+  "mode": "gameplay-update-fix",
+  "cacheVersion": "fight-simulator-gameplay-update-fix-2.3.8"
 }

@@ -190,32 +190,41 @@
   }
 
   function applyUpdateNow() {
-    var registration = pendingUpdateRegistration;
     updateReloading = true;
     persistNow();
 
-    if (registration && registration.waiting) {
-      registration.waiting.postMessage({ type: "SKIP_WAITING" });
-      window.setTimeout(function () { window.location.reload(); }, 1200);
-      return;
+    function hardReload() {
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.3.7&t=" + Date.now());
     }
 
-    if (registration && registration.update) {
-      registration.update().then(function (updatedRegistration) {
-        var activeRegistration = updatedRegistration || registration;
-        if (activeRegistration.waiting) {
-          activeRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
-          window.setTimeout(function () { window.location.reload(); }, 900);
-        } else {
-          window.location.reload();
-        }
-      }).catch(function () {
-        window.location.reload();
+    function clearFightCaches() {
+      if (!window.caches || !caches.keys) { return Promise.resolve(); }
+      return caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (key) {
+          var low = String(key || "").toLowerCase();
+          if (low.indexOf("fight") !== -1 || low.indexOf("simulator") !== -1 || low.indexOf("fw-") === 0) {
+            return caches.delete(key);
+          }
+          return false;
+        }));
       });
-      return;
     }
 
-    window.location.reload();
+    function unregisterServiceWorkers() {
+      if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
+        return Promise.resolve();
+      }
+      return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        return Promise.all(registrations.map(function (registration) {
+          return registration.unregister();
+        }));
+      });
+    }
+
+    unregisterServiceWorkers()
+      .then(clearFightCaches)
+      .then(hardReload)
+      .catch(hardReload);
   }
 
   function checkRemoteVersion(registration) {
