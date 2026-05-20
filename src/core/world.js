@@ -9,14 +9,29 @@
 
   function createNews(state, tone, text, meta) {
     var allowed = ["club", "team", "tournament", "medal", "champion", "migration"];
+    var payload;
+    var i;
     if (allowed.indexOf(tone || "") === -1) { return; }
     if (!text) { return; }
-    U.pushLimited(state.world.news, {
-      id: U.uid("news"),
+    state.world = state.world || {};
+    state.world.news = state.world.news instanceof Array ? state.world.news : [];
+    payload = {
       week: state.week,
       tone: tone || "world",
       text: text,
       meta: meta || {}
+    };
+    for (i = 0; i < state.world.news.length; i += 1) {
+      if (state.world.news[i] && state.world.news[i].week === payload.week && state.world.news[i].tone === payload.tone && state.world.news[i].text === payload.text) {
+        return;
+      }
+    }
+    U.pushLimited(state.world.news, {
+      id: U.uid("news"),
+      week: payload.week,
+      tone: payload.tone,
+      text: payload.text,
+      meta: payload.meta
     }, 110);
   }
 
@@ -110,7 +125,7 @@
       State.addFighterAward(state, fighter, label, "amateur", { medal: medalTypeForPlace(place), competitionId: comp.id, place: place });
     }
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
-    fighter.careerLog.unshift({ week: state.week, text: label + "." });
+    fighter.careerLog.unshift({ week: state.week, text: label + ".", meta: { competitionId: comp.id, place: place } });
     if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
   }
 
@@ -150,7 +165,7 @@
               return rating >= comp.minRating && rating <= comp.maxRating;
             });
             winners = pool.slice(0, 3);
-            if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); }
+            if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); growNpcAfterFight(winners[0], null, { isTournamentWin: true, isTournamentFinal: true, round: 3 }); }
             if (winners[1]) { awardNpcTournament(state, winners[1], comp, "2 место"); }
             if (winners[2]) { awardNpcTournament(state, winners[2], comp, "3 место"); }
             if (p && p.weightClassId === weight.id && country.id === (p.countryId || p.homeCountryId) && comp.id === "country" && winners[0]) {
@@ -170,7 +185,7 @@
             return rating >= comp.minRating && rating <= comp.maxRating;
           }).sort(function (left, right) { return U.statAverage(right.stats) - U.statAverage(left.stats); });
           winners = pool.slice(0, 3);
-          if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); }
+          if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); growNpcAfterFight(winners[0], null, { isTournamentWin: true, isTournamentFinal: true, round: 3 }); }
           if (winners[1]) { awardNpcTournament(state, winners[1], comp, "2 место"); }
           if (winners[2]) { awardNpcTournament(state, winners[2], comp, "3 место"); }
           if (p && p.weightClassId === weight.id && ["continent", "world", "olympiad"].indexOf(comp.id) !== -1 && winners[0]) {
@@ -182,26 +197,7 @@
   }
 
   function simulateTournamentNews(state) {
-    var kinds = [];
-    var p = State.player(state);
-    if (!p || p.trackId !== "amateur") { return; }
-    if (state.week % 12 === 5) { kinds.push("country"); }
-    if (state.week % 24 === 9) { kinds.push("continent"); }
-    if (state.week % 48 === 13) { kinds.push("world"); }
-    if (state.week % 96 === 25) { kinds.push("olympics"); }
-    kinds.forEach(function (kind) {
-      var label = tournamentNewsLabel(state, kind);
-      var pool = State.ranking(state, kind === "country" ? (p.homeCountryId || p.countryId) : "world", "amateur", p.weightClassId)
-        .filter(function (fighter) { return !fighter.retired && !fighter.isPlayer && U.statAverage(fighter.stats) >= (kind === "country" ? 35 : 70); });
-      var first = pool[0];
-      var second = pool[1];
-      var third = pool[2];
-      var text = label + ": 1 место — " + (first ? first.name : "—") + ", 2 место — " + (second ? second.name : "—") + ", 3 место — " + (third ? third.name : "—") + ".";
-      pushNews(state, "tournament", text, { kind: kind, weightClassId: p.weightClassId, fighterIds: [first && first.id, second && second.id, third && third.id].filter(Boolean), firstId: first ? first.id : "", secondId: second ? second.id : "", thirdId: third ? third.id : "" });
-      if (!state.modal) {
-        state.modal = { type: "eventNotice", title: label, text: text };
-      }
-    });
+    return;
   }
 
   function scheduleTournamentNotice(state) {
@@ -287,26 +283,103 @@
     return pool[U.randomInt(0, Math.min(9, pool.length - 1))] || pool[0] || null;
   }
 
-  function logNpcCareer(fighter, text, week) {
+  function logNpcCareer(fighter, text, week, meta) {
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
-    fighter.careerLog.unshift({ week: week, text: text });
+    fighter.careerLog.unshift({ week: week, text: text, meta: meta || {} });
     if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
   }
 
-  function growFighterStat(fighter, amount) {
+  function ageGrowthFactor(fighter) {
+    var age = Number(fighter && fighter.age) || 24;
+    if (age <= 20) { return 1.45; }
+    if (age <= 24) { return 1.22; }
+    if (age <= 28) { return 1.0; }
+    if (age <= 32) { return 0.82; }
+    if (age <= 35) { return 0.58; }
+    if (age <= 38) { return 0.32; }
+    return -0.45;
+  }
+
+  function lossStreak(fighter) {
+    var losses = 0;
+    var log = fighter && fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    var i;
+    for (i = 0; i < log.length; i += 1) {
+      if (!log[i] || !log[i].text) { continue; }
+      if (log[i].text.indexOf("Поражение") === 0) { losses += 1; }
+      else if (log[i].text.indexOf("Ничья") === 0) { break; }
+      else { break; }
+    }
+    return losses;
+  }
+
+  function winStreak(fighter) {
+    var wins = 0;
+    var log = fighter && fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    var i;
+    for (i = 0; i < log.length; i += 1) {
+      if (!log[i] || !log[i].text) { continue; }
+      if (log[i].text.indexOf("Победа") === 0 || log[i].text.indexOf("Турнир:") === 0) { wins += 1; }
+      else if (log[i].text.indexOf("Ничья") === 0) { break; }
+      else { break; }
+    }
+    return wins;
+  }
+
+  function adjustFighterStat(fighter, amount) {
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var cap = U.findTrack(fighter.trackId).maxStat;
+    var floor = fighter.trackId === "pro" ? 35 : (fighter.trackId === "amateur" ? 8 : 2);
+    var steps = Math.max(1, Math.round(Math.abs(amount)));
     var i;
-    for (i = 0; i < amount; i += 1) {
-      var key = keys[U.randomInt(0, keys.length - 1)];
-      fighter.stats[key] = U.clamp((Number(fighter.stats[key]) || 1) + 1, 1, cap);
+    var key;
+    for (i = 0; i < steps; i += 1) {
+      key = keys[U.randomInt(0, keys.length - 1)];
+      fighter.stats[key] = U.clamp((Number(fighter.stats[key]) || 1) + (amount >= 0 ? 1 : -1), floor, cap);
     }
     State.updateDerivedFighterFields(fighter);
   }
 
-  function growNpcAfterFight(winner, loser) {
-    if (winner && !winner.isPlayer) { growFighterStat(winner, U.randomInt(1, 2)); }
-    if (loser && !loser.isPlayer) { growFighterStat(loser, 1); }
+  function agingAdjustment(fighter) {
+    var factor = ageGrowthFactor(fighter);
+    if (factor >= 0) { return; }
+    if (U.randomInt(1, 100) <= Math.round(Math.abs(factor) * 35)) {
+      adjustFighterStat(fighter, -1);
+    }
+  }
+
+  function growFighterStat(fighter, amount) {
+    var factor;
+    var scaled;
+    if (!fighter || fighter.retired) { return; }
+    factor = ageGrowthFactor(fighter);
+    if (factor < 0) {
+      agingAdjustment(fighter);
+      return;
+    }
+    scaled = Math.max(0, Math.round((Number(amount) || 0) * factor));
+    if (scaled <= 0) { return; }
+    adjustFighterStat(fighter, scaled);
+  }
+
+  function growNpcAfterFight(winner, loser, meta) {
+    var winBonus = 1;
+    var lossBonus = 0;
+    var info = meta || {};
+    if (winner && !winner.isPlayer) {
+      if (info.ko && info.round <= 2) { winBonus += 1; }
+      if (info.isTournamentFinal) { winBonus += 1; }
+      if (info.isTournamentWin) { winBonus += 1; }
+      if (winStreak(winner) >= 3) { winBonus += 1; }
+      growFighterStat(winner, winBonus);
+    }
+    if (loser && !loser.isPlayer) {
+      if (lossStreak(loser) >= 3) { lossBonus += 1; }
+      if (info.ko && info.round <= 2) { lossBonus += 1; }
+      if ((Number(loser.age) || 0) >= 35 && (info.ko || lossBonus > 0)) { lossBonus += 1; }
+      if (lossBonus > 0) { adjustFighterStat(loser, -lossBonus); }
+      else { growFighterStat(loser, 1); }
+    }
   }
 
   function resolveNpcFight(state, a, b) {
@@ -318,28 +391,36 @@
     var loser;
     var draw = Math.abs(aScore - bScore) <= 2 && U.randomInt(1, 100) <= 7;
     var ko;
+    var finishRound = 0;
     rememberOpponent(a, b.id);
     rememberOpponent(b, a.id);
     if (draw) {
-      a.record.draws += 1; b.record.draws += 1;
-      growNpcAfterFight(a, b);
-      logNpcCareer(a, "Ничья с " + b.name + " решением.", state.week);
-      logNpcCareer(b, "Ничья с " + a.name + " решением.", state.week);
-      a.lastFightWeek = state.week; b.lastFightWeek = state.week;
+      a.record.draws += 1;
+      b.record.draws += 1;
+      growNpcAfterFight(a, b, { draw: true });
+      logNpcCareer(a, "Ничья с " + b.name + " решением.", state.week, { fighterId: b.id });
+      logNpcCareer(b, "Ничья с " + a.name + " решением.", state.week, { fighterId: a.id });
+      a.lastFightWeek = state.week;
+      b.lastFightWeek = state.week;
       if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
       if (State.invalidateCaches) { State.invalidateCaches(state); }
       return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью.", fighterIds: [a.id, b.id] };
     }
     if (roll <= aChance) { winner = a; loser = b; } else { winner = b; loser = a; }
     ko = U.randomInt(1, 100) <= (winner.trackId === "street" ? U.randomInt(50, 90) : (winner.trackId === "pro" ? U.randomInt(40, 80) : U.randomInt(10, 30)));
-    winner.record.wins += 1; loser.record.losses += 1; if (ko) { winner.record.kos += 1; }
-    growNpcAfterFight(winner, loser);
-    logNpcCareer(winner, "Победа над " + loser.name + (ko ? " KO/TKO." : " решением."), state.week);
-    logNpcCareer(loser, "Поражение от " + winner.name + (ko ? " KO/TKO." : " решением."), state.week);
-    winner.lastFightWeek = state.week; loser.lastFightWeek = state.week;
+    finishRound = ko ? U.randomInt(1, Math.max(1, U.findTrack(winner.trackId).rounds || 3)) : 0;
+    winner.record.wins += 1;
+    loser.record.losses += 1;
+    if (ko) { winner.record.kos += 1; }
+    growNpcAfterFight(winner, loser, { ko: ko, round: finishRound, isTournamentWin: false, isTournamentFinal: false });
+    logNpcCareer(winner, "Победа над " + loser.name + (ko ? " KO/TKO." : " решением."), state.week, { fighterId: loser.id });
+    logNpcCareer(loser, "Поражение от " + winner.name + (ko ? " KO/TKO." : " решением."), state.week, { fighterId: winner.id });
+    winner.lastFightWeek = state.week;
+    loser.lastFightWeek = state.week;
     if (winner.trackRecords) { winner.trackRecords[winner.trackId] = State.cloneRecord(winner.record); }
     if (loser.trackRecords) { loser.trackRecords[loser.trackId] = State.cloneRecord(loser.record); }
-    State.updateDerivedFighterFields(winner); State.updateDerivedFighterFields(loser);
+    State.updateDerivedFighterFields(winner);
+    State.updateDerivedFighterFields(loser);
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, winner, loser, false); }
     if (State.invalidateCaches) { State.invalidateCaches(state); }
     return { type: "win", winner: winner.id, loser: loser.id, text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей."), fighterIds: [winner.id, loser.id] };
@@ -347,12 +428,18 @@
 
   function simulateNpcTraining(state) {
     var keys = ["power", "technique", "speed", "stamina", "defense"];
-    var i, fighter, key, cap, seed;
+    var i, fighter, key, cap, seed, factor, growthChance;
     for (i = 0; i < state.roster.length; i += 1) {
       fighter = state.roster[i];
       if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
       seed = Math.abs((fighter.seed || i * 37) + state.week * 13);
-      if (seed % 10 !== 0) { continue; }
+      factor = ageGrowthFactor(fighter);
+      if (factor < 0) {
+        if (seed % 12 === 0) { agingAdjustment(fighter); }
+        continue;
+      }
+      growthChance = factor >= 1.4 ? 3 : (factor >= 1.2 ? 4 : (factor >= 1.0 ? 6 : 9));
+      if (seed % growthChance !== 0) { continue; }
       key = keys[seed % keys.length];
       cap = U.findTrack(fighter.trackId).maxStat;
       fighter.stats[key] = U.clamp((Number(fighter.stats[key]) || 1) + 1, 1, cap);

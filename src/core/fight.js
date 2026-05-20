@@ -623,7 +623,7 @@
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
     opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
-    opponent.careerLog.unshift({ week: state.week, text: oppLine });
+    opponent.careerLog.unshift({ week: state.week, text: oppLine, meta: { fighterId: p.id } });
     if (opponent.careerLog.length > 8) { opponent.careerLog.length = 8; }
     p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
     opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
@@ -696,8 +696,8 @@
     }
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
-    p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method });
-    opponent.careerLog.unshift({ week: state.week, text: "Бой против " + p.name + ": " + result });
+    p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method, meta: { fighterId: opponent.id } });
+    opponent.careerLog.unshift({ week: state.week, text: "Бой против " + p.name + ": " + result, meta: { fighterId: p.id } });
 
     if (offer) {
       state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });

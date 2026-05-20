@@ -1832,3 +1832,63 @@ button, input, select { max-width: 100%; }
 .continue-card .split-row {
   padding: 6px 0;
 }
+
+
+.inline-link-btn,
+.pill-link {
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
+  color: #f5f7fb;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.inline-link-btn:hover,
+.pill-link:hover {
+  border-color: rgba(229, 62, 62, .55);
+  background: rgba(229, 62, 62, .16);
+}
+.inline-link-btn {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+}
+.news-inline-text, .history-text {
+  line-height: 1.55;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.topbar-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.32);
+}
+.start-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.34);
+}
+.continue-card {
+  border-color: rgba(63, 185, 80, .35);
+  background: linear-gradient(180deg, rgba(46, 160, 67, .12), rgba(255,255,255,.025));
+  margin-bottom: 14px;
+}
+@media (max-width: 760px) {
+  .topbar.compact-topbar {
+    grid-template-columns: 44px 1fr;
+    gap: 10px;
+  }
+  .topbar.compact-topbar .compact-toolbar {
+    grid-column: 1 / -1;
+  }
+  .start-logo {
+    width: 60px;
+    height: 60px;
+  }
+}

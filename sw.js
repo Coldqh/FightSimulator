@@ -1,7 +1,7 @@
 /* Fight Simulator offline service worker */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-persistent-save-2.2.2";
+const CACHE_VERSION = "fight-simulator-world-ui-npc-2.2.3";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

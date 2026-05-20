@@ -556,7 +556,7 @@
     }
 
     if (p && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + "." });
+      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + ".", meta: { competitionId: comp.id } });
     }
   }
 
