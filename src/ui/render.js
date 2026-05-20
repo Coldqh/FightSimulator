@@ -32,6 +32,34 @@
     "</div></details>";
   }
 
+  function shortDateText(state) {
+    var parts = State.dateParts ? State.dateParts(state) : null;
+    if (!parts) { return "Н" + (state.week || 1); }
+    return "Г" + parts.year + " · " + String(parts.monthLabel || "").slice(0, 3) + " · " + parts.weekOfMonth + "н";
+  }
+
+  function shortWeightLabel(weightId) {
+    var weight = U.findWeightClass(weightId);
+    if (!weight || !weight.label) { return ""; }
+    if (weight.id === "bantam") { return "Легч."; }
+    if (weight.id === "light") { return "Лёгк."; }
+    if (weight.id === "welter") { return "Полуср."; }
+    if (weight.id === "middle") { return "Средн."; }
+    if (weight.id === "heavy") { return "Тяж."; }
+    if (weight.id === "super_heavy") { return "Супертяж."; }
+    return weight.label;
+  }
+
+  function shortTrackLabel(trackId) {
+    var track = U.findTrack(trackId);
+    return track.short || track.label || trackId;
+  }
+
+  function appVersionNumber() {
+    var match = String(Data.appVersion || "").match(/\d+(?:\.\d+){1,3}/);
+    return match ? match[0] : String(Data.appVersion || "");
+  }
+
   function weekDateText(week) {
     var parts = State.dateParts ? State.dateParts({ week: Number(week) || 1 }) : { year: 1, monthLabel: "месяц", weekOfMonth: 1 };
     return "год " + parts.year + ", " + parts.monthLabel + ", " + parts.weekOfMonth + " неделя";
@@ -71,28 +99,27 @@
         '<div class="split-row"><span>Неделя</span><strong>' + (savedSummary.week || 1) + '</strong></div>' +
         '<div class="split-row"><span>Путь</span><strong>' + U.escapeHtml(track) + '</strong></div>' +
         '<div class="split-row"><span>Страна</span><strong>' + country + '</strong></div>' +
-        '<div class="row" style="margin-top:12px"><button class="primary" data-action="continue-career">Продолжить карьеру</button><button data-action="import-save">Импорт</button></div>' +
+        '<div class="row start-actions"><button class="primary" data-action="continue-career">Продолжить карьеру</button><button data-action="import-save">Импорт</button></div>' +
       '</div>';
     }
 
     return '<section class="start-screen">' +
       '<div class="start-card">' +
-        '<div class="start-head">' +
-          '<div class="brand">' +
+        '<div class="start-head start-head-compact">' +
+          '<div class="brand start-brand-compact">' +
             '<img class="start-logo" src="assets/icons/icon-192.png" alt="Fight World">' +
-            '<div><h1>Fight World</h1><div class="muted small">Боксёрская карьера, живая мировая сцена и удобная мобильная игра.</div><div class="pills" style="margin-top:8px"><span class="pill gold">Версия ' + U.escapeHtml(Data.appVersion) + '</span><span class="pill green">автосохранение</span></div></div>' +
+            '<div class="start-title-line"><h1>Fight World</h1><span class="version-badge">' + U.escapeHtml(appVersionNumber()) + '</span></div>' +
           '</div>' +
-          '<div class="ring-line"></div>' +
         '</div>' +
         '<div class="start-body">' +
           summaryHtml() +
-          '<div class="grid two">' +
+          '<div class="grid two start-form-grid">' +
             '<label><div class="label">Имя бойца</div><input id="careerName" value="Влад" maxlength="32"></label>' +
             '<label><div class="label">Страна</div><input id="careerCountry" type="hidden" value="russia"><div id="careerCountryDropdown">' + countryDropdown('russia', 'data-start-country', 'start-country-dropdown') + '</div></label>' +
             '<label><div class="label">Весовая категория</div><select id="careerWeightClass">' + weightOptions + '</select></label>' +
           '</div>' +
-          '<div class="content-card" style="margin-top:14px"><h3>Новая карьера</h3><div class="archetype-grid">' + cards + '</div></div>' +
-          '<div class="row" style="margin-top:18px"><button class="primary" data-action="create-career">Начать новую карьеру</button>' + (savedSummary ? '<button class="danger" data-action="reset-save">Удалить сохранение</button>' : '<button data-action="import-save">Импорт</button>') + '</div>' +
+          '<div class="content-card new-career-card"><h3>Новая карьера</h3><div class="archetype-grid">' + cards + '</div></div>' +
+          '<div class="row start-actions"><button class="primary" data-action="create-career">Начать новую карьеру</button>' + (savedSummary ? '<button class="danger" data-action="reset-save">Удалить сохранение</button>' : '<button data-action="import-save">Импорт</button>') + '</div>' +
         '</div>' +
       '</div>' +
     '</section>';
@@ -100,25 +127,25 @@
 
   function renderHeader(state) {
     var p = State.player(state);
-    var timeText = State.dateText ? State.dateText(state) : ("Неделя " + state.week);
-    var weightText = p.trackId === "street" ? "" : U.findWeightClass(p.weightClassId).label;
+    var weightText = p.trackId === "street" ? "" : shortWeightLabel(p.weightClassId);
     var status = State.pathProgress ? State.pathProgress(state, p).badge : "";
+    var money = Number(p.money) || 0;
+    var moneyText = money >= 1000000 ? (Math.round(money / 10000) / 100 + "м") : (money >= 1000 ? (Math.round(money / 100) / 10 + "к") : String(money));
 
-    return '<header class="topbar compact-topbar">' +
-      '<div class="topbar-brand"><img class="topbar-logo" src="assets/icons/icon-192.png" alt="Fight World"></div>' +
-      '<div class="top-pills">' +
-        '<span class="pill">' + U.escapeHtml(timeText) + '</span>' +
-        '<span class="pill gold">' + U.escapeHtml(p.name) + '</span>' +
-        '<span class="pill flag-pill">' + countryLabel(p.countryId) + '</span>' +
-        '<span class="pill red">' + U.escapeHtml(U.findTrack(p.trackId).label) + '</span>' +
+    return '<header class="topbar compact-topbar mobile-fit-topbar">' +
+      '<div class="top-pills player-strip">' +
+        '<span class="pill date-pill">' + U.escapeHtml(shortDateText(state)) + '</span>' +
+        '<span class="pill gold name-pill">' + U.escapeHtml(p.name) + '</span>' +
+        '<span class="pill flag-pill country-pill">' + countryLabel(p.countryId) + '</span>' +
+        '<span class="pill red">' + U.escapeHtml(shortTrackLabel(p.trackId)) + '</span>' +
         (weightText ? '<span class="pill">' + U.escapeHtml(weightText) + '</span>' : '') +
         '<span class="pill blue">OVR ' + U.statAverage(p.stats) + '</span>' +
-        '<span class="pill">' + U.escapeHtml(U.recordText(p.record)) + '</span>' +
-        '<span class="pill gold">$' + (Number(p.money) || 0) + '</span>' +
-        '<span class="pill red">Усталость ' + (Number(p.fatigue) || 0) + '/100</span>' +
-        (status ? '<button class="pill-link green" data-path-rank-info="' + U.escapeHtml(p.trackId) + '">' + U.escapeHtml(status) + '</button>' : '') +
+        '<span class="pill record-pill">' + U.escapeHtml(U.recordText(p.record)) + '</span>' +
+        '<span class="pill gold">$' + U.escapeHtml(moneyText) + '</span>' +
+        '<span class="pill red">Уст ' + (Number(p.fatigue) || 0) + '</span>' +
+        (status ? '<button class="pill-link green rank-pill" data-path-rank-info="' + U.escapeHtml(p.trackId) + '">' + U.escapeHtml(status) + '</button>' : '') +
       '</div>' +
-      '<div class="toolbar compact-toolbar"><button data-action="next-week">Следующая неделя</button><button class="danger" data-action="reset-career">Сбросить</button><button class="primary" data-action="train-week">Тренировка</button><button data-action="rest-week">Отдых</button></div>' +
+      '<div class="toolbar compact-toolbar action-strip"><button data-action="next-week">Неделя</button><button class="primary" data-action="train-week">Тренировка</button><button data-action="rest-week">Отдых</button><button class="danger" data-action="reset-career">Сброс</button></div>' +
     '</header>';
   }
 
@@ -339,22 +366,23 @@
 
   function renderFightsTab(state) {
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
-    return "<div class=\"content-card\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить соперников</button></div></div>" +
-      "<div class=\"offer-list compact-offers\">" + offers.map(function (offer) {
+    return "<div class=\"content-card fights-head\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить</button></div></div>" +
+      "<div class=\"offer-list compact-offers fight-lines\">" + offers.map(function (offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
       if (!opponent || !preview) { return ""; }
-      return "<div class=\"offer compact-offer\"><div class=\"compact-fight-info\">" +
-        favoriteButton(state, opponent.id) +
-        "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
-        "<span class=\"pill flag-pill\">" + fighterCountryLabel(opponent) + "</span>" +
-        "<span class=\"pill red\">" + U.escapeHtml(U.findTrack(opponent.trackId).label) + "</span>" +
-        "<span class=\"pill\">OVR " + preview.opponentRating + "</span>" +
-        "<span class=\"pill\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span>" +
-        "<span class=\"pill\">" + offer.rounds + " раунда</span>" +
-        "<span class=\"pill gold\">$" + preview.purse + "</span>" +
-        "<span class=\"pill blue\">Шанс " + preview.winChance + "%</span>" +
-      "</div><button class=\"primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Бой</button></div>";
+      return "<div class=\"fight-line\">" +
+        "<div class=\"fight-line-main\">" +
+          favoriteButton(state, opponent.id) +
+          "<button class=\"fighter-link\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
+          "<span class=\"mini-chip flag-mini\">" + fighterCountryLabel(opponent) + "</span>" +
+          "<span class=\"mini-chip\">OVR " + preview.opponentRating + "</span>" +
+          "<span class=\"mini-chip record-mini\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span>" +
+          "<span class=\"mini-chip gold\">$" + preview.purse + "</span>" +
+          "<span class=\"mini-chip blue\">" + preview.winChance + "%</span>" +
+        "</div>" +
+        "<button class=\"fight-line-btn primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Бой</button>" +
+      "</div>";
     }).join("") + "</div>";
   }
 

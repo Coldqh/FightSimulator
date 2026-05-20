@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "update-notify-2.2.6") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 227) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "mobile-scroll-ui-2.2.7") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 228) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -200,5 +200,23 @@ console.log("tournament ranks save smoke ok", {
   }
   if (!swSource.includes("networkFirstStatic") || !swSource.includes("version.json")) {
     throw new Error("version.json network-first update check missing");
+  }
+}
+
+/* 2.2.7 mobile source checks */
+{
+  const renderSource227 = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
+  const cssSource227 = fs.readFileSync(path.join(root,"src/styles.css"),"utf8");
+  if (!renderSource227.includes("version-badge") || renderSource227.includes("автосохранение")) {
+    throw new Error("start screen compact version cleanup missing");
+  }
+  if (!renderSource227.includes("player-strip") || !renderSource227.includes("shortDateText")) {
+    throw new Error("compact header strip missing");
+  }
+  if (!renderSource227.includes("fight-line") || !renderSource227.includes("fighter-link")) {
+    throw new Error("thin fight line UI missing");
+  }
+  if (!cssSource227.includes("overflow-y: auto !important") || !cssSource227.includes("height: auto !important")) {
+    throw new Error("mobile page scroll fix missing");
   }
 }

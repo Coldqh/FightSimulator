@@ -2247,3 +2247,459 @@ body.app-booting { overflow: hidden; }
     width: 100%;
   }
 }
+
+
+/* 2.2.7 mobile scroll + compact phone UI */
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 160, 25, 0.42);
+  background: rgba(214, 160, 25, 0.12);
+  color: #f4d06b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.start-head-compact {
+  padding: 16px 18px;
+}
+
+.start-brand-compact {
+  align-items: center;
+}
+
+.start-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.start-title-line h1 {
+  margin: 0;
+}
+
+.new-career-card {
+  margin-top: 12px;
+}
+
+.start-actions {
+  margin-top: 12px;
+}
+
+.mobile-fit-topbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.player-strip {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.player-strip .pill,
+.player-strip .pill-link {
+  min-width: 0;
+  width: 100%;
+  min-height: 28px;
+  padding: 5px 7px;
+  font-size: 12px;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-strip .country-label {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.player-strip .country-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  width: 100%;
+}
+
+.action-strip button {
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 8px;
+}
+
+.fights-head {
+  padding-block: 10px;
+}
+
+.fight-lines {
+  display: grid;
+  gap: 6px;
+}
+
+.fight-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+}
+
+.fight-line-main {
+  display: grid;
+  grid-template-columns: 34px minmax(112px, 1.25fr) minmax(70px, .8fr) 64px 72px 62px 56px;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fighter-link {
+  min-width: 0;
+  width: 100%;
+  padding: 5px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-chip {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 25px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-chip.gold {
+  border-color: rgba(214, 160, 25, .32);
+  color: #f3d98d;
+}
+
+.mini-chip.blue {
+  border-color: rgba(59, 130, 246, .34);
+  color: #b9d4ff;
+}
+
+.flag-mini .country-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.flag-mini .country-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fight-line .favorite-btn {
+  width: 30px;
+  height: 25px;
+  min-height: 25px;
+  padding: 0;
+  font-size: 0;
+  border-radius: 999px;
+}
+
+.fight-line .favorite-btn::before {
+  content: "☆";
+  font-size: 13px;
+}
+
+.fight-line .favorite-btn.active::before {
+  content: "★";
+}
+
+.fight-line-btn {
+  width: 100%;
+  min-height: 30px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  html, body {
+    height: auto !important;
+    min-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.app-booting {
+    overflow: hidden !important;
+  }
+
+  .app-shell {
+    min-height: auto !important;
+    padding: 6px 6px 18px !important;
+  }
+
+  .topbar.compact-topbar,
+  .topbar.compact-topbar.mobile-fit-topbar {
+    position: static;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding: 7px !important;
+    margin-bottom: 6px !important;
+    border-radius: 14px;
+  }
+
+  .topbar-brand {
+    display: none !important;
+  }
+
+  .player-strip,
+  .top-pills.player-strip {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-auto-rows: 27px;
+    gap: 4px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .player-strip .pill,
+  .player-strip .pill-link {
+    min-height: 27px !important;
+    height: 27px;
+    padding: 3px 4px !important;
+    font-size: 10.5px !important;
+    border-radius: 9px !important;
+    line-height: 1 !important;
+  }
+
+  .player-strip .flag-icon {
+    width: 15px;
+    height: 11px;
+  }
+
+  .country-pill .country-label span {
+    max-width: 46px;
+  }
+
+  .name-pill {
+    grid-column: span 1;
+  }
+
+  .record-pill {
+    font-size: 10px !important;
+  }
+
+  .action-strip,
+  .compact-toolbar.action-strip {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  .action-strip button {
+    min-height: 29px !important;
+    padding: 5px 4px !important;
+    border-radius: 9px !important;
+    font-size: 11px !important;
+  }
+
+  .main-panel {
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .tab-scroll-area {
+    overflow: visible !important;
+    max-height: none !important;
+    padding-right: 0 !important;
+    gap: 7px !important;
+  }
+
+  .tabs {
+    margin-bottom: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  .tabs button {
+    min-width: auto !important;
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    border-radius: 999px !important;
+  }
+
+  .feed {
+    padding: 7px 8px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+
+  .start-screen {
+    min-height: auto !important;
+    padding: 6px 0 18px !important;
+  }
+
+  .start-card {
+    padding: 0 !important;
+    border-radius: 16px !important;
+    overflow: visible !important;
+  }
+
+  .start-head-compact {
+    padding: 10px 12px !important;
+  }
+
+  .start-brand-compact {
+    gap: 8px !important;
+  }
+
+  .start-logo {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+  }
+
+  .start-title-line h1 {
+    font-size: 25px !important;
+    line-height: 1 !important;
+    letter-spacing: -0.055em;
+  }
+
+  .version-badge {
+    min-height: 20px;
+    padding: 2px 7px;
+    font-size: 11px;
+  }
+
+  .ring-line {
+    display: none !important;
+  }
+
+  .start-body {
+    padding: 10px !important;
+  }
+
+  .continue-card,
+  .new-career-card {
+    margin-bottom: 8px !important;
+  }
+
+  .new-career-card {
+    margin-top: 8px !important;
+  }
+
+  .content-card h3,
+  .stat-card h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+
+  .archetype-grid {
+    gap: 7px !important;
+  }
+
+  .archetype-card {
+    padding: 8px !important;
+  }
+
+  .archetype-card span {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  .start-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    margin-top: 8px !important;
+  }
+
+  .start-actions button {
+    width: 100%;
+  }
+
+  .fight-lines {
+    gap: 5px !important;
+  }
+
+  .fight-line {
+    grid-template-columns: minmax(0, 1fr) 48px !important;
+    gap: 5px !important;
+    min-height: 34px !important;
+    padding: 4px 5px !important;
+    border-radius: 10px !important;
+  }
+
+  .fight-line-main {
+    grid-template-columns: 24px minmax(86px, 1.4fr) 43px 48px 46px 42px !important;
+    gap: 3px !important;
+  }
+
+  .fight-line .favorite-btn {
+    width: 22px !important;
+    height: 23px !important;
+    min-height: 23px !important;
+  }
+
+  .fighter-link {
+    padding: 4px 5px !important;
+    font-size: 10.5px !important;
+  }
+
+  .mini-chip {
+    min-height: 23px !important;
+    padding: 3px 4px !important;
+    font-size: 9.8px !important;
+    border-radius: 8px !important;
+  }
+
+  .flag-mini {
+    display: none !important;
+  }
+
+  .record-mini {
+    max-width: 48px;
+  }
+
+  .fight-line-btn {
+    min-height: 26px !important;
+    padding: 4px 5px !important;
+    font-size: 10.5px !important;
+    border-radius: 8px !important;
+  }
+
+  .fights-head {
+    padding: 8px !important;
+  }
+}
