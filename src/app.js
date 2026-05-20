@@ -10,6 +10,9 @@
   var Render = window.FS.Render;
   var app = document.getElementById("app");
   var state = Storage.load();
+  if (state && state._migrationReport) {
+    state.feed = state._migrationReport;
+  }
 
   function saveAndRender() {
     Storage.save(state);

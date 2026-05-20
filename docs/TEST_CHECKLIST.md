@@ -1,4 +1,4 @@
-# Test Checklist 2.0.4
+# Test Checklist 2.1.4
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -8,11 +8,11 @@ start index.html
 ```
 
 Manual:
-1. Tournament rows show next exact date and weeks left, not the full rule.
-2. When an available tournament week starts, a modal says `Доступен турнир`.
-3. Team card modal has only one `Сборная ...` heading.
-4. New career has foreign residents in street/amateur scenes across countries.
-5. Foreign residents show origin → current country route.
-6. Mobile tournament row stays in one compact line.
-7. Auto-resolved winChance fights do not show punch logs.
-8. Week tick should be noticeably faster than 2.0.3.
+1. Old save loads without breaking.
+2. Version shows `technical-core-2.1.4`.
+3. Rankings still open.
+4. Fight result updates ranking after win/loss.
+5. News tab can show short migration news.
+6. Week switch should feel at least as fast as 2.0.4.
+7. Pro contract preview still appears on fight week.
+8. No huge duplicate data appears in exported save.

@@ -624,6 +624,7 @@
       if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }
       else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
     }
+    if (State.invalidateCaches) { State.invalidateCaches(state); }
   }
 
   function completeFightEconomy(state, p, opponent, result, purse, fatigue) {

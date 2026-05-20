@@ -159,6 +159,12 @@
     title.championId = newChampion.id;
     title.defenses = 0;
     title.history.unshift({ week: state.week, fighterId: newChampion.id, text: text || (newChampion.name + " забрал титул: " + title.label) });
+    if (window.FS.World && window.FS.World.createNews) {
+      var p = window.FS.State && window.FS.State.player ? window.FS.State.player(state) : null;
+      if (p && ((title.trackId === "street" && title.countryId === p.countryId) || (title.trackId === "pro" && title.weightClassId === p.weightClassId))) {
+        window.FS.World.createNews(state, "champion", "Сменился чемпион: " + title.label + " — " + newChampion.name + ".", { titleId: title.id, fighterId: newChampion.id });
+      }
+    }
 
     if (newChampion.titles.indexOf(title.id) === -1) {
       newChampion.titles.push(title.id);
@@ -202,14 +208,54 @@
     return { eligible: true, reason: "Можно бросить вызов чемпиону.", rank: rankIndex + 1 };
   }
 
+  function titleCandidateKey(trackId, countryId, weightClassId) {
+    return trackId + "|" + (trackId === "pro" ? "world" : countryId) + "|" + (weightClassId || "");
+  }
+
+  function addCandidate(tops, key, fighter) {
+    var first;
+    var second;
+    var score;
+    if (!fighter || fighter.retired || fighter.isPlayer) { return; }
+    score = U.scoreFighter(fighter);
+    tops[key] = tops[key] || [];
+    first = tops[key][0];
+    second = tops[key][1];
+
+    if (!first || score > U.scoreFighter(first)) {
+      tops[key][1] = first;
+      tops[key][0] = fighter;
+    } else if ((!second || score > U.scoreFighter(second)) && (!first || first.id !== fighter.id)) {
+      tops[key][1] = fighter;
+    }
+  }
+
+  function buildTitleTops(state) {
+    var tops = {};
+    var i;
+    var fighter;
+    for (i = 0; i < (state.roster || []).length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.retired || fighter.trackId === "amateur") { continue; }
+      if (fighter.trackId === "pro") {
+        addCandidate(tops, titleCandidateKey("pro", "world", fighter.weightClassId), fighter);
+      } else if (fighter.trackId === "street") {
+        addCandidate(tops, titleCandidateKey("street", fighter.countryId, ""), fighter);
+      }
+    }
+    return tops;
+  }
+
   function updateTitles(state) {
     var key;
     var title;
-    var ranking;
+    var tops;
+    var candidates;
     var currentChampion;
     var challenger;
 
     ensureTitles(state);
+    tops = buildTitleTops(state);
 
     for (key in state.titles) {
       if (!Object.prototype.hasOwnProperty.call(state.titles, key)) {
@@ -221,15 +267,9 @@
         continue;
       }
 
-      ranking = window.FS.State.ranking(state, title.scope === "world" ? "world" : title.countryId, title.trackId, title.weightClassId);
-      if (!ranking.length) {
-        continue;
-      }
-
+      candidates = tops[titleCandidateKey(title.trackId, title.countryId, title.weightClassId)] || [];
       currentChampion = U.getFighterById(state, title.championId);
-      challenger = ranking.find(function (fighter) {
-        return fighter.id !== title.championId;
-      }) || ranking[0];
+      challenger = candidates[0] && candidates[0].id !== title.championId ? candidates[0] : candidates[1];
 
       if (!currentChampion && challenger) {
         transferTitle(state, title.id, challenger.id, challenger.name + " стал чемпионом: " + title.label);

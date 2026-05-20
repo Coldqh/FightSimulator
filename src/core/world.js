@@ -8,15 +8,16 @@
   var State = window.FS.State;
 
   function createNews(state, tone, text, meta) {
-    var allowed = ["club", "team", "tournament", "medal", "champion"];
+    var allowed = ["club", "team", "tournament", "medal", "champion", "migration"];
     if (allowed.indexOf(tone || "") === -1) { return; }
+    if (!text) { return; }
     U.pushLimited(state.world.news, {
       id: U.uid("news"),
       week: state.week,
       tone: tone || "world",
       text: text,
       meta: meta || {}
-    }, 90);
+    }, 110);
   }
 
   function playerHomeCountryId(state) {
@@ -26,6 +27,29 @@
 
   function pushNews(state, tone, text, meta) {
     createNews(state, tone, text, meta || {});
+  }
+
+  function migrationNewsForMove(state, fighter, fromCountryId, toCountryId) {
+    var p = State.player(state);
+    var playerCountryId;
+    var playerHomeId;
+    var fromCountry;
+    var toCountry;
+    var originCountry;
+
+    if (!p || !fighter || fromCountryId === toCountryId) { return; }
+
+    playerCountryId = p.countryId;
+    playerHomeId = p.homeCountryId || p.countryId;
+    fromCountry = U.findCountry(fromCountryId);
+    toCountry = U.findCountry(toCountryId);
+    originCountry = U.findCountry(fighter.originCountryId || fighter.homeCountryId || fromCountryId);
+
+    if (toCountryId === playerCountryId && (fighter.originCountryId || fighter.homeCountryId || fromCountryId) !== playerCountryId) {
+      pushNews(state, "migration", "Иностранец приехал: " + fighter.name + " · " + originCountry.label + " → " + toCountry.label + ".", { fighterId: fighter.id, fromCountryId: fromCountryId, toCountryId: toCountryId });
+    } else if ((fighter.originCountryId || fighter.homeCountryId || fromCountryId) === playerHomeId && toCountryId !== playerHomeId) {
+      pushNews(state, "migration", "Соотечественник уехал: " + fighter.name + " · " + fromCountry.label + " → " + toCountry.label + ".", { fighterId: fighter.id, fromCountryId: fromCountryId, toCountryId: toCountryId });
+    }
   }
 
   function futureDateText(week) {
@@ -175,6 +199,7 @@
       logNpcCareer(b, "Ничья с " + a.name, state.week);
       a.lastFightWeek = state.week; b.lastFightWeek = state.week;
       if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
+      if (State.invalidateCaches) { State.invalidateCaches(state); }
       return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью." };
     }
     if (roll <= aChance) { winner = a; loser = b; } else { winner = b; loser = a; }
@@ -187,6 +212,7 @@
     if (loser.trackRecords) { loser.trackRecords[loser.trackId] = State.cloneRecord(loser.record); }
     State.updateDerivedFighterFields(winner); State.updateDerivedFighterFields(loser);
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, winner, loser, false); }
+    if (State.invalidateCaches) { State.invalidateCaches(state); }
     return { type: "win", winner: winner.id, loser: loser.id, text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей.") };
   }
 
@@ -625,6 +651,7 @@
 
 function simulateInternationalGymMoves(state) {
     var attempts = Math.min(55, Math.max(8, Math.floor((state.roster || []).length / 380)));
+    var clubsByCountry = {};
     var i;
     var fighter;
     var currentCountry;
@@ -639,6 +666,14 @@ function simulateInternationalGymMoves(state) {
       return;
     }
 
+    for (i = 0; i < state.clubs.length; i += 1) {
+      club = state.clubs[i];
+      clubsByCountry[club.countryId] = clubsByCountry[club.countryId] || [];
+      clubsByCountry[club.countryId].push(club);
+    }
+
+    targetCountries = Data.countries;
+
     for (i = 0; i < attempts; i += 1) {
       fighter = state.roster[U.randomInt(0, state.roster.length - 1)];
       if (!fighter || fighter.isPlayer || fighter.retired || U.randomInt(1, 1000) > 6) {
@@ -646,15 +681,16 @@ function simulateInternationalGymMoves(state) {
       }
 
       currentCountry = fighter.countryId;
-      targetCountries = Data.countries.filter(function (country) { return country.id !== currentCountry; });
       targetCountry = targetCountries[U.randomInt(0, targetCountries.length - 1)];
+      if (!targetCountry || targetCountry.id === currentCountry) { continue; }
+
       rating = U.statAverage(fighter.stats);
-      targetClubs = (state.clubs || []).filter(function (item) {
-        return item.countryId === targetCountry.id && rating >= item.minOvr && rating <= item.maxOvr;
+      targetClubs = (clubsByCountry[targetCountry.id] || []).filter(function (item) {
+        return rating >= item.minOvr && rating <= item.maxOvr;
       });
 
       if (!targetClubs.length) {
-        targetClubs = (state.clubs || []).filter(function (item) { return item.countryId === targetCountry.id; });
+        targetClubs = clubsByCountry[targetCountry.id] || [];
       }
 
       club = targetClubs[U.randomInt(0, Math.max(0, targetClubs.length - 1))];
@@ -665,14 +701,19 @@ function simulateInternationalGymMoves(state) {
       fighter.countryId = targetCountry.id;
       fighter.currentCountryId = targetCountry.id;
       fighter.gymId = club.id;
+      fighter.isForeignResident = (fighter.originCountryId || fighter.homeCountryId || currentCountry) !== targetCountry.id;
       fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
       fighter.careerLog.unshift({ week: state.week, text: "Переезд в " + targetCountry.label + ", клуб " + club.name + "." });
       if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
       U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал в " + targetCountry.label + "." }, 120);
+      migrationNewsForMove(state, fighter, currentCountry, targetCountry.id);
       moved = true;
     }
 
-    if (moved) { window.FS.Clubs.assignFightersToClubs(state); }
+    if (moved) {
+      if (State.invalidateCaches) { State.invalidateCaches(state); }
+      window.FS.Clubs.assignFightersToClubs(state);
+    }
   }
 
   function promoterById(id) {
@@ -837,6 +878,7 @@ function simulateInternationalGymMoves(state) {
     var p = State.player(state);
 
     state.week += 1;
+    if (State.invalidateCaches) { State.invalidateCaches(state); }
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
     if (action === "rest" && State.restPlayer) { State.restPlayer(state); }
     else if (State.adjustFatigue) { State.adjustFatigue(state, -(Data.economy && Data.economy.fatigue ? Data.economy.fatigue.recoveryPerWeek : 6), "Недельное восстановление"); }

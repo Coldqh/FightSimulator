@@ -520,6 +520,7 @@
     adjustFatigue(state, Data.economy && Data.economy.fatigue ? Data.economy.fatigue.travel : 14, "Перелёт");
     p.countryId = country.id;
     p.currentCountryId = country.id;
+    invalidateCaches(state);
     p.gymId = "";
     state.people = [];
     state.rankingCountryId = country.id;
@@ -892,6 +893,22 @@
     }
   }
 
+  function invalidateCaches(state) {
+    if (!state) { return; }
+    state._rankingVersion = (Number(state._rankingVersion) || 0) + 1;
+    state._rankingCache = {};
+  }
+
+  function rankingCacheKey(state, countryId, trackId, weightClassId) {
+    return [
+      Number(state.week) || 1,
+      Number(state._rankingVersion) || 0,
+      countryId || "",
+      trackId || "",
+      weightClassId || ""
+    ].join("|");
+  }
+
   function recordStrengthForRanking(fighter) {
     var record = fighter.record || {};
     var wins = Number(record.wins) || 0;
@@ -908,7 +925,16 @@
   }
 
   function ranking(state, countryId, trackId, weightClassId) {
-    return state.roster
+    var key;
+    var result;
+
+    state._rankingCache = state._rankingCache && typeof state._rankingCache === "object" ? state._rankingCache : {};
+    key = rankingCacheKey(state, countryId, trackId, weightClassId);
+    if (state._rankingCache[key]) {
+      return state._rankingCache[key];
+    }
+
+    result = state.roster
       .filter(function (fighter) {
         var countryOk;
         var weightOk;
@@ -929,6 +955,9 @@
       .sort(function (left, right) {
         return (recordStrengthForRanking(right) + U.statAverage(right.stats) * 0.08) - (recordStrengthForRanking(left) + U.statAverage(left.stats) * 0.08);
       });
+
+    state._rankingCache[key] = result;
+    return result;
   }
 
   function repairState(state) {
@@ -936,6 +965,9 @@
     var p;
 
     if (!state) { return null; }
+    if (state._fullRepairDone && state._lastRepairVersion === Data.appVersion && state._lastRepairWeek === state.week) {
+      return state;
+    }
     state.version = Data.appVersion;
     state.week = Math.max(1, Number(state.week) || 1);
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
@@ -1013,6 +1045,9 @@
       state.rankingWeightClassId = state.rankingWeightClassId || p.weightClassId || "welter";
     }
 
+    state._fullRepairDone = true;
+    state._lastRepairVersion = Data.appVersion;
+    state._lastRepairWeek = state.week;
     return state;
   }
 
@@ -1136,6 +1171,7 @@
     isLockedByFatigue: isLockedByFatigue,
     fatigueLockedModal: fatigueLockedModal,
     debtWeeksLeft: debtWeeksLeft,
-    updateDebtStatus: updateDebtStatus
+    updateDebtStatus: updateDebtStatus,
+    invalidateCaches: invalidateCaches
   };
 }());

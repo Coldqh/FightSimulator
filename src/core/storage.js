@@ -59,6 +59,33 @@
     };
   }
 
+  function cleanTransientFields(state) {
+    var copy = Object.assign({}, state);
+    delete copy._rankingCache;
+    delete copy._worldIndexes;
+    delete copy._lastRepairVersion;
+    delete copy._lastRepairWeek;
+    delete copy._fullRepairDone;
+    delete copy._migrationReport;
+    return copy;
+  }
+
+  function ensureWorldShape(state) {
+    state.world = state.world && typeof state.world === "object" ? state.world : {};
+    state.world.news = state.world.news instanceof Array ? state.world.news : [];
+    state.world.weekReports = state.world.weekReports instanceof Array ? state.world.weekReports : [];
+    state.world.teamsByCountry = state.world.teamsByCountry && typeof state.world.teamsByCountry === "object" ? state.world.teamsByCountry : {};
+    state.world.teamCoaches = state.world.teamCoaches && typeof state.world.teamCoaches === "object" ? state.world.teamCoaches : {};
+    state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
+    state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
+    state.world.memorials = state.world.memorials instanceof Array ? state.world.memorials : [];
+    state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
+    state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
+    state.world.tournamentCalendar = state.world.tournamentCalendar instanceof Array ? state.world.tournamentCalendar : [];
+    state.world.pendingTournamentInvite = state.world.pendingTournamentInvite || null;
+    state.world.pendingProFight = state.world.pendingProFight || null;
+  }
+
   function repairFighter(fighter) {
     if (!fighter || typeof fighter !== "object") {
       return;
@@ -66,6 +93,10 @@
 
     fighter.trackId = fighter.trackId || "amateur";
     fighter.countryId = fighter.countryId || "russia";
+    fighter.homeCountryId = fighter.homeCountryId || fighter.countryId;
+    fighter.currentCountryId = fighter.currentCountryId || fighter.countryId;
+    fighter.originCountryId = fighter.originCountryId || fighter.homeCountryId || fighter.countryId;
+    fighter.isForeignResident = fighter.originCountryId !== fighter.countryId;
     fighter.weightClassId = fighter.weightClassId || "welter";
     fighter.stanceId = fighter.stanceId || "orthodox";
     fighter.age = clamp(Number(fighter.age) || 18, 16, 48);
@@ -98,20 +129,22 @@
 
   function migrate(state) {
     var i;
+    var oldVersion;
 
     if (!state || typeof state !== "object") {
       return null;
     }
 
+    oldVersion = state.version || "";
     state.version = Data.appVersion;
+    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 214);
     state.week = Math.max(1, Number(state.week) || 1);
     state.selectedTab = state.selectedTab || "dashboard";
     state.rankingCountryId = state.rankingCountryId || "russia";
     state.rankingTrackId = state.rankingTrackId || "amateur";
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
-    if (!state.world) { state.world = {}; }
-    state.world.proContracts = state.world.proContracts instanceof Array ? state.world.proContracts : [];
+    state.selectedTeamCountryId = state.selectedTeamCountryId || state.rankingCountryId || "russia";
     state.modal = null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];
@@ -126,15 +159,11 @@
     state.amateurPath.points = Number(state.amateurPath.points) || 0;
     state.feed = state.feed || "Сохранение загружено.";
 
-    if (!state.world || typeof state.world !== "object") {
-      state.world = {};
-    }
+    ensureWorldShape(state);
 
-    state.world.news = state.world.news instanceof Array ? state.world.news : [];
-    state.world.weekReports = state.world.weekReports instanceof Array ? state.world.weekReports : [];
-    state.world.teamsByCountry = state.world.teamsByCountry && typeof state.world.teamsByCountry === "object" ? state.world.teamsByCountry : {};
-    state.world.transitionLog = state.world.transitionLog instanceof Array ? state.world.transitionLog : [];
-    state.world.stories = state.world.stories instanceof Array ? state.world.stories : [];
+    state._rankingVersion = (Number(state._rankingVersion) || 1) + (oldVersion && oldVersion !== Data.appVersion ? 1 : 0);
+    state._rankingCache = {};
+    state._migrationReport = oldVersion && oldVersion !== Data.appVersion ? ("Сохранение обновлено: " + oldVersion + " → " + Data.appVersion) : "";
 
     for (i = 0; i < state.roster.length; i += 1) {
       repairFighter(state.roster[i]);
@@ -169,13 +198,16 @@
   }
 
   function save(state) {
+    var safe;
     try {
       if (!state) {
         clear();
         return;
       }
       state.version = Data.appVersion;
-      localStorage.setItem(Data.saveKey, JSON.stringify(state));
+      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 214;
+      safe = cleanTransientFields(state);
+      localStorage.setItem(Data.saveKey, JSON.stringify(safe));
     } catch (error) {
       console.error(error);
     }

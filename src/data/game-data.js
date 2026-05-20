@@ -4,8 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "availability-foreigners-optimization-2.0.4",
+    appVersion: "technical-core-2.1.4",
     saveKey: "fight_simulator_vertical_slice_v10",
+    saveSchemaVersion: 214,
 
     tracks: {
       amateur: {
