@@ -1,4 +1,4 @@
-name: Deploy Fight Simulator to GitHub Pages
+name: Deploy Fight World to GitHub Pages
 
 on:
   push:
@@ -12,15 +12,14 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
-  cancel-in-progress: false
+  group: fight-world-pages
+  cancel-in-progress: true
 
 jobs:
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +29,8 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload static app
-        uses: actions/upload-pages-artifact@v5
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
