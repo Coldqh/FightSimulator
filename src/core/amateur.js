@@ -726,7 +726,7 @@
 
     session.continueMode = continueMode;
     session.finalPlace = finalPlace;
-    session.pendingFatigue = (session.pendingFatigue || 0) + (Data.economy && Data.economy.fatigue ? Data.economy.fatigue.tournamentFight : 10);
+    session.pendingFatigue = (session.pendingFatigue || 0) + (result === "Победа" ? 25 : (result === "Ничья" ? 30 : 40));
 
     return {
       type: "tournamentResult",
@@ -761,7 +761,7 @@
 
     state.amateurPath.lastCompetitionWeekById[comp.id] = state.week;
     if (State.adjustFatigue && session.pendingFatigue) {
-      State.adjustFatigue(state, Math.min(55, session.pendingFatigue), "Турнир завершён");
+      State.adjustFatigue(state, Math.min(100, session.pendingFatigue), "Турнир завершён");
       session.pendingFatigue = 0;
     }
 

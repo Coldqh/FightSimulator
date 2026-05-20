@@ -1135,7 +1135,6 @@ function simulateInternationalGymMoves(state) {
     if (State.invalidateCaches) { State.invalidateCaches(state); }
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
     if ((action === "rest" || action === "skip" || action === "week") && State.restPlayer) { State.restPlayer(state); }
-    else if (State.adjustFatigue) { State.adjustFatigue(state, -(Data.economy && Data.economy.fatigue ? Data.economy.fatigue.recoveryPerWeek : 6), "Недельное восстановление"); }
 
     playerClubBefore = p ? p.gymId : "";
     if (window.FS.Clubs) {

@@ -127,7 +127,6 @@
 
   function renderHeader(state) {
     var p = State.player(state);
-    var weightText = p.trackId === "street" ? "" : shortWeightLabel(p.weightClassId);
     var status = State.pathProgress ? State.pathProgress(state, p).badge : "";
     var money = Number(p.money) || 0;
     var moneyText = money >= 1000000 ? (Math.round(money / 10000) / 100 + "м") : (money >= 1000 ? (Math.round(money / 100) / 10 + "к") : String(money));
@@ -135,17 +134,13 @@
     return '<header class="topbar compact-topbar mobile-fit-topbar">' +
       '<div class="top-pills player-strip">' +
         '<span class="pill date-pill">' + U.escapeHtml(shortDateText(state)) + '</span>' +
-        '<span class="pill gold name-pill">' + U.escapeHtml(p.name) + '</span>' +
         '<span class="pill flag-pill country-pill">' + countryLabel(p.countryId) + '</span>' +
-        '<span class="pill red">' + U.escapeHtml(shortTrackLabel(p.trackId)) + '</span>' +
-        (weightText ? '<span class="pill">' + U.escapeHtml(weightText) + '</span>' : '') +
         '<span class="pill blue">OVR ' + U.statAverage(p.stats) + '</span>' +
         '<span class="pill record-pill">' + U.escapeHtml(U.recordText(p.record)) + '</span>' +
         '<span class="pill gold">$' + U.escapeHtml(moneyText) + '</span>' +
         '<span class="pill red">Уст ' + (Number(p.fatigue) || 0) + '</span>' +
         (status ? '<button class="pill-link green rank-pill" data-path-rank-info="' + U.escapeHtml(p.trackId) + '">' + U.escapeHtml(status) + '</button>' : '') +
       '</div>' +
-      '<div class="toolbar compact-toolbar action-strip"><button data-action="next-week">Неделя</button><button class="primary" data-action="train-week">Тренировка</button><button data-action="rest-week">Отдых</button><button class="danger" data-action="reset-career">Сброс</button></div>' +
     '</header>';
   }
 
@@ -270,7 +265,7 @@
     var p = State.player(state);
 
     return '<div class="grid two">' +
-      '<div class="content-card"><h3>Паспорт бойца</h3>' +
+      '<div class="content-card"><h3>Информация о бойце</h3>' +
         '<div class="split-row"><span>Имя</span><strong>' + U.escapeHtml(p.name) + '</strong></div>' +
         '<div class="split-row"><span>Возраст</span><strong>' + p.age + '</strong></div>' +
         '<div class="split-row"><span>Страна</span><strong>' + countryLabel(p.countryId) + '</strong></div>' +
@@ -471,7 +466,7 @@
     return '<div class="content-card training-card"><h3>Характеристики</h3><div class="split-row"><span>Очки прокачки</span><strong>' + (p.trainingPoints || 0) + '</strong></div><div class="split-row"><span>Усталость</span><strong>' + (p.fatigue || 0) + '/100</strong></div>' +
       '<div class="training-list" style="margin-top:12px">' +
       Data.statKeys.map(function (stat) {
-        return '<div class="training-row"><button class="primary training-plus-btn" data-train-stat="' + U.escapeHtml(stat.id) + '"' + disabled + '>+ ' + U.escapeHtml(stat.label) + '</button><span class="training-value">' + (p.stats[stat.id] || 0) + '</span></div>';
+        return '<div class="training-row"><button class="training-plus-btn" data-train-stat="' + U.escapeHtml(stat.id) + '"' + disabled + '>+ ' + U.escapeHtml(stat.label) + '</button><span class="training-value">' + (p.stats[stat.id] || 0) + '</span></div>';
       }).join('') +
     '</div></div>';
   }
@@ -678,6 +673,14 @@
     "</div>";
   }
 
+  function tournamentWeeksOnly(comp) {
+    var text = String(comp.scheduleText || comp.reason || "");
+    var match = text.match(/(?:через \d+ нед\.|на этой неделе)/);
+    if (match) { return match[0]; }
+    if (comp.cooldownLeft) { return "через " + comp.cooldownLeft + " нед."; }
+    return "по календарю";
+  }
+
   function renderWorldTab(state) {
     var p = State.player(state);
     var homeId = p.homeCountryId || p.countryId;
@@ -685,7 +688,7 @@
     var comps = window.FS.Amateur ? window.FS.Amateur.availableCompetitions(state) : [];
 
     function renderCompetition(comp) {
-      return '<div class="split-row tournament-row"><div><div class="name-line">' + U.escapeHtml(comp.label) + '</div><div class="muted small">OVR ' + comp.minRating + '–' + comp.maxRating + ' · +' + comp.rewardRating + ' · ' + U.escapeHtml(comp.scheduleText || '—') + '</div></div><span>' + (comp.available ? '<button class="small-btn primary" data-amateur-competition="' + U.escapeHtml(comp.id) + '">Начать турнир</button>' : '<span class="pill">закрыто</span>') + '</span></div>';
+      return '<div class="split-row tournament-row"><div><div class="name-line">' + U.escapeHtml(comp.label) + '</div><div class="muted small">OVR ' + comp.minRating + '–' + comp.maxRating + ' · +' + comp.rewardRating + ' · ' + U.escapeHtml(tournamentWeeksOnly(comp)) + '</div></div><span>' + (comp.available ? '<button class="small-btn primary" data-amateur-competition="' + U.escapeHtml(comp.id) + '">Начать турнир</button>' : '<span class="pill">закрыто</span>') + '</span></div>';
     }
 
     return '<div class="grid two world-grid">' +

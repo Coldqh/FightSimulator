@@ -668,9 +668,9 @@
   function adjustFatigue(state, amount, reason) {
     var p = ensurePlayerSystems(state);
     if (!p) { return 0; }
-    p.fatigue = U.clamp(Math.round((Number(p.fatigue) || 0) + (Number(amount) || 0)), 0, 94);
+    p.fatigue = U.clamp(Math.round((Number(p.fatigue) || 0) + (Number(amount) || 0)), 0, 100);
     if (reason && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/94." });
+      p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/100." });
     }
     return p.fatigue;
   }
@@ -860,8 +860,8 @@
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
-    if (p.fatigue >= 94) {
-      state.feed = "Усталость 94/94. Можно только отдыхать.";
+    if (p.fatigue >= 100) {
+      state.feed = "Усталость 100/100. Можно только отдыхать.";
       state.modal = { type: "fatigueLock", fatigue: p.fatigue };
       return;
     }
@@ -869,8 +869,8 @@
     if (!statKey) {
       p.trainingPoints += 3;
       adjustFatigue(state, 20, "Тренировка");
-      p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/94." });
-      state.feed = "Тренировка: +3 очка характеристик. Усталость " + p.fatigue + "/94.";
+      p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/100." });
+      state.feed = "Тренировка: +3 очка характеристик. Усталость " + p.fatigue + "/100.";
       updateDebtStatus(state, "training");
       return;
     }

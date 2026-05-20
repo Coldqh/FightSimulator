@@ -2779,3 +2779,23 @@ body.app-booting { overflow: hidden; }
   .news-row-card { padding:8px 0; }
   .news-row .pill { margin-top:6px; display:inline-flex; }
 }
+
+
+/* 2.2.8 fatigue/layout hotfix */
+.training-plus-btn { background: rgba(255,255,255,.065) !important; border-color: rgba(255,255,255,.16) !important; color: var(--text) !important; }
+@media (min-width: 761px) {
+  .fight-line { grid-template-columns: minmax(0,1fr) 62px; max-width: 100%; }
+  .fight-line-main { grid-template-columns: 32px minmax(180px, 1.1fr) minmax(130px, .65fr) 66px 72px 62px 56px; }
+  .fight-line .country-label span { max-width: 92px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fight-line .mini-chip, .fight-line .fighter-link { min-height: 24px; }
+}
+@media (max-width: 760px) {
+  body, button, input, select, textarea { font-size: 12px; }
+  .content-card, .stat-card, .skills, .offer, .modal { padding: 8px !important; }
+  .top-pills.player-strip, .player-strip { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-auto-rows: 25px; }
+  .top-pills.player-strip .pill, .top-pills.player-strip .pill-link, .player-strip .pill, .player-strip .pill-link { font-size: 9.7px !important; min-height:25px !important; height:25px !important; }
+  .tabs button { font-size: 11px !important; padding: 7px 4px 6px !important; }
+  .main-panel { padding: 7px !important; }
+  .split-row { padding: 6px 0; }
+  .small-btn, button { font-size: 11px; }
+}

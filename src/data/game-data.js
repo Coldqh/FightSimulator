@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "mobile-layout-2.2.8",
+    appVersion: "fatigue-mobile-layout-2.2.9",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 229,
+    saveSchemaVersion: 230,
 
     tracks: {
       amateur: {

@@ -641,11 +641,25 @@
     var pointMod = 1;
     var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
     var gained;
+    var ratingDiff;
+    var diffBonus;
+    var finalFatigue;
     if (club) { pointMod = Number(club.trainingModifier) || 1; }
-    gained = result === "Победа" ? 7 : (result === "Ничья" ? 4 : 3);
+    ratingDiff = U.statAverage(opponent.stats) - U.statAverage(p.stats);
+    if (result === "Победа") {
+      diffBonus = U.clamp(Math.round(ratingDiff / 8), -3, 5);
+      gained = U.clamp(5 + diffBonus, 2, 11);
+    } else if (result === "Ничья") {
+      diffBonus = U.clamp(Math.round(ratingDiff / 12), -1, 3);
+      gained = U.clamp(3 + diffBonus, 2, 6);
+    } else {
+      diffBonus = U.clamp(Math.round(ratingDiff / 16), 0, 2);
+      gained = 2 + diffBonus;
+    }
     p.trainingPoints = (Number(p.trainingPoints) || 0) + Math.max(1, Math.round(gained * pointMod));
     if (State.addMoney) { State.addMoney(state, purse, "Гонорар за бой"); } else { p.money = (Number(p.money) || 0) + purse; }
-    if (State.adjustFatigue) { State.adjustFatigue(state, typeof fatigue === "number" ? fatigue : (result === "Победа" ? 25 : 40), "Бой"); }
+    finalFatigue = typeof fatigue === "number" ? fatigue : (result === "Победа" ? 25 : (result === "Ничья" ? 30 : 40));
+    if (State.adjustFatigue) { State.adjustFatigue(state, finalFatigue, "Бой"); }
     if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id); }
   }
 
@@ -687,7 +701,7 @@
     }
 
     applyFightResult(state, p, opponent, result, method);
-    completeFightEconomy(state, p, opponent, result, session.purse || (p.contractPurse || 0), Data.economy && Data.economy.fatigue ? Data.economy.fatigue.fight : 18);
+    completeFightEconomy(state, p, opponent, result, session.purse || (p.contractPurse || 0));
     if (p.contractOpponentId === opponent.id) {
       state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
       state.world.proContractHistory.unshift({ week: state.week, text: "Контрактный бой завершён: " + result + " против " + opponent.name + "." });
@@ -822,7 +836,7 @@
     var scoreLine;
     var rounds;
     if (!offer || !p) { return false; }
-    if (p.fatigue >= 94) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
+    if (p.fatigue >= 100) { return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false; }
     opponent = U.getFighterById(state, offer.opponentId);
     if (!opponent) { return false; }
     chance = estimateWinChance(p, opponent);

@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "mobile-layout-2.2.8") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 229) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "fatigue-mobile-layout-2.2.9") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 230) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -229,4 +229,18 @@ console.log("tournament ranks save smoke ok", {
   if (!renderSource228.includes('Следующая неделя') || !renderSource228.includes('dashboard-actions')) throw new Error('dashboard actions missing');
   if (!renderSource228.includes('training-row') || !renderSource228.includes('training-value')) throw new Error('compact training rows missing');
   if (!cssSource228.includes('grid-template-columns: repeat(3, minmax(0,1fr))') || !cssSource228.includes('.feed { display:none')) throw new Error('mobile tabs/feed cleanup missing');
+}
+
+/* 2.2.9 fatigue layout checks */
+{
+  const stateSource229 = fs.readFileSync(path.join(root,'src/core/state.js'),'utf8');
+  const fightSource229 = fs.readFileSync(path.join(root,'src/core/fight.js'),'utf8');
+  const renderSource229 = fs.readFileSync(path.join(root,'src/ui/render.js'),'utf8');
+  const cssSource229 = fs.readFileSync(path.join(root,'src/styles.css'),'utf8');
+  if (stateSource229.includes(', 0, 94') || stateSource229.includes('/94')) throw new Error('fatigue 94 cap text still exists');
+  if (!fightSource229.includes('ratingDiff') || !fightSource229.includes('result === "Победа" ? 25')) throw new Error('fight fatigue/reward patch missing');
+  if (renderSource229.includes('Паспорт бойца')) throw new Error('profile title not renamed');
+  if (renderSource229.includes('shortTrackLabel(p.trackId)') || renderSource229.includes('shortWeightLabel(p.weightClassId)')) throw new Error('header still renders path/weight');
+  if (!renderSource229.includes('tournamentWeeksOnly')) throw new Error('tournament weeks only helper missing');
+  if (!cssSource229.includes('training-plus-btn') || !cssSource229.includes('fatigue/layout hotfix')) throw new Error('mobile/fight CSS hotfix missing');
 }
