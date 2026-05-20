@@ -12,10 +12,29 @@
   var state = Storage.load();
   if (state && state._migrationReport) {
     state.feed = state._migrationReport;
+    Storage.save(state);
+  }
+
+  function persistNow() {
+    if (state && State.player(state)) {
+      Storage.save(state);
+    }
+  }
+
+  function continueCareer() {
+    var loaded = Storage.load();
+    if (!loaded || !State.player(loaded)) {
+      window.alert("Сохранение не найдено.");
+      return;
+    }
+    state = loaded;
+    State.repairState(state);
+    state.feed = state.feed || "Карьера продолжена.";
+    saveAndRender();
   }
 
   function saveAndRender() {
-    Storage.save(state);
+    persistNow();
     render();
   }
 
@@ -61,8 +80,21 @@
     }
 
     state = imported;
-    rebuildWorld("Сохранение импортировано.");
+    State.repairState(state);
+    if (window.FS.Clubs) { window.FS.Clubs.ensureClubs(state); }
+    if (!state.offers || !state.offers.length) { World.refreshOffers(state); }
+    state.feed = "Сохранение импортировано.";
     saveAndRender();
+  }
+
+  function setupPersistentSave() {
+    window.addEventListener("pagehide", persistNow);
+    window.addEventListener("beforeunload", persistNow);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "hidden") {
+        persistNow();
+      }
+    });
   }
 
   function applyMobileCollapse() {
@@ -148,7 +180,7 @@
 
   function render() {
     if (!state || !State.player(state)) {
-      app.innerHTML = Render.start();
+      app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
       return;
     }
 
@@ -198,6 +230,25 @@
       }
       var openDetails = button.closest("details");
       if (openDetails) { openDetails.open = false; }
+      return;
+    }
+
+    if (button.dataset.action === "continue-career") {
+      continueCareer();
+      return;
+    }
+
+    if (button.dataset.action === "import-save") {
+      importSave();
+      return;
+    }
+
+    if (button.dataset.action === "reset-save") {
+      if (window.confirm("Удалить сохранение?")) {
+        Storage.clear();
+        state = null;
+        render();
+      }
       return;
     }
 
@@ -511,6 +562,7 @@
     }
   });
 
+  setupPersistentSave();
   registerOfflineApp();
   render();
 }());

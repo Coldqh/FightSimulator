@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "offline-pwa-2.2.1") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 221) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "persistent-save-2.2.2") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 222) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -131,7 +131,24 @@ if (!worldSource.includes("simulateAutonomousTournaments") || !worldSource.inclu
 const renderSource = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
 if (!renderSource.includes("newsProfiles") || !renderSource.includes("fighterTitleHistory") || !renderSource.includes("pathRankInfo")) throw new Error("UI patch pieces missing");
 
-console.log("career systems smoke ok", {
+
+/* Persistent save 2.2.2 checks */
+const savedBefore = JSON.stringify(state);
+FS.Storage.save(state);
+if (!sandbox.localStorage.store[FS.Data.saveKey]) throw new Error("primary save missing");
+if (!sandbox.localStorage.store[FS.Data.saveKey + "_backup"]) throw new Error("backup save missing");
+if (!sandbox.localStorage.store[FS.Data.saveKey + "_last_good"]) throw new Error("last_good save missing");
+const summary = FS.Storage.savedSummary();
+if (!summary || summary.week !== state.week || !summary.name) throw new Error("saved summary broken");
+const loadedAgain = FS.Storage.load();
+if (!loadedAgain || loadedAgain.week !== state.week || loadedAgain.version !== FS.Data.appVersion) throw new Error("load did not preserve week/version");
+sandbox.localStorage.removeItem(FS.Data.saveKey);
+const backupLoaded = FS.Storage.load();
+if (!backupLoaded || backupLoaded.week !== state.week) throw new Error("backup load failed");
+let startHtml = FS.Render.start(FS.Storage.savedSummary());
+if (!startHtml.includes("Продолжить карьеру") || !startHtml.includes("Импорт")) throw new Error("start menu continue/import missing");
+
+console.log("persistent save smoke ok", {
   version: FS.Data.appVersion,
   schema: FS.Data.saveSchemaVersion,
   offers: state.offers.length,

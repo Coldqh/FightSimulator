@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "offline-pwa-2.2.1",
+    appVersion: "persistent-save-2.2.2",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 221,
+    saveSchemaVersion: 222,
 
     tracks: {
       amateur: {

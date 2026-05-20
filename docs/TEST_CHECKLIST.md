@@ -1,4 +1,4 @@
-# Test Checklist 2.2.1 Offline PWA
+# Test Checklist 2.2.2 Persistent Save
 
 ```powershell
 cd C:\FightSimulator_GitHub
@@ -8,12 +8,15 @@ node --check sw.js
 start index.html
 ```
 
-Manual iPhone test:
-1. Push to GitHub Pages.
-2. Open the site on iPhone while online.
-3. Wait for the page to fully load.
-4. Add to Home Screen.
-5. Turn on airplane mode.
-6. Open FightSim from the home screen.
-7. Existing save should load from localStorage.
-8. Main UI, flags, ring image and scripts should load offline.
+Manual:
+1. Start a career.
+2. Switch a week.
+3. Refresh the page.
+4. Career should continue from the same week.
+5. Close and reopen browser / iPhone web app.
+6. Career should still load.
+7. Open the start screen after deleting app state only if save is absent.
+8. Start screen should have Continue Career and Import when a save exists.
+9. Update app version and reload.
+10. Save should migrate, not reset.
+11. If primary localStorage save is missing but backup exists, game should restore from backup.

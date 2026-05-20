@@ -89,3 +89,27 @@ Caching:
 Save data:
 - career saves remain in `localStorage`
 - service worker only caches app files, not private save data
+
+
+## Persistent Save 2.2.2
+
+`Storage.load()` now checks multiple keys:
+- `Data.saveKey`
+- `Data.saveKey + "_backup"`
+- `Data.saveKey + "_last_good"`
+- `fight_simulator_autosave`
+- legacy save keys
+
+The newest valid state by `week` wins.
+
+`Storage.save(state)` writes the same cleaned save JSON to all active save keys.
+It does not clear the career when called with a null/invalid state.
+
+`Storage.savedSummary()` reads a lightweight summary for the start menu.
+
+`app.js` now persists on:
+- `pagehide`
+- `beforeunload`
+- `visibilitychange: hidden`
+
+This protects iOS standalone PWA restarts and normal browser refreshes.

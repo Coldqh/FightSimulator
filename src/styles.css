@@ -1820,3 +1820,15 @@ button, input, select { max-width: 100%; }
     flex-wrap: wrap;
   }
 }
+
+
+/* 2.2.2 persistent save menu */
+.continue-card {
+  border-color: rgba(63, 185, 80, .35);
+  background: linear-gradient(180deg, rgba(46, 160, 67, .12), rgba(255,255,255,.025));
+  margin-bottom: 14px;
+}
+
+.continue-card .split-row {
+  padding: 6px 0;
+}

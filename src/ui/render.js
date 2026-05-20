@@ -44,7 +44,7 @@
     return "<option value=\"" + U.escapeHtml(value) + "\"" + (value === selectedValue ? " selected" : "") + ">" + U.escapeHtml(label) + "</option>";
   }
 
-  function renderStartScreen() {
+  function renderStartScreen(savedSummary) {
     var weightOptions = Data.weightClasses.map(function (weightClass) {
       return option(weightClass.id, weightClass.label + " · " + weightClass.min + "-" + weightClass.max + " кг", "welter");
     }).join("");
@@ -57,23 +57,37 @@
       "</label>";
     }).join("");
 
+    function summaryHtml() {
+      if (!savedSummary) { return ""; }
+      var track = savedSummary.trackId ? U.findTrack(savedSummary.trackId).label : "карьера";
+      var country = savedSummary.countryId ? countryLabel(savedSummary.countryId) : "";
+      return "<div class=\"content-card continue-card\"><h3>Сохранённая карьера</h3>" +
+        "<div class=\"split-row\"><span>Боец</span><strong>" + U.escapeHtml(savedSummary.name || "Боец") + "</strong></div>" +
+        "<div class=\"split-row\"><span>Неделя</span><strong>" + (savedSummary.week || 1) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Путь</span><strong>" + U.escapeHtml(track) + "</strong></div>" +
+        "<div class=\"split-row\"><span>Страна</span><strong>" + country + "</strong></div>" +
+        "<div class=\"row\" style=\"margin-top:12px\"><button class=\"primary\" data-action=\"continue-career\">Продолжить карьеру</button><button data-action=\"import-save\">Импорт</button></div>" +
+      "</div>";
+    }
+
     return "<section class=\"start-screen\">" +
       "<div class=\"start-card\">" +
         "<div class=\"start-head\">" +
           "<div class=\"brand\">" +
             "<div class=\"logo\">FS</div>" +
-            "<div><h1>Fight Simulator</h1><div class=\"pills\" style=\"margin-top:8px\"><span class=\"pill gold\">Версия " + U.escapeHtml(Data.appVersion) + "</span></div></div>" +
+            "<div><h1>Fight Simulator</h1><div class=\"pills\" style=\"margin-top:8px\"><span class=\"pill gold\">Версия " + U.escapeHtml(Data.appVersion) + "</span><span class=\"pill green\">автосохранение</span></div></div>" +
           "</div>" +
           "<div class=\"ring-line\"></div>" +
         "</div>" +
         "<div class=\"start-body\">" +
+          summaryHtml() +
           "<div class=\"grid two\">" +
             "<label><div class=\"label\">Имя бойца</div><input id=\"careerName\" value=\"Влад\" maxlength=\"32\"></label>" +
             "<label><div class=\"label\">Страна</div><input id=\"careerCountry\" type=\"hidden\" value=\"russia\"><div id=\"careerCountryDropdown\">" + countryDropdown("russia", "data-start-country", "start-country-dropdown") + "</div></label>" +
             "<label><div class=\"label\">Весовая категория</div><select id=\"careerWeightClass\">" + weightOptions + "</select></label>" +
           "</div>" +
-          "<div class=\"content-card\" style=\"margin-top:14px\"><h3>Архетип карьеры</h3><div class=\"archetype-grid\">" + cards + "</div></div>" +
-          "<div class=\"row\" style=\"margin-top:18px\"><button class=\"primary\" data-action=\"create-career\">Начать карьеру</button></div>" +
+          "<div class=\"content-card\" style=\"margin-top:14px\"><h3>Новая карьера</h3><div class=\"archetype-grid\">" + cards + "</div></div>" +
+          "<div class=\"row\" style=\"margin-top:18px\"><button class=\"primary\" data-action=\"create-career\">Начать новую карьеру</button>" + (savedSummary ? "<button class=\"danger\" data-action=\"reset-save\">Удалить сохранение</button>" : "<button data-action=\"import-save\">Импорт</button>") + "</div>" +
         "</div>" +
       "</div>" +
     "</section>";

@@ -1,6 +1,6 @@
 # Fight Simulator
 
-Version: `offline-pwa-2.2.1`
+Version: `persistent-save-2.2.2`
 
 Large career systems patch.
 
@@ -32,3 +32,33 @@ On iPhone:
 4. Launch from the icon. The game can open without internet after the first successful load.
 
 Offline mode requires HTTPS hosting, so GitHub Pages works. Opening `index.html` directly as a local file does not register a service worker.
+
+
+## Persistent Save 2.2.2
+
+The career now survives:
+- browser refresh
+- browser restart
+- reopening the iPhone Home Screen web app
+- game version updates
+
+Save storage:
+- primary save key
+- backup save key
+- last-good save key
+- autosave key
+
+The app loads the newest valid save by week number.
+If the main save is missing, it restores from backup.
+
+Autosave triggers:
+- normal game actions
+- pagehide
+- beforeunload
+- visibilitychange when the app is hidden
+
+Start screen:
+- Continue Career
+- Import
+- Delete Save
+- Start New Career

@@ -4,6 +4,11 @@
   window.FS = window.FS || {};
 
   var Data = window.FS.Data;
+  var BACKUP_KEYS = [
+    Data.saveKey + "_backup",
+    Data.saveKey + "_last_good",
+    "fight_simulator_autosave"
+  ];
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -16,6 +21,68 @@
       console.error(error);
       return null;
     }
+  }
+
+  function writeRaw(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
+
+  function removeRaw(key) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  function rawKeys() {
+    var keys = [Data.saveKey].concat(BACKUP_KEYS);
+    var i;
+    if (Data.legacySaveKeys instanceof Array) {
+      for (i = 0; i < Data.legacySaveKeys.length; i += 1) {
+        keys.push(Data.legacySaveKeys[i]);
+      }
+    }
+    return Array.from(new Set(keys));
+  }
+
+  function isUsableState(candidate) {
+    return candidate && typeof candidate === "object" && candidate.roster instanceof Array && candidate.roster.some(function (fighter) { return fighter && fighter.isPlayer; });
+  }
+
+  function rawWeek(raw) {
+    var parsed = parse(raw);
+    return parsed ? Number(parsed.week) || 0 : 0;
+  }
+
+  function newestRawSave() {
+    var keys = rawKeys();
+    var best = null;
+    var bestWeek = -1;
+    var i;
+    var raw;
+    var parsed;
+    var week;
+
+    for (i = 0; i < keys.length; i += 1) {
+      raw = readRaw(keys[i]);
+      if (!raw) { continue; }
+      parsed = parse(raw);
+      if (!isUsableState(parsed)) { continue; }
+      week = Number(parsed.week) || 0;
+      if (!best || week >= bestWeek) {
+        best = raw;
+        bestWeek = week;
+      }
+    }
+
+    return best;
   }
 
   function parse(raw) {
@@ -137,7 +204,7 @@
 
     oldVersion = state.version || "";
     state.version = Data.appVersion;
-    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 220);
+    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 222);
     state.week = Math.max(1, Number(state.week) || 1);
     state.selectedTab = state.selectedTab || "dashboard";
     state.rankingCountryId = state.rankingCountryId || "russia";
@@ -145,7 +212,7 @@
     state.rankingWeightClassId = state.rankingWeightClassId || "welter";
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
     state.selectedTeamCountryId = state.selectedTeamCountryId || state.rankingCountryId || "russia";
-    state.modal = null;
+    state.modal = state.modal && state.modal.type === "proContractPreview" ? state.modal : null;
     state.roster = state.roster instanceof Array ? state.roster : [];
     state.people = state.people instanceof Array ? state.people : [];
     state.offers = state.offers instanceof Array ? state.offers : [];
@@ -169,29 +236,16 @@
       repairFighter(state.roster[i]);
     }
 
-    return state;
+    return isUsableState(state) ? state : null;
   }
 
   function load() {
-    var raw = readRaw(Data.saveKey);
-    var state;
-    var i;
+    var raw = newestRawSave();
+    var state = raw ? migrate(parse(raw)) : null;
 
-    if (raw) {
-      return migrate(parse(raw));
-    }
-
-    if (Data.legacySaveKeys instanceof Array) {
-      for (i = 0; i < Data.legacySaveKeys.length; i += 1) {
-        raw = readRaw(Data.legacySaveKeys[i]);
-        if (raw) {
-          state = migrate(parse(raw));
-          if (state) {
-            save(state);
-            return state;
-          }
-        }
-      }
+    if (state) {
+      save(state);
+      return state;
     }
 
     return null;
@@ -199,40 +253,65 @@
 
   function save(state) {
     var safe;
+    var raw;
     try {
-      if (!state) {
-        clear();
-        return;
+      if (!state || !isUsableState(state)) {
+        return false;
       }
       state.version = Data.appVersion;
-      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 220;
+      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 222;
       safe = cleanTransientFields(state);
-      localStorage.setItem(Data.saveKey, JSON.stringify(safe));
+      raw = JSON.stringify(safe);
+
+      writeRaw(Data.saveKey, raw);
+      writeRaw(BACKUP_KEYS[0], raw);
+      writeRaw(BACKUP_KEYS[1], raw);
+      writeRaw(BACKUP_KEYS[2], raw);
+      return true;
     } catch (error) {
       console.error(error);
+      return false;
     }
   }
 
   function clear() {
+    var keys = rawKeys();
     var i;
-    try {
-      localStorage.removeItem(Data.saveKey);
-      if (Data.legacySaveKeys instanceof Array) {
-        for (i = 0; i < Data.legacySaveKeys.length; i += 1) {
-          localStorage.removeItem(Data.legacySaveKeys[i]);
-        }
-      }
-    } catch (error) {
-      console.error(error);
+    for (i = 0; i < keys.length; i += 1) {
+      removeRaw(keys[i]);
     }
   }
 
   function exportString(state) {
-    return JSON.stringify(state, null, 2);
+    return JSON.stringify(cleanTransientFields(state), null, 2);
   }
 
   function importString(raw) {
-    return migrate(parse(raw));
+    var imported = migrate(parse(raw));
+    if (imported) {
+      save(imported);
+    }
+    return imported;
+  }
+
+  function hasSave() {
+    return !!newestRawSave();
+  }
+
+  function savedSummary() {
+    var raw = newestRawSave();
+    var parsed = raw ? parse(raw) : null;
+    var player;
+    if (!isUsableState(parsed)) { return null; }
+    player = parsed.roster.find(function (fighter) { return fighter && fighter.isPlayer; });
+    return {
+      name: player ? player.name : "Боец",
+      week: Number(parsed.week) || 1,
+      version: parsed.version || "",
+      trackId: player ? player.trackId : "",
+      countryId: player ? player.countryId : "",
+      weightClassId: player ? player.weightClassId : ""
+    };
   }
 
   window.FS.Storage = {
@@ -241,6 +320,8 @@
     clear: clear,
     migrate: migrate,
     exportString: exportString,
-    importString: importString
+    importString: importString,
+    hasSave: hasSave,
+    savedSummary: savedSummary
   };
 }());
