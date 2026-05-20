@@ -1,9 +1,175 @@
+/* Fight World ROOT CACHE FIX 2.3.6
+   Главная правка: старый service worker и Cache Storage больше не могут держать 2.3.6 локально.
+*/
+(function () {
+  "use strict";
+
+  var VERSION = "fight-rows-fix-2.3.6";
+  var LOCAL_HOSTS = { "localhost": true, "127.0.0.1": true, "0.0.0.0": true };
+  var isLocal = !!LOCAL_HOSTS[window.location.hostname];
+  var params = new URLSearchParams(window.location.search || "");
+  var resetRequested = params.has("cacheReset") || params.has("hardReset") || params.has("fresh");
+
+  function log(message) {
+    try {
+      console.info("[Fight World 2.3.6]", message);
+    } catch (error) {}
+  }
+
+  function allCaches() {
+    if (!window.caches || !caches.keys) {
+      return Promise.resolve([]);
+    }
+    return caches.keys();
+  }
+
+  function deleteFightWorldCaches() {
+    if (!window.caches || !caches.keys) {
+      return Promise.resolve();
+    }
+    return caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        if (
+          /^fight-simulator-/i.test(key) ||
+          /^fight-world-/i.test(key) ||
+          /^fw-/i.test(key) ||
+          key.toLowerCase().indexOf("fight") !== -1 ||
+          key.toLowerCase().indexOf("simulator") !== -1
+        ) {
+          return caches.delete(key);
+        }
+        return Promise.resolve(false);
+      }));
+    });
+  }
+
+  function unregisterFightWorldWorkers() {
+    if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
+      return Promise.resolve();
+    }
+    return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+      return Promise.all(registrations.map(function (registration) {
+        var scope = String(registration.scope || "");
+        if (
+          scope.indexOf(window.location.origin) === 0 ||
+          scope.toLowerCase().indexOf("fightsimulator") !== -1 ||
+          scope.toLowerCase().indexOf("fight") !== -1
+        ) {
+          return registration.unregister();
+        }
+        return Promise.resolve(false);
+      }));
+    });
+  }
+
+  function blockLocalServiceWorkerRegistration() {
+    if (!isLocal || !("serviceWorker" in navigator) || navigator.serviceWorker.__fightWorldLocalBlock236) {
+      return;
+    }
+
+    try {
+      var fakeRegister = function () {
+        log("serviceWorker.register заблокирован локально, чтобы старый cache не вернул 2.3.6.");
+        return Promise.resolve({
+          scope: window.location.origin + "/",
+          installing: null,
+          waiting: null,
+          active: null,
+          unregister: function () { return Promise.resolve(true); },
+          update: function () { return Promise.resolve(); }
+        });
+      };
+
+      try {
+        Object.defineProperty(navigator.serviceWorker, "register", {
+          value: fakeRegister,
+          configurable: true
+        });
+      } catch (defineError) {
+        navigator.serviceWorker.register = fakeRegister;
+      }
+
+      navigator.serviceWorker.__fightWorldLocalBlock236 = true;
+    } catch (error) {}
+  }
+
+  function resetRootCache() {
+    return unregisterFightWorldWorkers()
+      .then(deleteFightWorldCaches)
+      .then(function () {
+        try {
+          sessionStorage.setItem("fightWorldRootCacheFix", VERSION);
+        } catch (error) {}
+        log("service workers unregistered, Fight World caches deleted.");
+      });
+  }
+
+  function forceVersion() {
+    window.FS = window.FS || {};
+    window.FS.Data = window.FS.Data || {};
+    window.FS.Data.appVersion = VERSION;
+    window.FS.Data.saveSchemaVersion = 236;
+
+    try {
+      document.querySelectorAll(".version-badge,.footer-note,[data-version],[data-app-version]").forEach(function (node) {
+        var text = node.textContent || "";
+        if (node.hasAttribute("data-version") || node.hasAttribute("data-app-version")) {
+          node.textContent = VERSION;
+          return;
+        }
+        if (/\d+\.\d+\.\d+/.test(text) || /версия/i.test(text)) {
+          node.textContent = node.classList.contains("version-badge") ? "2.3.6" : ("Версия: " + VERSION);
+        }
+      });
+    } catch (error) {}
+  }
+
+  blockLocalServiceWorkerRegistration();
+
+  window.FW_ROOT_CACHE_FIX_236 = {
+    version: VERSION,
+    isLocal: isLocal,
+    reset: resetRootCache,
+    deleteCaches: deleteFightWorldCaches,
+    unregisterServiceWorkers: unregisterFightWorldWorkers,
+    forceVersion: forceVersion,
+    listCaches: allCaches
+  };
+
+  forceVersion();
+
+  if (isLocal || resetRequested) {
+    resetRootCache().then(forceVersion);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    forceVersion();
+    if (isLocal || resetRequested) {
+      resetRootCache().then(forceVersion);
+    }
+  });
+
+  window.addEventListener("load", function () {
+    forceVersion();
+    if (isLocal || resetRequested) {
+      resetRootCache().then(forceVersion);
+    }
+    window.setTimeout(forceVersion, 300);
+    window.setTimeout(forceVersion, 1200);
+  });
+
+  window.addEventListener("pageshow", forceVersion);
+
+  window.setInterval(forceVersion, 1500);
+}());
+
+
 (function () {
   "use strict";
 
   window.FS = window.FS || {};
   var FS = window.FS;
-  var PATCH_VERSION = "hard-version-fix-2.3.3";
+  var PATCH_VERSION = "fight-rows-fix-2.3.6";
   var MONTH_WEEKS = 4;
 
   var RULES = {
@@ -133,7 +299,7 @@
 
     competitions().forEach(function (comp) {
       if (ruleFor(comp) && !scheduledAt(comp, week)) {
-        comp.schedule = "__disabled_by_calendar_2_3_3__";
+        comp.schedule = "__disabled_by_calendar_2_3_6__";
       }
     });
 
@@ -148,10 +314,10 @@
 
   function patchAmateurCalendar() {
     var Amateur = FS.Amateur;
-    if (!Amateur || Amateur.__calendar233) {
+    if (!Amateur || Amateur.__calendar236) {
       return;
     }
-    Amateur.__calendar233 = true;
+    Amateur.__calendar236 = true;
 
     Amateur.availableCompetitions = function availableCompetitionsPatched(state) {
       var player = FS.State && FS.State.player ? FS.State.player(state) : null;
@@ -210,10 +376,10 @@
 
   function patchWorldCalendar() {
     var World = FS.World;
-    if (!World || World.__calendar233) {
+    if (!World || World.__calendar236) {
       return;
     }
-    World.__calendar233 = true;
+    World.__calendar236 = true;
 
     if (typeof World.advanceWeek === "function") {
       var originalAdvanceWeek = World.advanceWeek.bind(World);
@@ -242,12 +408,12 @@
 
   function injectStyles() {
     var style;
-    if (document.getElementById("fight-world-hard-fix-2-3-3")) {
+    if (document.getElementById("fight-world-fight-rows-fix-2-3-6")) {
       return;
     }
 
     style = document.createElement("style");
-    style.id = "fight-world-hard-fix-2-3-3";
+    style.id = "fight-world-fight-rows-fix-2-3-6";
     style.textContent = [
       ".tabs button{min-height:0!important;padding:7px 10px!important;line-height:1.1!important;flex:0 0 auto!important}",
       ".small-btn,.fighter-name-btn,.fight-line-btn,.training-plus-btn,.modal-actions button,.punch-action-btn{min-height:0!important;padding:7px 10px!important;line-height:1.1!important}",
@@ -493,10 +659,10 @@
 
   function patchRender() {
     var Render = FS.Render;
-    if (!Render || Render.__hotfix233 || typeof Render.dashboard !== "function") {
+    if (!Render || Render.__hotfix236 || typeof Render.dashboard !== "function") {
       return;
     }
-    Render.__hotfix233 = true;
+    Render.__hotfix236 = true;
 
     var originalDashboard = Render.dashboard.bind(Render);
     Render.dashboard = function dashboardPatched(state) {
@@ -530,7 +696,7 @@
 (function () {
   "use strict";
 
-  var HARD_VERSION = "hard-version-fix-2.3.3";
+  var HARD_VERSION = "fight-rows-fix-2.3.6";
   var NOTICE_ID = "fightWorldUpdateNotice233";
 
   function versionNumber(text) {
@@ -560,7 +726,7 @@
   function removeOldPatchScripts() {
     document.querySelectorAll('script[src*="src/patches/"]').forEach(function (script) {
       var src = script.getAttribute("src") || "";
-      if (src.indexOf("hard-fix-2.3.3.js") === -1) {
+      if (src.indexOf("fight-rows-fix-2.3.6.js") === -1) {
         script.parentNode && script.parentNode.removeChild(script);
       }
     });
@@ -729,4 +895,215 @@
     checkVersion();
     checkWaitingWorker();
   }, 2 * 60 * 1000);
+}());
+
+
+
+/* Fight rows renderer fix 2.3.6 */
+(function () {
+  "use strict";
+
+  var VERSION = "fight-rows-fix-2.3.6";
+
+  function esc(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function getStateUtils() {
+    window.FS = window.FS || {};
+    return {
+      U: window.FS.Utils || {},
+      Fight: window.FS.Fight || {},
+      Data: window.FS.Data || {}
+    };
+  }
+
+  function fighterById(state, id) {
+    var refs = getStateUtils();
+    if (!id || !state) { return null; }
+    if (refs.U.getFighterById) {
+      return refs.U.getFighterById(state, id);
+    }
+    return ((state.roster || state.fighters || [])).find(function (fighter) {
+      return fighter && fighter.id === id;
+    }) || null;
+  }
+
+  function fighterName(fighter) {
+    if (!fighter) { return "Боец"; }
+    return fighter.name || fighter.fullName || ((fighter.firstName || "") + " " + (fighter.lastName || fighter.surname || "")).trim() || "Боец";
+  }
+
+  function recordText(fighter) {
+    var refs = getStateUtils();
+    if (!fighter) { return "0-0-0"; }
+    if (refs.U.recordText) {
+      return refs.U.recordText(fighter.record || fighter);
+    }
+    var record = fighter.record || fighter;
+    return (record.wins || 0) + "-" + (record.losses || 0) + "-" + (record.draws || 0);
+  }
+
+  function fighterOvr(fighter) {
+    var refs = getStateUtils();
+    if (!fighter) { return 0; }
+    if (refs.U.statAverage) {
+      return refs.U.statAverage(fighter.stats || fighter);
+    }
+    return Math.round(Number(fighter.ovr || fighter.overall || fighter.rating || 0));
+  }
+
+  function countryById(countryId) {
+    var refs = getStateUtils();
+    if (refs.U.findCountry) {
+      return refs.U.findCountry(countryId);
+    }
+    return (refs.Data.countries || []).find(function (country) {
+      return country && country.id === countryId;
+    }) || { id: countryId, label: countryId || "—", flag: "" };
+  }
+
+  function countryHtml(countryId) {
+    var country = countryById(countryId);
+    var label = (country && (country.label || country.name)) || countryId || "—";
+    var flag = country && country.flag
+      ? '<img class="flag-icon" src="' + esc(country.flag) + '" alt="' + esc(label) + '">'
+      : "";
+    return '<span class="country-label">' + flag + '<span>' + esc(label) + '</span></span>';
+  }
+
+  function previewFor(state, offer) {
+    var refs = getStateUtils();
+    if (refs.Fight.buildFightPreview && offer && offer.id) {
+      try {
+        return refs.Fight.buildFightPreview(state, offer.id);
+      } catch (error) {}
+    }
+    return null;
+  }
+
+  function moneyText(value) {
+    var num = Number(value) || 0;
+    return "$" + Math.round(num);
+  }
+
+  function fightRowHtml(state, offer) {
+    var opponent = fighterById(state, offer && offer.opponentId);
+    if (!opponent) { return ""; }
+
+    var preview = previewFor(state, offer) || {};
+    var chance = preview.winChance;
+    if (chance == null) { chance = offer.winChance; }
+    if (chance == null) { chance = offer.chance; }
+    if (chance == null) { chance = "—"; }
+    if (typeof chance === "number") { chance = Math.round(chance) + "%"; }
+    else if (String(chance).indexOf("%") === -1 && chance !== "—") { chance = String(chance) + "%"; }
+
+    var purse = preview.purse;
+    if (purse == null) { purse = offer.purse; }
+    if (purse == null) { purse = offer.reward; }
+    if (purse == null) { purse = offer.money; }
+
+    var opponentOvr = preview.opponentRating;
+    if (opponentOvr == null) { opponentOvr = fighterOvr(opponent); }
+
+    return '<div class="fw-fight-row">' +
+      '<button class="small-btn fighter-name-btn fw-fight-name" data-fighter="' + esc(opponent.id) + '">' + esc(fighterName(opponent)) + '</button>' +
+      '<span class="fw-fight-cell fw-fight-record">' + esc(recordText(opponent)) + '</span>' +
+      '<span class="fw-fight-cell fw-fight-country">' + countryHtml(opponent.countryId || opponent.currentCountryId || opponent.homeCountryId) + '</span>' +
+      '<span class="fw-fight-cell fw-fight-chance">Шанс ' + esc(chance) + '</span>' +
+      '<span class="fw-fight-cell fw-fight-money">' + esc(moneyText(purse)) + '</span>' +
+      '<span class="fw-fight-cell fw-fight-ovr">OVR ' + esc(opponentOvr) + '</span>' +
+      '<button class="primary fw-fight-action" data-preview-fight="' + esc(offer.id) + '">Бой</button>' +
+    '</div>';
+  }
+
+  function patchFightRows(root, state) {
+    if (!root || !state) { return; }
+
+    var fightList = root.querySelector(".fight-lines, .offer-list.compact-offers.fight-lines, .offer-list.fight-lines");
+    var offers = (state.offers || []).filter(function (offer) {
+      return offer && !offer.isCompetition && offer.opponentId;
+    });
+
+    if (!fightList) {
+      if (state.selectedTab !== "fights") { return; }
+      var card = root.querySelector(".fights-head, .content-card");
+      if (!card || !card.parentNode) { return; }
+      fightList = document.createElement("div");
+      card.parentNode.insertBefore(fightList, card.nextSibling);
+    }
+
+    fightList.className = "fw-fight-list";
+    fightList.innerHTML = offers.length
+      ? offers.map(function (offer) { return fightRowHtml(state, offer); }).join("")
+      : '<div class="content-card"><div class="muted small">Пусто.</div></div>';
+  }
+
+  function injectFightRowStyles() {
+    if (document.getElementById("fight-world-fight-rows-236-style")) { return; }
+
+    var style = document.createElement("style");
+    style.id = "fight-world-fight-rows-236-style";
+    style.textContent = [
+      ".fw-fight-list{display:grid!important;gap:6px!important;width:100%!important;min-width:0!important}",
+      ".fw-fight-row{display:flex!important;align-items:center!important;gap:7px!important;width:100%!important;min-height:36px!important;padding:5px 6px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:12px!important;background:rgba(255,255,255,.028)!important;white-space:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch!important}",
+      ".fw-fight-row>*{flex:0 0 auto!important}",
+      ".fw-fight-row .fighter-name-btn,.fw-fight-name{width:auto!important;max-width:210px!important;min-width:0!important;padding:6px 10px!important;justify-content:flex-start!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}",
+      ".fw-fight-cell{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:auto!important;min-height:27px!important;padding:5px 9px!important;border:1px solid rgba(255,255,255,.10)!important;border-radius:999px!important;background:rgba(255,255,255,.045)!important;color:var(--text,#f4f4f5)!important;font-size:11px!important;line-height:1!important}",
+      ".fw-fight-record{min-width:72px!important}",
+      ".fw-fight-country{min-width:118px!important;justify-content:flex-start!important}",
+      ".fw-fight-country .country-label{display:inline-flex!important;align-items:center!important;gap:5px!important;min-width:0!important}",
+      ".fw-fight-country .country-label span{max-width:96px!important;overflow:hidden!important;text-overflow:ellipsis!important}",
+      ".fw-fight-chance{min-width:74px!important;color:#b9d4ff!important;border-color:rgba(59,130,246,.34)!important}",
+      ".fw-fight-money{min-width:58px!important;color:#f3d98d!important;border-color:rgba(214,160,25,.34)!important}",
+      ".fw-fight-ovr{min-width:62px!important;color:#f3d98d!important;border-color:rgba(214,160,25,.34)!important}",
+      ".fw-fight-action{width:auto!important;min-width:50px!important;min-height:29px!important;padding:6px 10px!important;border-radius:10px!important;font-size:11px!important}",
+      ".fight-line{display:none!important}",
+      "@media(max-width:760px){.fw-fight-row{gap:5px!important;padding:4px 5px!important}.fw-fight-name{max-width:126px!important}.fw-fight-cell{font-size:10px!important;min-height:24px!important;padding:4px 6px!important}.fw-fight-country{min-width:82px!important}.fw-fight-country .country-label span{max-width:58px!important}.fw-fight-record{min-width:58px!important}.fw-fight-chance{min-width:62px!important}.fw-fight-money{min-width:48px!important}.fw-fight-ovr{min-width:52px!important}.fw-fight-action{min-height:26px!important;padding:4px 8px!important}}"
+    ].join("\n");
+
+    document.head.appendChild(style);
+  }
+
+  function patchRender() {
+    var Render = window.FS && window.FS.Render;
+    if (!Render || Render.__fightRowsFix236 || typeof Render.dashboard !== "function") { return; }
+
+    Render.__fightRowsFix236 = true;
+    var originalDashboard = Render.dashboard.bind(Render);
+
+    Render.dashboard = function dashboardFightRowsPatched(state) {
+      var template = document.createElement("template");
+      template.innerHTML = originalDashboard(state);
+      injectFightRowStyles();
+      patchFightRows(template.content, state);
+      return template.innerHTML;
+    };
+  }
+
+  window.FWFixFightRows236 = {
+    version: VERSION,
+    patchFightRows: patchFightRows,
+    injectStyles: injectFightRowStyles
+  };
+
+  patchRender();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      injectFightRowStyles();
+      patchRender();
+    });
+  } else {
+    injectFightRowStyles();
+    patchRender();
+  }
+
+  window.addEventListener("load", function () {
+    injectFightRowStyles();
+    patchRender();
+  });
 }());

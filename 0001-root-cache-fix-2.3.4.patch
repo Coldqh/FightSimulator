@@ -1,0 +1,1 @@
+Use apply_root_fix.ps1 for safe in-place patching. This root fix resets Service Worker and Cache Storage state.

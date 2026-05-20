@@ -1,0 +1,15 @@
+Fight World 2.3.4 — ROOT CACHE FIX
+
+Корень проблемы:
+- старый service worker на том же origin мог отдавать старый index.html / JS из Cache Storage;
+- поэтому локально оставалась версия 2.3.0 даже после замены файлов;
+- предыдущий фикс бил по подключению/надписи, но не гарантированно убивал старый SW до загрузки приложения.
+
+Исправление:
+1. reset-cache.html удаляет service workers и Fight World caches.
+2. start_clean_local.ps1 запускает игру на новом origin: 127.0.0.1:5184.
+3. root-cache-fix-2.3.4.js локально блокирует serviceWorker.register.
+4. sw.js заменён на network-first и чистит старые Fight World caches.
+5. index.html подключает только root-cache-fix-2.3.4.js.
+6. game-data.js получает appVersion root-cache-fix-2.3.4 и saveSchemaVersion 234.
+7. verify_root_fix.ps1 валит проверку, если старые 2.3.0/2.3.1/2.3.2/2.3.3 хвосты остались в рабочих файлах.

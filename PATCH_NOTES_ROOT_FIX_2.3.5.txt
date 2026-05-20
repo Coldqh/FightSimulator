@@ -1,0 +1,15 @@
+Fight World 2.3.5 - root cache fix.
+
+The previous PowerShell installer was broken by parsing/encoding/quoting.
+This package uses Node.js installers instead.
+
+Root problem:
+- old Service Worker and Cache Storage can keep serving old index/js files;
+- local localhost:5173 can keep showing 2.3.0 even after source edits.
+
+Fix:
+- reset-cache.html unregisters SW and deletes Fight World caches;
+- local clean server runs on 127.0.0.1:5185;
+- root-cache-fix-2.3.5.js blocks local SW registration and forces data version;
+- sw.js is network-first and clears old Fight World caches;
+- verify script checks real source files.

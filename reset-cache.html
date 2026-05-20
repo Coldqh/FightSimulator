@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Fight World - cache reset</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:#08090b; color:#f4f4f5; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .card { width:min(720px,calc(100vw - 28px)); border:1px solid rgba(255,255,255,.12); border-radius:22px; padding:22px; background:linear-gradient(180deg,#181b21,#0e1014); box-shadow:0 24px 80px rgba(0,0,0,.55); }
+    h1 { margin:0 0 8px; font-size:24px; }
+    p { color:#a7adba; line-height:1.5; }
+    pre { white-space:pre-wrap; background:#050609; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; max-height:320px; overflow:auto; color:#d6d9e1; }
+    button,a { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 14px; border-radius:12px; border:1px solid rgba(255,255,255,.16); background:#cf2525; color:white; text-decoration:none; font-weight:700; cursor:pointer; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Fight World cache reset 2.3.6</h1>
+    <p>Сбрасывает старый Service Worker и кэш, потом открывает свежую сборку.</p>
+    <pre id="log">Starting...</pre>
+    <div class="row">
+      <button id="again" type="button">Reset again</button>
+      <a id="go" href="index.html?cacheReset=2.3.6">Open game</a>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const logNode = document.getElementById("log");
+    const go = document.getElementById("go");
+
+    function log(message) {
+      logNode.textContent += "\n" + message;
+    }
+
+    function freshIndexUrl() {
+      return "index.html?cacheReset=2.3.6&fresh=1&t=" + Date.now();
+    }
+
+    async function reset() {
+      logNode.textContent = "Starting root cache reset 2.3.6...";
+      go.href = freshIndexUrl();
+
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        log("Service Workers found: " + registrations.length);
+        for (const registration of registrations) {
+          log("Unregister SW scope: " + registration.scope);
+          await registration.unregister();
+        }
+      } else {
+        log("Service Worker API is not available.");
+      }
+
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        log("Cache Storage entries found: " + keys.length);
+        for (const key of keys) {
+          const low = key.toLowerCase();
+          if (low.includes("fight") || low.includes("simulator") || low.startsWith("fw-")) {
+            log("Delete cache: " + key);
+            await caches.delete(key);
+          }
+        }
+      } else {
+        log("Cache Storage API is not available.");
+      }
+
+      try {
+        localStorage.setItem("fightWorldRootCacheFix", "fight-rows-fix-2.3.6");
+        sessionStorage.setItem("fightWorldRootCacheFix", "fight-rows-fix-2.3.6");
+      } catch (error) {}
+
+      log("Done. Opening fresh game...");
+      setTimeout(() => window.location.replace(freshIndexUrl()), 650);
+    }
+
+    document.getElementById("again").addEventListener("click", reset);
+    reset().catch((error) => log("ERROR: " + (error && error.message ? error.message : error)));
+  </script>
+</body>
+</html>

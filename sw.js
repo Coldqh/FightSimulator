@@ -1,13 +1,14 @@
-/* Fight World offline service worker */
+/* Fight World service worker - FIGHT ROWS FIX 2.3.6 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-fatigue-mobile-layout-2.2.9";
+const CACHE_VERSION = "fight-simulator-fight-rows-fix-2.3.6";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
 const PRECACHE_URLS = [
   "./",
   "./index.html",
+  "./reset-cache.html",
   "./manifest.webmanifest",
   "./version.json",
   "./ring_top_view.png",
@@ -27,203 +28,91 @@ const PRECACHE_URLS = [
   "./src/core/world.js",
   "./src/core/fight.js",
   "./src/ui/render.js",
-  "./src/app.js",
-  "./assets/flags/algeria.png",
-  "./assets/flags/angola.png",
-  "./assets/flags/argentina.png",
-  "./assets/flags/armenia.png",
-  "./assets/flags/australia.png",
-  "./assets/flags/azerbaijan.png",
-  "./assets/flags/belarus.png",
-  "./assets/flags/belgium.png",
-  "./assets/flags/bolivia.png",
-  "./assets/flags/brazil.png",
-  "./assets/flags/bulgaria.png",
-  "./assets/flags/burkina_faso.png",
-  "./assets/flags/cameroon.png",
-  "./assets/flags/canada.png",
-  "./assets/flags/chile.png",
-  "./assets/flags/china.png",
-  "./assets/flags/colombia.png",
-  "./assets/flags/costa_rica.png",
-  "./assets/flags/croatia.png",
-  "./assets/flags/cuba.png",
-  "./assets/flags/czechia.png",
-  "./assets/flags/denmark.png",
-  "./assets/flags/dominican_republic.png",
-  "./assets/flags/drc.png",
-  "./assets/flags/ecuador.png",
-  "./assets/flags/egypt.png",
-  "./assets/flags/el_salvador.png",
-  "./assets/flags/estonia.png",
-  "./assets/flags/ethiopia.png",
-  "./assets/flags/finland.png",
-  "./assets/flags/france.png",
-  "./assets/flags/georgia.png",
-  "./assets/flags/germany.png",
-  "./assets/flags/ghana.png",
-  "./assets/flags/greece.png",
-  "./assets/flags/guatemala.png",
-  "./assets/flags/haiti.png",
-  "./assets/flags/honduras.png",
-  "./assets/flags/hungary.png",
-  "./assets/flags/india.png",
-  "./assets/flags/indonesia.png",
-  "./assets/flags/iran.png",
-  "./assets/flags/iraq.png",
-  "./assets/flags/ireland.png",
-  "./assets/flags/israel.png",
-  "./assets/flags/italy.png",
-  "./assets/flags/ivory_coast.png",
-  "./assets/flags/jamaica.png",
-  "./assets/flags/japan.png",
-  "./assets/flags/jordan.png",
-  "./assets/flags/kazakhstan.png",
-  "./assets/flags/kenya.png",
-  "./assets/flags/latvia.png",
-  "./assets/flags/libya.png",
-  "./assets/flags/lithuania.png",
-  "./assets/flags/malaysia.png",
-  "./assets/flags/mali.png",
-  "./assets/flags/mexico.png",
-  "./assets/flags/moldova.png",
-  "./assets/flags/mongolia.png",
-  "./assets/flags/morocco.png",
-  "./assets/flags/mozambique.png",
-  "./assets/flags/netherlands.png",
-  "./assets/flags/new_zealand.png",
-  "./assets/flags/nicaragua.png",
-  "./assets/flags/nigeria.png",
-  "./assets/flags/norway.png",
-  "./assets/flags/pakistan.png",
-  "./assets/flags/panama.png",
-  "./assets/flags/paraguay.png",
-  "./assets/flags/peru.png",
-  "./assets/flags/philippines.png",
-  "./assets/flags/poland.png",
-  "./assets/flags/puerto_rico.png",
-  "./assets/flags/qatar.png",
-  "./assets/flags/romania.png",
-  "./assets/flags/russia.png",
-  "./assets/flags/saudi_arabia.png",
-  "./assets/flags/senegal.png",
-  "./assets/flags/serbia.png",
-  "./assets/flags/slovakia.png",
-  "./assets/flags/south_africa.png",
-  "./assets/flags/south_korea.png",
-  "./assets/flags/spain.png",
-  "./assets/flags/sweden.png",
-  "./assets/flags/syria.png",
-  "./assets/flags/tanzania.png",
-  "./assets/flags/thailand.png",
-  "./assets/flags/trinidad_tobago.png",
-  "./assets/flags/tunisia.png",
-  "./assets/flags/turkey.png",
-  "./assets/flags/uae.png",
-  "./assets/flags/uganda.png",
-  "./assets/flags/uk.png",
-  "./assets/flags/ukraine.png",
-  "./assets/flags/uruguay.png",
-  "./assets/flags/usa.png",
-  "./assets/flags/uzbekistan.png",
-  "./assets/flags/venezuela.png",
-  "./assets/flags/vietnam.png",
-  "./assets/flags/zambia.png",
-  "./assets/flags/zimbabwe.png"
+  "./src/patches/root-cache-fix-2.3.6.js",
+  "./src/app.js"
 ];
+
+function isFightWorldCache(key) {
+  const value = String(key || "").toLowerCase();
+  return value.includes("fight") || value.includes("simulator") || value.startsWith("fw-");
+}
+
+function cleanOldCaches() {
+  return caches.keys().then((keys) => Promise.all(keys.map((key) => {
+    if ((key !== STATIC_CACHE && key !== RUNTIME_CACHE) && isFightWorldCache(key)) {
+      return caches.delete(key);
+    }
+    return false;
+  })));
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then((cache) => cache.addAll(PRECACHE_URLS.map((url) => new Request(url, { cache: "reload" }))).catch(() => undefined))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(
-        keys
-          .filter((key) => key.startsWith("fight-simulator-") && key !== STATIC_CACHE && key !== RUNTIME_CACHE)
-          .map((key) => caches.delete(key))
-      ))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil(cleanOldCaches().then(() => self.clients.claim()));
 });
 
-async function networkFirstNavigation(request) {
-  const cache = await caches.open(STATIC_CACHE);
+function isAlwaysFresh(url) {
+  return (
+    url.pathname.endsWith(".html") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith("version.json") ||
+    url.pathname.endsWith("manifest.webmanifest")
+  );
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(RUNTIME_CACHE);
   try {
-    const response = await fetch(request);
-    if (response && response.ok) {
-      await cache.put("./index.html", response.clone());
+    const response = await fetch(new Request(request, { cache: "no-store" }));
+    if (response && response.ok && request.method === "GET") {
+      cache.put(request, response.clone()).catch(() => undefined);
     }
     return response;
   } catch (error) {
-    return (await cache.match("./index.html")) || Response.error();
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    if (request.mode === "navigate") return caches.match("./index.html");
+    throw error;
   }
 }
 
-async function networkFirstStatic(request) {
-  const cache = await caches.open(STATIC_CACHE);
-  try {
-    const response = await fetch(request, { cache: "no-store" });
-    if (response && response.ok) {
-      await cache.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    return (await caches.match(request, { ignoreSearch: true })) || Response.error();
-  }
-}
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
 
-async function cacheFirstStatic(request) {
-  const cached = await caches.match(request, { ignoreSearch: true });
-  if (cached) {
-    return cached;
+  const response = await fetch(request);
+  if (response && response.ok && request.method === "GET") {
+    const cache = await caches.open(RUNTIME_CACHE);
+    cache.put(request, response.clone()).catch(() => undefined);
   }
-
-  try {
-    const response = await fetch(request);
-    if (response && response.ok) {
-      const runtime = await caches.open(RUNTIME_CACHE);
-      await runtime.put(request, response.clone());
-    }
-    return response;
-  } catch (error) {
-    if (request.destination === "document") {
-      return caches.match("./index.html");
-    }
-    return Response.error();
-  }
+  return response;
 }
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
-  if (request.method !== "GET") {
-    return;
-  }
+  if (!request || request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) {
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate" || isAlwaysFresh(url)) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
-  if (request.mode === "navigate") {
-    event.respondWith(networkFirstNavigation(request));
-    return;
-  }
-
-  if (url.pathname.endsWith("/version.json")) {
-    event.respondWith(networkFirstStatic(request));
-    return;
-  }
-
-  event.respondWith(cacheFirstStatic(request));
+  event.respondWith(cacheFirst(request));
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
+  const data = event.data || {};
+  if (data.type === "SKIP_WAITING") self.skipWaiting();
+  if (data.type === "CLEAR_FIGHT_WORLD_CACHES") event.waitUntil(cleanOldCaches());
 });

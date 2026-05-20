@@ -1,9 +1,175 @@
+/* Fight World ROOT CACHE FIX 2.3.5
+   Главная правка: старый service worker и Cache Storage больше не могут держать 2.3.5 локально.
+*/
+(function () {
+  "use strict";
+
+  var VERSION = "root-cache-fix-2.3.5";
+  var LOCAL_HOSTS = { "localhost": true, "127.0.0.1": true, "0.0.0.0": true };
+  var isLocal = !!LOCAL_HOSTS[window.location.hostname];
+  var params = new URLSearchParams(window.location.search || "");
+  var resetRequested = params.has("cacheReset") || params.has("hardReset") || params.has("fresh");
+
+  function log(message) {
+    try {
+      console.info("[Fight World 2.3.5]", message);
+    } catch (error) {}
+  }
+
+  function allCaches() {
+    if (!window.caches || !caches.keys) {
+      return Promise.resolve([]);
+    }
+    return caches.keys();
+  }
+
+  function deleteFightWorldCaches() {
+    if (!window.caches || !caches.keys) {
+      return Promise.resolve();
+    }
+    return caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (key) {
+        if (
+          /^fight-simulator-/i.test(key) ||
+          /^fight-world-/i.test(key) ||
+          /^fw-/i.test(key) ||
+          key.toLowerCase().indexOf("fight") !== -1 ||
+          key.toLowerCase().indexOf("simulator") !== -1
+        ) {
+          return caches.delete(key);
+        }
+        return Promise.resolve(false);
+      }));
+    });
+  }
+
+  function unregisterFightWorldWorkers() {
+    if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
+      return Promise.resolve();
+    }
+    return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+      return Promise.all(registrations.map(function (registration) {
+        var scope = String(registration.scope || "");
+        if (
+          scope.indexOf(window.location.origin) === 0 ||
+          scope.toLowerCase().indexOf("fightsimulator") !== -1 ||
+          scope.toLowerCase().indexOf("fight") !== -1
+        ) {
+          return registration.unregister();
+        }
+        return Promise.resolve(false);
+      }));
+    });
+  }
+
+  function blockLocalServiceWorkerRegistration() {
+    if (!isLocal || !("serviceWorker" in navigator) || navigator.serviceWorker.__fightWorldLocalBlock235) {
+      return;
+    }
+
+    try {
+      var fakeRegister = function () {
+        log("serviceWorker.register заблокирован локально, чтобы старый cache не вернул 2.3.5.");
+        return Promise.resolve({
+          scope: window.location.origin + "/",
+          installing: null,
+          waiting: null,
+          active: null,
+          unregister: function () { return Promise.resolve(true); },
+          update: function () { return Promise.resolve(); }
+        });
+      };
+
+      try {
+        Object.defineProperty(navigator.serviceWorker, "register", {
+          value: fakeRegister,
+          configurable: true
+        });
+      } catch (defineError) {
+        navigator.serviceWorker.register = fakeRegister;
+      }
+
+      navigator.serviceWorker.__fightWorldLocalBlock235 = true;
+    } catch (error) {}
+  }
+
+  function resetRootCache() {
+    return unregisterFightWorldWorkers()
+      .then(deleteFightWorldCaches)
+      .then(function () {
+        try {
+          sessionStorage.setItem("fightWorldRootCacheFix", VERSION);
+        } catch (error) {}
+        log("service workers unregistered, Fight World caches deleted.");
+      });
+  }
+
+  function forceVersion() {
+    window.FS = window.FS || {};
+    window.FS.Data = window.FS.Data || {};
+    window.FS.Data.appVersion = VERSION;
+    window.FS.Data.saveSchemaVersion = 235;
+
+    try {
+      document.querySelectorAll(".version-badge,.footer-note,[data-version],[data-app-version]").forEach(function (node) {
+        var text = node.textContent || "";
+        if (node.hasAttribute("data-version") || node.hasAttribute("data-app-version")) {
+          node.textContent = VERSION;
+          return;
+        }
+        if (/\d+\.\d+\.\d+/.test(text) || /версия/i.test(text)) {
+          node.textContent = node.classList.contains("version-badge") ? "2.3.5" : ("Версия: " + VERSION);
+        }
+      });
+    } catch (error) {}
+  }
+
+  blockLocalServiceWorkerRegistration();
+
+  window.FW_ROOT_CACHE_FIX_235 = {
+    version: VERSION,
+    isLocal: isLocal,
+    reset: resetRootCache,
+    deleteCaches: deleteFightWorldCaches,
+    unregisterServiceWorkers: unregisterFightWorldWorkers,
+    forceVersion: forceVersion,
+    listCaches: allCaches
+  };
+
+  forceVersion();
+
+  if (isLocal || resetRequested) {
+    resetRootCache().then(forceVersion);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    forceVersion();
+    if (isLocal || resetRequested) {
+      resetRootCache().then(forceVersion);
+    }
+  });
+
+  window.addEventListener("load", function () {
+    forceVersion();
+    if (isLocal || resetRequested) {
+      resetRootCache().then(forceVersion);
+    }
+    window.setTimeout(forceVersion, 300);
+    window.setTimeout(forceVersion, 1200);
+  });
+
+  window.addEventListener("pageshow", forceVersion);
+
+  window.setInterval(forceVersion, 1500);
+}());
+
+
 (function () {
   "use strict";
 
   window.FS = window.FS || {};
   var FS = window.FS;
-  var PATCH_VERSION = "tournament-ui-layout-2.3.1";
+  var PATCH_VERSION = "root-cache-fix-2.3.5";
   var MONTH_WEEKS = 4;
 
   var RULES = {
@@ -133,7 +299,7 @@
 
     competitions().forEach(function (comp) {
       if (ruleFor(comp) && !scheduledAt(comp, week)) {
-        comp.schedule = "__disabled_by_calendar_2_3_1__";
+        comp.schedule = "__disabled_by_calendar_2_3_5__";
       }
     });
 
@@ -148,10 +314,10 @@
 
   function patchAmateurCalendar() {
     var Amateur = FS.Amateur;
-    if (!Amateur || Amateur.__calendar231) {
+    if (!Amateur || Amateur.__calendar235) {
       return;
     }
-    Amateur.__calendar231 = true;
+    Amateur.__calendar235 = true;
 
     Amateur.availableCompetitions = function availableCompetitionsPatched(state) {
       var player = FS.State && FS.State.player ? FS.State.player(state) : null;
@@ -210,10 +376,10 @@
 
   function patchWorldCalendar() {
     var World = FS.World;
-    if (!World || World.__calendar231) {
+    if (!World || World.__calendar235) {
       return;
     }
-    World.__calendar231 = true;
+    World.__calendar235 = true;
 
     if (typeof World.advanceWeek === "function") {
       var originalAdvanceWeek = World.advanceWeek.bind(World);
@@ -242,12 +408,12 @@
 
   function injectStyles() {
     var style;
-    if (document.getElementById("fight-world-hotfix-2-3-1")) {
+    if (document.getElementById("fight-world-root-cache-fix-2-3-5")) {
       return;
     }
 
     style = document.createElement("style");
-    style.id = "fight-world-hotfix-2-3-1";
+    style.id = "fight-world-root-cache-fix-2-3-5";
     style.textContent = [
       ".tabs button{min-height:0!important;padding:7px 10px!important;line-height:1.1!important;flex:0 0 auto!important}",
       ".small-btn,.fighter-name-btn,.fight-line-btn,.training-plus-btn,.modal-actions button,.punch-action-btn{min-height:0!important;padding:7px 10px!important;line-height:1.1!important}",
@@ -493,10 +659,10 @@
 
   function patchRender() {
     var Render = FS.Render;
-    if (!Render || Render.__hotfix231 || typeof Render.dashboard !== "function") {
+    if (!Render || Render.__hotfix235 || typeof Render.dashboard !== "function") {
       return;
     }
-    Render.__hotfix231 = true;
+    Render.__hotfix235 = true;
 
     var originalDashboard = Render.dashboard.bind(Render);
     Render.dashboard = function dashboardPatched(state) {
@@ -523,4 +689,210 @@
     injectStyles();
     polish(document, null);
   });
+}());
+
+
+
+(function () {
+  "use strict";
+
+  var HARD_VERSION = "root-cache-fix-2.3.5";
+  var NOTICE_ID = "fightWorldUpdateNotice233";
+
+  function versionNumber(text) {
+    var match = String(text || "").match(/\d+(?:\.\d+){1,3}/);
+    return match ? match[0] : String(text || "");
+  }
+
+  function currentVersion() {
+    return String(window.FS && window.FS.Data && window.FS.Data.appVersion ? window.FS.Data.appVersion : "");
+  }
+
+  function forceVersion() {
+    window.FS = window.FS || {};
+    window.FS.Data = window.FS.Data || {};
+    window.FS.Data.appVersion = HARD_VERSION;
+
+    try {
+      var versionNodes = document.querySelectorAll(".version-badge,.footer-note");
+      versionNodes.forEach(function (node) {
+        if ((node.textContent || "").match(/\d+\.\d+\.\d+/)) {
+          node.textContent = node.classList.contains("version-badge") ? versionNumber(HARD_VERSION) : ("Версия: " + HARD_VERSION);
+        }
+      });
+    } catch (error) {}
+  }
+
+  function removeOldPatchScripts() {
+    document.querySelectorAll('script[src*="src/patches/"]').forEach(function (script) {
+      var src = script.getAttribute("src") || "";
+      if (src.indexOf("root-cache-fix-2.3.5.js") === -1) {
+        script.parentNode && script.parentNode.removeChild(script);
+      }
+    });
+  }
+
+  function ensureStyles() {
+    var style;
+    if (document.getElementById("fightWorldUpdateStyles233")) {
+      return;
+    }
+    style = document.createElement("style");
+    style.id = "fightWorldUpdateStyles233";
+    style.textContent = [
+      ".fw-update-notice{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9000;transform:translateX(-50%);width:min(560px,calc(100vw - 18px));display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid rgba(207,37,37,.42);border-radius:16px;background:linear-gradient(180deg,rgba(29,31,36,.98),rgba(13,14,17,.98));box-shadow:0 18px 44px rgba(0,0,0,.55)}",
+      ".fw-update-text{min-width:0;display:grid;gap:2px}",
+      ".fw-update-text strong{font-size:13px}",
+      ".fw-update-text span{font-size:11px;color:var(--muted,#9ca3af)}",
+      ".fw-update-actions{display:flex;gap:6px;align-items:center}",
+      ".fw-update-actions button{min-height:30px;padding:7px 10px;border-radius:10px;font-size:12px}",
+      "@media(max-width:640px){.fw-update-notice{grid-template-columns:1fr;gap:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px))}.fw-update-actions{display:grid;grid-template-columns:1fr 1fr}.fw-update-actions button{width:100%}}"
+    ].join("\n");
+    document.head.appendChild(style);
+  }
+
+  function removeNotice() {
+    var old = document.getElementById(NOTICE_ID);
+    if (old && old.parentNode) {
+      old.parentNode.removeChild(old);
+    }
+  }
+
+  function clearFightWorldCaches() {
+    if (!window.caches || !caches.keys) {
+      return Promise.resolve();
+    }
+    return caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (key) {
+        return /^fight-simulator-/.test(key);
+      }).map(function (key) {
+        return caches.delete(key);
+      }));
+    }).catch(function () {});
+  }
+
+  function reloadFresh(version) {
+    var url = new URL(window.location.href);
+    url.searchParams.set("v", versionNumber(version || HARD_VERSION));
+    url.searchParams.set("hard", "1");
+    url.searchParams.set("t", String(Date.now()));
+    window.location.replace(url.toString());
+  }
+
+  function applyUpdate(remoteVersion) {
+    removeNotice();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistration().then(function (registration) {
+        if (registration && registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        return clearFightWorldCaches();
+      }).then(function () {
+        reloadFresh(remoteVersion);
+      }).catch(function () {
+        reloadFresh(remoteVersion);
+      });
+    } else {
+      clearFightWorldCaches().then(function () {
+        reloadFresh(remoteVersion);
+      });
+    }
+  }
+
+  function showNotice(remoteVersion) {
+    var node;
+    if (!document.body) {
+      return;
+    }
+    ensureStyles();
+    removeNotice();
+
+    node = document.createElement("div");
+    node.id = NOTICE_ID;
+    node.className = "fw-update-notice";
+    node.innerHTML =
+      '<div class="fw-update-text">' +
+        '<strong>Доступна новая версия</strong>' +
+        '<span>Текущая: ' + versionNumber(currentVersion()) + ' · новая: ' + versionNumber(remoteVersion || HARD_VERSION) + '</span>' +
+      '</div>' +
+      '<div class="fw-update-actions">' +
+        '<button class="primary" type="button" data-fw-update-now>Обновить</button>' +
+        '<button class="small-btn" type="button" data-fw-update-later>Позже</button>' +
+      '</div>';
+
+    node.querySelector("[data-fw-update-now]").addEventListener("click", function () {
+      applyUpdate(remoteVersion);
+    });
+    node.querySelector("[data-fw-update-later]").addEventListener("click", removeNotice);
+    document.body.appendChild(node);
+  }
+
+  function checkVersion() {
+    if (!navigator.onLine) {
+      return;
+    }
+    fetch("./version.json?updateCheck=" + Date.now(), {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    }).then(function (response) {
+      if (!response.ok) { return null; }
+      return response.json();
+    }).then(function (remote) {
+      if (!remote || !remote.version) { return; }
+      if (String(remote.version) !== currentVersion()) {
+        showNotice(String(remote.version));
+      }
+    }).catch(function () {});
+  }
+
+  function checkWaitingWorker() {
+    if (!("serviceWorker" in navigator)) { return; }
+    navigator.serviceWorker.getRegistration().then(function (registration) {
+      if (registration && registration.waiting) {
+        showNotice(HARD_VERSION);
+      }
+    }).catch(function () {});
+  }
+
+  forceVersion();
+  removeOldPatchScripts();
+  window.FWCheckUpdate = checkVersion;
+  window.FWApplyUpdate = applyUpdate;
+  window.FWClearFightWorldCaches = clearFightWorldCaches;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () {
+      forceVersion();
+      checkVersion();
+      checkWaitingWorker();
+    });
+  } else {
+    forceVersion();
+    checkVersion();
+    checkWaitingWorker();
+  }
+
+  window.addEventListener("load", function () {
+    forceVersion();
+    checkVersion();
+    checkWaitingWorker();
+    window.setTimeout(function () {
+      forceVersion();
+      checkVersion();
+    }, 1000);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+      forceVersion();
+      checkVersion();
+      checkWaitingWorker();
+    }
+  });
+
+  window.setInterval(function () {
+    forceVersion();
+    checkVersion();
+    checkWaitingWorker();
+  }, 2 * 60 * 1000);
 }());
