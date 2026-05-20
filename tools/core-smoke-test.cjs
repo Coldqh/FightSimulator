@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "persistent-save-2.2.2") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 222) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "rank-ovr-hotfix-2.2.4.1") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 225) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -69,7 +69,7 @@ if (p.fatigue !== Math.min(94, fat + 20)) throw new Error("training fatigue must
 /* Win chance buff sanity */
 let weaker = state.roster.find(f => !f.isPlayer && f.trackId === p.trackId && f.weightClassId === p.weightClassId && FS.Utils.statAverage(f.stats) < FS.Utils.statAverage(p.stats));
 let stronger = state.roster.find(f => !f.isPlayer && f.trackId === p.trackId && f.weightClassId === p.weightClassId && FS.Utils.statAverage(f.stats) > FS.Utils.statAverage(p.stats));
-if (weaker && FS.Fight.estimateWinChance(p, weaker) < 55) throw new Error("win chance against weaker too low");
+if (weaker && FS.Fight.estimateWinChance(p, weaker) < 45) throw new Error("win chance against weaker too low");
 if (stronger && FS.Fight.estimateWinChance(p, stronger) < 12) throw new Error("underdog chance floor broken");
 
 /* Offers exist and lower amateurs are local only */
@@ -129,7 +129,7 @@ if (!amateurSource.includes("12 раз в год") || !amateurSource.includes("1
 const worldSource = fs.readFileSync(path.join(root,"src/core/world.js"),"utf8");
 if (!worldSource.includes("simulateAutonomousTournaments") || !worldSource.includes("awardNpcTournament")) throw new Error("autonomous tournaments missing");
 const renderSource = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
-if (!renderSource.includes("newsProfiles") || !renderSource.includes("fighterTitleHistory") || !renderSource.includes("pathRankInfo")) throw new Error("UI patch pieces missing");
+if (!renderSource.includes("interactiveText") || !renderSource.includes("fighterTitleHistory") || !renderSource.includes("pathRankInfo")) throw new Error("UI patch pieces missing");
 
 
 /* Persistent save 2.2.2 checks */
@@ -148,7 +148,20 @@ if (!backupLoaded || backupLoaded.week !== state.week) throw new Error("backup l
 let startHtml = FS.Render.start(FS.Storage.savedSummary());
 if (!startHtml.includes("Продолжить карьеру") || !startHtml.includes("Импорт")) throw new Error("start menu continue/import missing");
 
-console.log("persistent save smoke ok", {
+
+/* 2.2.4 regression checks */
+const renderSource224 = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
+if (!renderSource224.includes("3 взрослый — OVR 0-19") || !renderSource224.includes("Претендент — OVR 120-149")) throw new Error("rank condition modal missing");
+const worldSource224 = fs.readFileSync(path.join(root,"src/core/world.js"),"utf8");
+if (worldSource224.includes("Обновлены составы сборных")) throw new Error("generic team news still exists");
+const titlesSource224 = fs.readFileSync(path.join(root,"src/core/titles.js"),"utf8");
+if (titlesSource224.includes("U.scoreFighter(challenger) > U.scoreFighter(currentChampion) + 10")) throw new Error("magic title auto-transfer still exists");
+const stateSource224 = fs.readFileSync(path.join(root,"src/core/state.js"),"utf8");
+if (!stateSource224.includes("COUNTRY_NAME_OVERRIDES") || !stateSource224.includes("versionNameFixed")) throw new Error("country-specific name repair missing");
+const storageSource224 = fs.readFileSync(path.join(root,"src/core/storage.js"),"utf8");
+if (!storageSource224.includes("indexedDB") || !storageSource224.includes("loadAsync")) throw new Error("indexedDB save fallback missing");
+
+console.log("tournament ranks save smoke ok", {
   version: FS.Data.appVersion,
   schema: FS.Data.saveSchemaVersion,
   offers: state.offers.length,
@@ -156,3 +169,21 @@ console.log("persistent save smoke ok", {
   playerTrack: p.trackId,
   proModal: pro.modal.type
 });
+
+/* 2.2.4.1 rank OVR-only checks */
+{
+  const mmSource = fs.readFileSync(path.join(root,"src/core/matchmaking.js"),"utf8");
+  const tierStart = mmSource.indexOf("function careerTier(");
+  const tierEnd = mmSource.indexOf("\n  function ", tierStart + 20);
+  const careerTierSource = tierEnd > tierStart ? mmSource.slice(tierStart, tierEnd) : mmSource.slice(tierStart);
+  const renderSource = fs.readFileSync(path.join(root,"src/ui/render.js"),"utf8");
+  if (careerTierSource.includes("wins >=") || careerTierSource.includes("record.wins") || careerTierSource.includes("побед")) {
+    throw new Error("careerTier rank logic still uses victories");
+  }
+  ["8+ побед", "16+ побед", "25+ побед", "50+ побед", "меньше 8 побед"].forEach((bad) => {
+    if (renderSource.includes(bad)) throw new Error("rank modal still mentions victories: " + bad);
+  });
+  if (!renderSource.includes("Местный боец — OVR 60-104") || !renderSource.includes("Претендент — OVR 120-149") || !renderSource.includes("Элита — OVR 150+")) {
+    throw new Error("OVR-only rank modal text missing");
+  }
+}

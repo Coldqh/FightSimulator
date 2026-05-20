@@ -1,22 +1,20 @@
-# Test Checklist 2.2.2 Persistent Save
+# Test Checklist 2.2.4
 
 ```powershell
 cd C:\FightSimulator_GitHub
 node tools\core-smoke-test.cjs
 node tools\week-benchmark.cjs
 node --check sw.js
-start index.html
 ```
 
 Manual:
-1. Start a career.
-2. Switch a week.
-3. Refresh the page.
-4. Career should continue from the same week.
-5. Close and reopen browser / iPhone web app.
-6. Career should still load.
-7. Open the start screen after deleting app state only if save is absent.
-8. Start screen should have Continue Career and Import when a save exists.
-9. Update app version and reload.
-10. Save should migrate, not reset.
-11. If primary localStorage save is missing but backup exists, game should restore from backup.
+1. Обнови страницу после смены недели — карьера должна остаться.
+2. Закрой браузер / iPhone web app и открой снова — карьера должна остаться.
+3. На старте при сейве видна кнопка “Продолжить карьеру”.
+4. В новостях нет дублей одинакового турнира на одной неделе.
+5. Чемпионаты города/области/региона/страны выводятся в новостях для веса и страны игрока.
+6. Чемпионат континента не смешивает страны разных континентов.
+7. В любительских профилях видны разряды: 3 взрослый, 2 взрослый, 1 взрослый, КМС, МС, МСМК.
+8. В окне статусов показаны условия рангов.
+9. Чемпионы не меняются сами на 3 неделе без боя.
+10. У украинских бойцов украинские имена, у чешских — чешские и т.д.

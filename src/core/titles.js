@@ -282,11 +282,10 @@
       currentChampion = U.getFighterById(state, title.championId);
       challenger = candidates[0] && candidates[0].id !== title.championId ? candidates[0] : candidates[1];
 
+      /* Автосмена чемпиона только если титул пустой. Дальше титулы меняются боями, а не магическим пересчётом OVR. */
       if (!currentChampion && challenger) {
         transferTitle(state, title.id, challenger.id, challenger.name + " стал чемпионом: " + title.label);
-      } else if (currentChampion && challenger && U.scoreFighter(challenger) > U.scoreFighter(currentChampion) + 10 && state.week % 3 === 0) {
-        transferTitle(state, title.id, challenger.id, challenger.name + " сместил чемпиона: " + title.label);
-      } else if (currentChampion && state.week % 4 === 0) {
+      } else if (currentChampion && state.week % 8 === 0) {
         title.defenses += 1;
       }
     }

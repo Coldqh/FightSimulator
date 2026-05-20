@@ -9,6 +9,67 @@
     Data.saveKey + "_last_good",
     "fight_simulator_autosave"
   ];
+  var IDB_NAME = "fight_simulator_save_db";
+  var IDB_STORE = "saves";
+  var IDB_KEY = "main";
+
+  function idbAvailable() {
+    return typeof indexedDB !== "undefined";
+  }
+
+  function openSaveDb() {
+    return new Promise(function (resolve, reject) {
+      var request;
+      if (!idbAvailable()) { reject(new Error("indexedDB unavailable")); return; }
+      request = indexedDB.open(IDB_NAME, 1);
+      request.onupgradeneeded = function () {
+        var db = request.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error || new Error("indexedDB open failed")); };
+    });
+  }
+
+  function saveRawToIdb(raw) {
+    if (!raw || !idbAvailable()) { return Promise.resolve(false); }
+    return openSaveDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(raw, IDB_KEY);
+        tx.oncomplete = function () { db.close(); resolve(true); };
+        tx.onerror = function () { db.close(); reject(tx.error || new Error("indexedDB save failed")); };
+      });
+    }).catch(function () { return false; });
+  }
+
+  function loadRawFromIdb() {
+    if (!idbAvailable()) { return Promise.resolve(null); }
+    return openSaveDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(IDB_STORE, "readonly");
+        var request = tx.objectStore(IDB_STORE).get(IDB_KEY);
+        request.onsuccess = function () { resolve(request.result || null); };
+        request.onerror = function () { reject(request.error || new Error("indexedDB load failed")); };
+        tx.oncomplete = function () { db.close(); };
+        tx.onerror = function () { db.close(); reject(tx.error || new Error("indexedDB tx failed")); };
+      });
+    }).catch(function () { return null; });
+  }
+
+  function clearIdb() {
+    if (!idbAvailable()) { return Promise.resolve(false); }
+    return openSaveDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).delete(IDB_KEY);
+        tx.oncomplete = function () { db.close(); resolve(true); };
+        tx.onerror = function () { db.close(); reject(tx.error || new Error("indexedDB clear failed")); };
+      });
+    }).catch(function () { return false; });
+  }
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -204,7 +265,7 @@
 
     oldVersion = state.version || "";
     state.version = Data.appVersion;
-    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 222);
+    state.schemaVersion = Math.max(Number(state.schemaVersion) || 0, Data.saveSchemaVersion || 224);
     state.week = Math.max(1, Number(state.week) || 1);
     state.selectedTab = state.selectedTab || "dashboard";
     state.rankingCountryId = state.rankingCountryId || "russia";
@@ -259,7 +320,7 @@
         return false;
       }
       state.version = Data.appVersion;
-      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 222;
+      state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 224;
       safe = cleanTransientFields(state);
       raw = JSON.stringify(safe);
 
@@ -267,6 +328,7 @@
       writeRaw(BACKUP_KEYS[0], raw);
       writeRaw(BACKUP_KEYS[1], raw);
       writeRaw(BACKUP_KEYS[2], raw);
+      saveRawToIdb(raw);
       return true;
     } catch (error) {
       console.error(error);
@@ -280,6 +342,7 @@
     for (i = 0; i < keys.length; i += 1) {
       removeRaw(keys[i]);
     }
+    clearIdb();
   }
 
   function exportString(state) {
@@ -292,6 +355,16 @@
       save(imported);
     }
     return imported;
+  }
+
+  function loadAsync() {
+    var state = load();
+    if (state) { return Promise.resolve(state); }
+    return loadRawFromIdb().then(function (raw) {
+      var migrated = raw ? migrate(parse(raw)) : null;
+      if (migrated) { save(migrated); }
+      return migrated;
+    });
   }
 
   function hasSave() {
@@ -316,6 +389,7 @@
 
   window.FS.Storage = {
     load: load,
+    loadAsync: loadAsync,
     save: save,
     clear: clear,
     migrate: migrate,

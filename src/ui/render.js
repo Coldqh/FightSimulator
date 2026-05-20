@@ -32,6 +32,11 @@
     "</div></details>";
   }
 
+  function weekDateText(week) {
+    var parts = State.dateParts ? State.dateParts({ week: Number(week) || 1 }) : { year: 1, monthLabel: "месяц", weekOfMonth: 1 };
+    return "год " + parts.year + ", " + parts.monthLabel + ", " + parts.weekOfMonth + " неделя";
+  }
+
   function fighterCountryLabel(fighter) {
     if (!fighter) { return ""; }
     if ((fighter.originCountryId || fighter.homeCountryId) && (fighter.originCountryId || fighter.homeCountryId) !== fighter.countryId) {
@@ -177,7 +182,7 @@
     }
     return titles.slice(0, 16).map(function (title) {
       var weight = title.weightClassId ? U.escapeHtml(U.findWeightClass(title.weightClassId).label) : "";
-      var dates = title.active ? ("с недели " + (title.fromWeek || "—")) : ("нед. " + (title.fromWeek || "—") + " — " + (title.toWeek || "—"));
+      var dates = title.active ? ("с " + weekDateText(title.fromWeek || 1)) : (weekDateText(title.fromWeek || 1) + " — " + weekDateText(title.toWeek || title.fromWeek || 1));
       return "<div class=\"split-row\"><span>" + (title.active ? "👑 " : "▫️ ") + U.escapeHtml(title.label) + "</span><strong>" + weight + " · " + dates + "</strong></div>";
     }).join("");
   }
@@ -995,9 +1000,28 @@
     if (modal.type === "pathRankInfo") {
       var title = modal.trackId === "street" ? "Уличные статусы" : (modal.trackId === "pro" ? "Профи-статусы" : "Любительские разряды");
       var lines = modal.trackId === "street" ?
-        ["Уличный новичок — стартовый уровень улицы.", "Местный боец — средний рейтинг и несколько побед.", "Опасное имя — высокий рейтинг и заметная серия побед.", "Король улицы — лидер страны и действующий уличный чемпион."] :
-        (modal.trackId === "pro" ? ["Дебютант — мало боёв, старт в профи.", "Джорнимен — уже в рейтинге, но ещё далеко от элиты.", "Проспект — крепкий рейтинг или двузначное число побед.", "Контендер — рядом с верхушкой рейтинга и титульной гонкой.", "Чемпион — владеет поясом своего веса."] : ["Новичок — базовый любительский уровень.", "Разрядник — OVR вырос до крепкого регионального уровня.", "Сборник — высокий OVR и конкурентность за резерв сборной.", "Мастер — элитный любитель и кандидат в основу сборной."]);
-      return '<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>' + title + '</h2></div><div class="modal-body"><div class="content-card">' + lines.map(function (line) { return '<div class="split-row"><span>' + U.escapeHtml(line) + '</span></div>'; }).join('') + '</div></div><div class="modal-actions"><button class="primary" data-action="close-modal">Закрыть</button></div></div></div>';
+        [
+          "Уличный новичок — OVR 0-59.",
+          "Местный боец — OVR 60-104.",
+          "Уличный претендент — OVR 105-134.",
+          "Опасное имя — OVR 135+.",
+          "Чемпион улицы — действующий уличный титул страны."
+        ] :
+        (modal.trackId === "pro" ? [
+          "Дебютант — OVR 90-99.",
+          "Проспект — OVR 100-119.",
+          "Претендент — OVR 120-149.",
+          "Элита — OVR 150+.",
+          "Чемпион — действующий пояс WBC/WBA/WBO/IBF."
+        ] : [
+          "3 взрослый — OVR 0-19.",
+          "2 взрослый — OVR 20-39.",
+          "1 взрослый — OVR 40-59.",
+          "КМС — OVR 60-79.",
+          "МС — OVR 80-99.",
+          "МСМК — OVR 100-120."
+        ]);
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + title + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + lines.map(function (line) { return "<div class=\"split-row\"><span>" + U.escapeHtml(line) + "</span></div>"; }).join("") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "patchNotes") {

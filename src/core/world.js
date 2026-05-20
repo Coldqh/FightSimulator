@@ -77,6 +77,18 @@
     return p && fighter && (p.trackId === "street" || !p.weightClassId || fighter.weightClassId === p.weightClassId);
   }
 
+  function continentLabelById(continentId) {
+    var country = Data.countries.find(function (item) { return item.continentId === continentId; });
+    return country ? country.continentLabel : "континента";
+  }
+
+  function competitionNewsLabel(comp, country, weight) {
+    if (comp.id === "continent") { return "Чемпионат " + continentLabelById(country.continentId) + " · " + weight.label; }
+    if (comp.id === "world") { return "Чемпионат мира · " + weight.label; }
+    if (comp.id === "olympiad") { return "Олимпиада · " + weight.label; }
+    return comp.label + " · " + country.label + " · " + weight.label;
+  }
+
   function tournamentNewsLabel(state, kind) {
     var p = State.player(state);
     var country = p ? U.findCountry(p.homeCountryId || p.countryId) : Data.countries[0];
@@ -133,10 +145,19 @@
     var comps = Data.amateurCompetitions || [];
     var scheduled = comps.filter(function (comp) { return compScheduledThisWeek(state, comp); });
     var buckets = {};
-    var i, fighter, key, comp, country, weight, pool, winners, countryIndex, weightIndex;
+    var teamSet = {};
+    var i, fighter, key, comp, country, weight, pool, winners, countryIndex, weightIndex, continentIds, continentId;
     var p = State.player(state);
+    var playerHomeCountry = p ? U.findCountry(p.homeCountryId || p.countryId) : null;
 
     if (!scheduled.length) { return; }
+
+    if (state.world && state.world.teamsByCountry) {
+      Object.keys(state.world.teamsByCountry).forEach(function (countryId) {
+        var team = state.world.teamsByCountry[countryId] || {};
+        (team.main || []).forEach(function (id) { teamSet[id] = true; });
+      });
+    }
 
     for (i = 0; i < state.roster.length; i += 1) {
       fighter = state.roster[i];
@@ -152,6 +173,31 @@
       });
     });
 
+    function awardAndNews(comp, country, weight, candidates) {
+      pool = candidates.filter(function (item) {
+        var rating = U.statAverage(item.stats);
+        return rating >= comp.minRating && rating <= comp.maxRating;
+      });
+      winners = pool.slice(0, 3);
+      if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); growNpcAfterFight(winners[0], null, { isTournamentWin: true, isTournamentFinal: true, round: 3 }); }
+      if (winners[1]) { awardNpcTournament(state, winners[1], comp, "2 место"); }
+      if (winners[2]) { awardNpcTournament(state, winners[2], comp, "3 место"); }
+
+      if (p && p.weightClassId === weight.id && winners[0]) {
+        if ((["city", "oblast", "region", "country"].indexOf(comp.id) !== -1 && country.id === p.countryId) ||
+            (comp.id === "continent" && playerHomeCountry && country.continentId === playerHomeCountry.continentId) ||
+            (["world", "olympiad"].indexOf(comp.id) !== -1)) {
+          pushNews(state, "tournament", competitionNewsLabel(comp, country, weight) + ": 1 — " + winners[0].name + (winners[1] ? ", 2 — " + winners[1].name : "") + (winners[2] ? ", 3 — " + winners[2].name : "") + ".", {
+            competitionId: comp.id,
+            fighterIds: winners.map(function (f) { return f.id; }),
+            firstId: winners[0].id,
+            secondId: winners[1] ? winners[1].id : "",
+            thirdId: winners[2] ? winners[2].id : ""
+          });
+        }
+      }
+    }
+
     for (i = 0; i < scheduled.length; i += 1) {
       comp = scheduled[i];
 
@@ -160,17 +206,24 @@
           country = Data.countries[countryIndex];
           for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
             weight = Data.weightClasses[weightIndex];
-            pool = (buckets[country.id + "|" + weight.id] || []).filter(function (item) {
-              var rating = U.statAverage(item.stats);
-              return rating >= comp.minRating && rating <= comp.maxRating;
+            awardAndNews(comp, country, weight, buckets[country.id + "|" + weight.id] || []);
+          }
+        }
+      } else if (comp.id === "continent") {
+        continentIds = Array.from(new Set(Data.countries.map(function (item) { return item.continentId; })));
+        for (countryIndex = 0; countryIndex < continentIds.length; countryIndex += 1) {
+          continentId = continentIds[countryIndex];
+          country = Data.countries.find(function (item) { return item.continentId === continentId; }) || Data.countries[0];
+          for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
+            weight = Data.weightClasses[weightIndex];
+            pool = [];
+            Object.keys(buckets).forEach(function (bucketKey) {
+              var bucketCountry = U.findCountry(bucketKey.split("|")[0]);
+              if (bucketCountry.continentId === continentId && bucketKey.split("|")[1] === weight.id) {
+                pool = pool.concat(buckets[bucketKey]);
+              }
             });
-            winners = pool.slice(0, 3);
-            if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); growNpcAfterFight(winners[0], null, { isTournamentWin: true, isTournamentFinal: true, round: 3 }); }
-            if (winners[1]) { awardNpcTournament(state, winners[1], comp, "2 место"); }
-            if (winners[2]) { awardNpcTournament(state, winners[2], comp, "3 место"); }
-            if (p && p.weightClassId === weight.id && country.id === (p.countryId || p.homeCountryId) && comp.id === "country" && winners[0]) {
-              pushNews(state, "tournament", comp.label + " · " + country.label + " · " + weight.label + ": 1 — " + winners[0].name + (winners[1] ? ", 2 — " + winners[1].name : "") + (winners[2] ? ", 3 — " + winners[2].name : "") + ".", { fighterIds: winners.map(function (f) { return f.id; }), firstId: winners[0].id, secondId: winners[1] ? winners[1].id : "", thirdId: winners[2] ? winners[2].id : "" });
-            }
+            awardAndNews(comp, country, weight, pool);
           }
         }
       } else {
@@ -180,17 +233,10 @@
           Object.keys(buckets).forEach(function (bucketKey) {
             if (bucketKey.split("|")[1] === weight.id) { pool = pool.concat(buckets[bucketKey]); }
           });
-          pool = pool.filter(function (item) {
-            var rating = U.statAverage(item.stats);
-            return rating >= comp.minRating && rating <= comp.maxRating;
-          }).sort(function (left, right) { return U.statAverage(right.stats) - U.statAverage(left.stats); });
-          winners = pool.slice(0, 3);
-          if (winners[0]) { awardNpcTournament(state, winners[0], comp, "1 место"); growNpcAfterFight(winners[0], null, { isTournamentWin: true, isTournamentFinal: true, round: 3 }); }
-          if (winners[1]) { awardNpcTournament(state, winners[1], comp, "2 место"); }
-          if (winners[2]) { awardNpcTournament(state, winners[2], comp, "3 место"); }
-          if (p && p.weightClassId === weight.id && ["continent", "world", "olympiad"].indexOf(comp.id) !== -1 && winners[0]) {
-            pushNews(state, "tournament", comp.label + " · " + weight.label + ": 1 — " + winners[0].name + (winners[1] ? ", 2 — " + winners[1].name : "") + (winners[2] ? ", 3 — " + winners[2].name : "") + ".", { fighterIds: winners.map(function (f) { return f.id; }), firstId: winners[0].id, secondId: winners[1] ? winners[1].id : "", thirdId: winners[2] ? winners[2].id : "" });
+          if (comp.id === "world" || comp.id === "olympiad") {
+            pool = pool.filter(function (item) { return teamSet[item.id]; });
           }
+          awardAndNews(comp, Data.countries[0], weight, pool.sort(function (left, right) { return U.statAverage(right.stats) - U.statAverage(left.stats); }));
         }
       }
     }
@@ -1119,10 +1165,6 @@ function simulateInternationalGymMoves(state) {
 
     if (p && p.gymId && playerClubBefore && p.gymId !== playerClubBefore) {
       pushNews(state, "club", "Изменения в клубе: состав и тренерский штаб обновлены.", { clubId: p.gymId });
-    }
-
-    if (state.week % 16 === 0) {
-      pushNews(state, "team", "Обновлены составы сборных. Проверь свою сборную и резерв.", { type: "team-update", countryId: playerHomeCountryId(state) });
     }
 
     U.pushLimited(state.world.weekReports, {

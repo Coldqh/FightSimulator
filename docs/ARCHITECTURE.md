@@ -113,3 +113,47 @@ It does not clear the career when called with a null/invalid state.
 - `visibilitychange: hidden`
 
 This protects iOS standalone PWA restarts and normal browser refreshes.
+
+
+## 2.2.4 Tournament/Ranks/Save Fix
+
+### Save durability
+
+Storage writes to:
+- primary localStorage key
+- backup localStorage key
+- last_good localStorage key
+- autosave localStorage key
+- IndexedDB `fight_simulator_save_db/saves/main`
+
+App startup:
+- first tries synchronous localStorage
+- if empty, asynchronously restores from IndexedDB and rerenders
+
+### Tournament layer
+
+Autonomous tournaments are the base world layer.
+Player tournament entry uses the same calendar/scope logic.
+
+Local tournaments:
+- city
+- oblast
+- region
+- country
+
+International tournaments:
+- continent: grouped by `continentId`
+- world/olympiad: uses national-team main roster where available
+
+### Titles
+
+Titles no longer auto-transfer by OVR.
+They transfer from:
+- empty/vacant title repair
+- actual fight/title logic
+- belt unification
+
+### Names
+
+NPC names are repaired by `originCountryId/homeCountryId`.
+The repair runs when the app version changes.

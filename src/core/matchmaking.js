@@ -9,50 +9,33 @@
 
   function careerTier(fighter) {
     var rating = U.statAverage(fighter.stats);
-    var wins = fighter.record ? fighter.record.wins : 0;
-    var losses = fighter.record ? fighter.record.losses : 0;
     var hasTitle = fighter.titles && fighter.titles.length > 0;
+    var rank;
+
+    if (fighter.trackId === "amateur") {
+      rank = State.rankForFighter ? State.rankForFighter(fighter) : null;
+      return { id: rank ? rank.id : "adult_3", label: rank ? rank.label : "3 взрослый", level: rank ? Math.round((rank.minRating || 0) / 20) + 1 : 1 };
+    }
 
     if (hasTitle) {
-      return { id: "champion", label: "Чемпион", level: 5 };
+      return { id: "champion", label: fighter.trackId === "street" ? "Чемпион улицы" : "Чемпион", level: 5 };
     }
 
     if (fighter.trackId === "pro") {
-      if (rating >= 82 || wins >= 22) {
-        return { id: "contender", label: "Контендер", level: 4 };
-      }
-      if (rating >= 58 || wins >= 10) {
-        return { id: "prospect", label: "Проспект", level: 3 };
-      }
-      if (wins <= 3 && losses <= 2) {
-        return { id: "debut", label: "Дебютант", level: 1 };
-      }
-      return { id: "journeyman", label: "Джорнимен", level: 2 };
+      if (rating >= 150) { return { id: "elite", label: "Элита", level: 4 }; }
+      if (rating >= 120) { return { id: "contender", label: "Претендент", level: 3 }; }
+      if (rating >= 100) { return { id: "prospect", label: "Проспект", level: 2 }; }
+      return { id: "debutant", label: "Дебютант", level: 1 };
     }
 
-    if (fighter.trackId === "amateur") {
-      if (rating >= 78) {
-        return { id: "master", label: "Мастер", level: 4 };
-      }
-      if (rating >= 58) {
-        return { id: "national", label: "Сборник", level: 3 };
-      }
-      if (rating >= 42) {
-        return { id: "regional", label: "Разрядник", level: 2 };
-      }
-      return { id: "novice", label: "Новичок", level: 1 };
+    if (fighter.trackId === "street") {
+      if (rating >= 135) { return { id: "street_elite", label: "Опасное имя", level: 4 }; }
+      if (rating >= 105) { return { id: "street_contender", label: "Уличный претендент", level: 3 }; }
+      if (rating >= 60) { return { id: "street_regular", label: "Местный боец", level: 2 }; }
+      return { id: "street_rookie", label: "Уличный новичок", level: 1 };
     }
 
-    if (rating >= 100) {
-      return { id: "street_king", label: "Король улицы", level: 4 };
-    }
-    if (rating >= 72) {
-      return { id: "street_name", label: "Опасное имя", level: 3 };
-    }
-    if (rating >= 45) {
-      return { id: "street_regular", label: "Местный боец", level: 2 };
-    }
-    return { id: "street_rookie", label: "Уличный новичок", level: 1 };
+    return { id: "fighter", label: "Боец", level: 1 };
   }
 
   function careerStage(fighter) {
@@ -204,7 +187,10 @@
     var used = usedIds || {};
     var playerRank = player.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(player) : null;
     var internationalAmateur = player.trackId === "amateur" && ["ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
-    var localCountries = localOpponentCountryIds(player);
+    var tier = careerTier(player);
+    var streetInternational = player.trackId === "street" && tier && tier.level >= 4;
+    var forceForeignStreet = streetInternational && slotIndex < 8;
+    var localCountries = forceForeignStreet ? null : localOpponentCountryIds(player);
     var candidates;
     var selected;
     var offset;
@@ -212,11 +198,16 @@
 
     candidates = rankingWindowCandidates(state, player, localCountries, used);
 
+    if (forceForeignStreet) {
+      candidates = candidates.filter(function (fighter) { return fighter.countryId !== player.countryId; });
+    }
+
     if (!candidates.length) {
       candidates = state.roster.filter(function (fighter) {
         var fRank = fighter.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(fighter) : null;
         return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
-          (player.trackId === "pro" || internationalAmateur || !localCountries || localCountries.indexOf(fighter.countryId) !== -1) &&
+          (player.trackId === "pro" || internationalAmateur || forceForeignStreet || !localCountries || localCountries.indexOf(fighter.countryId) !== -1) &&
+          (!forceForeignStreet || fighter.countryId !== player.countryId) &&
           fighter.trackId === player.trackId &&
           (player.trackId === "street" || fighter.weightClassId === player.weightClassId) &&
           (!internationalAmateur || ["ms", "msmk"].indexOf(fRank ? fRank.id : "") !== -1);

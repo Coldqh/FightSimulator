@@ -15,6 +15,17 @@
     Storage.save(state);
   }
 
+  function restoreCareerAsync() {
+    if (state || !Storage.loadAsync) { return; }
+    Storage.loadAsync().then(function (loaded) {
+      if (!loaded || state) { return; }
+      state = loaded;
+      State.repairState(state);
+      state.feed = state.feed || "Карьера восстановлена.";
+      saveAndRender();
+    });
+  }
+
   function persistNow() {
     if (state && State.player(state)) {
       Storage.save(state);
@@ -565,4 +576,5 @@
   setupPersistentSave();
   registerOfflineApp();
   render();
+  restoreCareerAsync();
 }());

@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "world-ui-npc-2.2.3",
+    appVersion: "rank-ovr-hotfix-2.2.4.1",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 223,
+    saveSchemaVersion: 225,
 
     tracks: {
       amateur: {
@@ -51622,9 +51622,9 @@
     },
 
     amateurRanks: [
-      { id: "adult_3", label: "III взрослый", minRating: 0, maxRating: 19 },
-      { id: "adult_2", label: "II взрослый", minRating: 20, maxRating: 39 },
-      { id: "adult_1", label: "I взрослый", minRating: 40, maxRating: 59 },
+      { id: "adult_3", label: "3 взрослый", minRating: 0, maxRating: 19 },
+      { id: "adult_2", label: "2 взрослый", minRating: 20, maxRating: 39 },
+      { id: "adult_1", label: "1 взрослый", minRating: 40, maxRating: 59 },
       { id: "kms", label: "КМС", minRating: 60, maxRating: 79 },
       { id: "ms", label: "МС", minRating: 80, maxRating: 99 },
       { id: "msmk", label: "МСМК", minRating: 100, maxRating: 120 }
