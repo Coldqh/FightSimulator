@@ -2190,3 +2190,60 @@ body.app-booting { overflow: hidden; }
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* 2.2.6 update notification */
+.update-notice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 5000;
+  width: min(560px, calc(100vw - 24px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(207, 37, 37, 0.42);
+  background: linear-gradient(180deg, rgba(27, 29, 34, 0.98), rgba(14, 15, 18, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.52);
+}
+
+.update-notice-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.update-notice-text strong {
+  font-size: 14px;
+}
+
+.update-notice-text span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.update-now-btn {
+  flex: 0 0 auto;
+}
+
+.update-later-btn {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 760px) {
+  .update-notice {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 16px);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .update-notice button {
+    width: 100%;
+  }
+}

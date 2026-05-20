@@ -145,26 +145,144 @@
     return;
   }
 
+  var updateNoticeVisible = false;
+  var updateReloading = false;
+  var pendingUpdateRegistration = null;
+  var updateCheckTimer = null;
+
+  function removeUpdateNotice() {
+    var existing = document.getElementById("appUpdateNotice");
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+    updateNoticeVisible = false;
+  }
+
+  function showUpdateNotice(registration, remoteVersion) {
+    var existing;
+    var button;
+    var text;
+    if (updateNoticeVisible) { return; }
+    updateNoticeVisible = true;
+    pendingUpdateRegistration = registration || pendingUpdateRegistration;
+
+    existing = document.createElement("div");
+    existing.id = "appUpdateNotice";
+    existing.className = "update-notice";
+    existing.innerHTML =
+      '<div class="update-notice-text">' +
+        '<strong>Доступна новая версия</strong>' +
+        '<span>' + (remoteVersion ? ('Последняя версия: ' + remoteVersion + '.') : 'Можно обновиться до последней сборки.') + '</span>' +
+      '</div>' +
+      '<button class="primary update-now-btn" type="button">Обновить до последней версии</button>' +
+      '<button class="small-btn update-later-btn" type="button" aria-label="Позже">Позже</button>';
+
+    button = existing.querySelector(".update-now-btn");
+    button.addEventListener("click", function () {
+      applyUpdateNow();
+    });
+
+    existing.querySelector(".update-later-btn").addEventListener("click", function () {
+      removeUpdateNotice();
+    });
+
+    document.body.appendChild(existing);
+  }
+
+  function applyUpdateNow() {
+    var registration = pendingUpdateRegistration;
+    updateReloading = true;
+    persistNow();
+
+    if (registration && registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      window.setTimeout(function () { window.location.reload(); }, 1200);
+      return;
+    }
+
+    if (registration && registration.update) {
+      registration.update().then(function (updatedRegistration) {
+        var activeRegistration = updatedRegistration || registration;
+        if (activeRegistration.waiting) {
+          activeRegistration.waiting.postMessage({ type: "SKIP_WAITING" });
+          window.setTimeout(function () { window.location.reload(); }, 900);
+        } else {
+          window.location.reload();
+        }
+      }).catch(function () {
+        window.location.reload();
+      });
+      return;
+    }
+
+    window.location.reload();
+  }
+
+  function checkRemoteVersion(registration) {
+    if (!navigator.onLine) { return; }
+    fetch("./version.json?updateCheck=" + Date.now(), {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    }).then(function (response) {
+      if (!response.ok) { return null; }
+      return response.json();
+    }).then(function (remote) {
+      if (!remote || !remote.version) { return; }
+      if (remote.version !== Data.appVersion) {
+        showUpdateNotice(registration || pendingUpdateRegistration, remote.version);
+      }
+    }).catch(function () {});
+  }
+
   function registerOfflineApp() {
     if (!("serviceWorker" in navigator)) {
       return;
     }
 
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!updateReloading) { return; }
+      updateReloading = false;
+      persistNow();
+      window.location.reload();
+    });
+
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("./sw.js")
         .then(function (registration) {
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+          pendingUpdateRegistration = registration;
+
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            showUpdateNotice(registration);
           }
+
           registration.addEventListener("updatefound", function () {
             var worker = registration.installing;
             if (!worker) { return; }
             worker.addEventListener("statechange", function () {
               if (worker.state === "installed" && navigator.serviceWorker.controller) {
-                console.log("Fight World offline cache updated.");
+                showUpdateNotice(registration);
               }
             });
           });
+
+          checkRemoteVersion(registration);
+          registration.update().catch(function () {});
+
+          if (updateCheckTimer) {
+            window.clearInterval(updateCheckTimer);
+          }
+          updateCheckTimer = window.setInterval(function () {
+            registration.update().catch(function () {});
+            checkRemoteVersion(registration);
+          }, 5 * 60 * 1000);
+
+          document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") {
+              registration.update().catch(function () {});
+              checkRemoteVersion(registration);
+            }
+          });
+
           console.log("Fight World offline cache ready.");
         })
         .catch(function (error) {

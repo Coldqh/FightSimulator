@@ -1,7 +1,7 @@
 /* Fight World offline service worker */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-fight-world-mobile-2.2.5";
+const CACHE_VERSION = "fight-simulator-update-notify-2.2.6";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -136,7 +136,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -162,6 +161,19 @@ async function networkFirstNavigation(request) {
     return response;
   } catch (error) {
     return (await cache.match("./index.html")) || Response.error();
+  }
+}
+
+async function networkFirstStatic(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (response && response.ok) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    return (await caches.match(request, { ignoreSearch: true })) || Response.error();
   }
 }
 
@@ -199,6 +211,11 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));
+    return;
+  }
+
+  if (url.pathname.endsWith("/version.json")) {
+    event.respondWith(networkFirstStatic(request));
     return;
   }
 

@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "fight-world-mobile-2.2.5") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 226) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "update-notify-2.2.6") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 227) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -185,5 +185,20 @@ console.log("tournament ranks save smoke ok", {
   });
   if (!renderSource.includes("Местный боец — OVR 60-104") || !renderSource.includes("Претендент — OVR 120-149") || !renderSource.includes("Элита — OVR 150+")) {
     throw new Error("OVR-only rank modal text missing");
+  }
+}
+
+/* 2.2.6 update notification source checks */
+{
+  const appSource = fs.readFileSync(path.join(root,"src/app.js"),"utf8");
+  const swSource = fs.readFileSync(path.join(root,"sw.js"),"utf8");
+  if (!appSource.includes("showUpdateNotice") || !appSource.includes("Обновить до последней версии")) {
+    throw new Error("update notification UI missing");
+  }
+  if (!appSource.includes("controllerchange") || !appSource.includes("registration.update")) {
+    throw new Error("service worker update hooks missing");
+  }
+  if (!swSource.includes("networkFirstStatic") || !swSource.includes("version.json")) {
+    throw new Error("version.json network-first update check missing");
   }
 }
