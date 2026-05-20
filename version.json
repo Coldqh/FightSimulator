@@ -1,5 +1,6 @@
 {
-  "version": "gameplay-update-fix-2.3.8",
+  "version": "gameplay-update-fix-2.3.9",
   "mode": "gameplay-update-fix",
-  "cacheVersion": "fight-simulator-gameplay-update-fix-2.3.8"
+  "cacheVersion": "fight-simulator-gameplay-update-fix-2.3.9",
+  "resetPage": "reset-cache.html"
 }

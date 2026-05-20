@@ -192,39 +192,10 @@
   function applyUpdateNow() {
     updateReloading = true;
     persistNow();
-
-    function hardReload() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.3.7&t=" + Date.now());
-    }
-
-    function clearFightCaches() {
-      if (!window.caches || !caches.keys) { return Promise.resolve(); }
-      return caches.keys().then(function (keys) {
-        return Promise.all(keys.map(function (key) {
-          var low = String(key || "").toLowerCase();
-          if (low.indexOf("fight") !== -1 || low.indexOf("simulator") !== -1 || low.indexOf("fw-") === 0) {
-            return caches.delete(key);
-          }
-          return false;
-        }));
-      });
-    }
-
-    function unregisterServiceWorkers() {
-      if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
-        return Promise.resolve();
-      }
-      return navigator.serviceWorker.getRegistrations().then(function (registrations) {
-        return Promise.all(registrations.map(function (registration) {
-          return registration.unregister();
-        }));
-      });
-    }
-
-    unregisterServiceWorkers()
-      .then(clearFightCaches)
-      .then(hardReload)
-      .catch(hardReload);
+    function go() { window.location.replace("./reset-cache.html?fromUpdateButton=2.3.8&t=" + Date.now()); }
+    function clearFightCaches() { if (!window.caches || !caches.keys) { return Promise.resolve(); } return caches.keys().then(function (keys) { return Promise.all(keys.map(function (key) { var low = String(key || "").toLowerCase(); if (low.indexOf("fight") !== -1 || low.indexOf("simulator") !== -1 || low.indexOf("fw-") === 0) { return caches.delete(key); } return false; })); }); }
+    function unregisterServiceWorkers() { if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) { return Promise.resolve(); } return navigator.serviceWorker.getRegistrations().then(function (registrations) { return Promise.all(registrations.map(function (registration) { return registration.unregister(); })); }); }
+    unregisterServiceWorkers().then(clearFightCaches).then(go).catch(go);
   }
 
   function checkRemoteVersion(registration) {

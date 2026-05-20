@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "update-button-hard-reset-2.3.7",
+    appVersion: "gameplay-update-fix-2.3.8",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 237,
+    saveSchemaVersion: 238,
 
     tracks: {
       amateur: {
