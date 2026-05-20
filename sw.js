@@ -1,7 +1,7 @@
-/* Fight Simulator offline service worker */
+/* Fight World offline service worker */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-rank-ovr-hotfix-2.2.4.1";
+const CACHE_VERSION = "fight-simulator-fight-world-mobile-2.2.5";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

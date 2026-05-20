@@ -1892,3 +1892,301 @@ button, input, select { max-width: 100%; }
     height: 60px;
   }
 }
+
+
+/* 2.2.5 mobile + boot polish */
+body.app-booting { overflow: hidden; }
+
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top, rgba(207, 37, 37, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(10, 10, 11, 0.96), rgba(10, 10, 11, 0.99)),
+    var(--bg);
+  transition: opacity 0.24s ease;
+}
+
+.boot-splash.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-card {
+  width: min(360px, 100%);
+  padding: 28px 22px;
+  border-radius: 28px;
+  border: 1px solid rgba(207, 37, 37, 0.26);
+  background: linear-gradient(180deg, rgba(23,25,28,0.98), rgba(14,15,18,0.98));
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.boot-card h1 {
+  margin: 14px 0 10px;
+  font-size: clamp(34px, 7vw, 48px);
+  letter-spacing: -0.05em;
+}
+
+.boot-logo {
+  width: 118px;
+  height: 118px;
+  object-fit: contain;
+  border-radius: 26px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.start-logo, .topbar-logo {
+  object-fit: contain;
+}
+
+.start-head .brand h1 {
+  margin-bottom: 6px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.top-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pill, .pill-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  white-space: nowrap;
+}
+
+.main-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 138px);
+  overflow: hidden;
+}
+
+.tab-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.single-layout {
+  display: block;
+}
+
+.feed {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 760px) {
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell {
+    width: 100%;
+    min-height: 100dvh;
+    padding: 8px 8px 10px;
+  }
+
+  .topbar.compact-topbar {
+    gap: 8px;
+    margin-bottom: 8px;
+    align-items: stretch;
+  }
+
+  .topbar-brand {
+    flex: 0 0 44px;
+    align-self: flex-start;
+  }
+
+  .topbar-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .top-pills {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  .pill, .pill-link {
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.15;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .compact-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  .compact-toolbar button {
+    width: 100%;
+    padding: 8px 8px;
+    font-size: 13px;
+  }
+
+  .main-panel {
+    min-height: calc(100dvh - 162px);
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .tab-scroll-area {
+    gap: 8px;
+    padding-right: 0;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .tabs button {
+    flex: 0 0 auto;
+    min-width: 90px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .grid.two, .grid.three {
+    grid-template-columns: 1fr !important;
+  }
+
+  .panel, .content-card, .stat-card, .skills, .offer, .modal {
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .split-row {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .split-row > strong, .split-row > span:last-child {
+    max-width: 48%;
+    text-align: right;
+  }
+
+  .offer.compact-offer, .favorite-tab-row, .favorite-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .compact-fight-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .offer.compact-offer > button,
+  .favorite-tab-row > button {
+    width: 100%;
+  }
+
+  .club-filter-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .club-filter-row .small-btn {
+    width: 100%;
+    padding-inline: 4px;
+  }
+
+  .row {
+    gap: 6px;
+  }
+
+  .profile-actions-card .row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .country-dropdown-menu {
+    max-height: 54dvh;
+  }
+
+  .modal-backdrop {
+    padding: 10px 8px;
+  }
+
+  .modal {
+    width: min(100%, calc(100vw - 16px));
+    max-height: calc(100dvh - 18px);
+    overflow: auto;
+  }
+
+  .start-screen {
+    min-height: 100dvh;
+    padding: 10px 0;
+  }
+
+  .start-card {
+    width: 100%;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .start-head .brand {
+    align-items: flex-start;
+  }
+
+  .start-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+  }
+
+  .start-body .row button {
+    width: 100%;
+  }
+
+  .archetype-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

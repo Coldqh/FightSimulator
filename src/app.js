@@ -9,20 +9,56 @@
   var Fight = window.FS.Fight;
   var Render = window.FS.Render;
   var app = document.getElementById("app");
-  var state = Storage.load();
-  if (state && state._migrationReport) {
-    state.feed = state._migrationReport;
-    Storage.save(state);
+  var bootSplash = document.getElementById("bootSplash");
+  var state = null;
+  var bootReady = false;
+
+  function prepareLoadedState(loaded, restoreMessage) {
+    if (!loaded) { return null; }
+    if (loaded._migrationReport) {
+      loaded.feed = loaded._migrationReport;
+      Storage.save(loaded);
+    }
+    State.repairState(loaded);
+    loaded.feed = loaded.feed || restoreMessage || "Карьера восстановлена.";
+    return loaded;
   }
 
-  function restoreCareerAsync() {
-    if (state || !Storage.loadAsync) { return; }
-    Storage.loadAsync().then(function (loaded) {
-      if (!loaded || state) { return; }
-      state = loaded;
-      State.repairState(state);
-      state.feed = state.feed || "Карьера восстановлена.";
-      saveAndRender();
+  function finishBoot() {
+    if (bootReady) { return; }
+    bootReady = true;
+    if (bootSplash) {
+      bootSplash.classList.add("hidden");
+      window.setTimeout(function () {
+        if (bootSplash && bootSplash.parentNode) { bootSplash.parentNode.removeChild(bootSplash); }
+      }, 260);
+    }
+    if (document.body) { document.body.classList.remove("app-booting"); }
+  }
+
+  function initializeBoot() {
+    var loadedSync = prepareLoadedState(Storage.load(), "Карьера восстановлена.");
+    if (loadedSync && State.player(loadedSync)) {
+      state = loadedSync;
+      finishBoot();
+      render();
+      return;
+    }
+
+    if (!Storage.loadAsync) {
+      finishBoot();
+      render();
+      return;
+    }
+
+    Storage.loadAsync().then(function (loadedAsync) {
+      state = prepareLoadedState(loadedAsync, "Карьера восстановлена.");
+      finishBoot();
+      render();
+    }).catch(function () {
+      state = null;
+      finishBoot();
+      render();
     });
   }
 
@@ -38,9 +74,7 @@
       window.alert("Сохранение не найдено.");
       return;
     }
-    state = loaded;
-    State.repairState(state);
-    state.feed = state.feed || "Карьера продолжена.";
+    state = prepareLoadedState(loaded, "Карьера продолжена.");
     saveAndRender();
   }
 
@@ -90,8 +124,7 @@
       return;
     }
 
-    state = imported;
-    State.repairState(state);
+    state = prepareLoadedState(imported, "Сохранение импортировано.");
     if (window.FS.Clubs) { window.FS.Clubs.ensureClubs(state); }
     if (!state.offers || !state.offers.length) { World.refreshOffers(state); }
     state.feed = "Сохранение импортировано.";
@@ -128,11 +161,11 @@
             if (!worker) { return; }
             worker.addEventListener("statechange", function () {
               if (worker.state === "installed" && navigator.serviceWorker.controller) {
-                console.log("Fight Simulator offline cache updated.");
+                console.log("Fight World offline cache updated.");
               }
             });
           });
-          console.log("Fight Simulator offline cache ready.");
+          console.log("Fight World offline cache ready.");
         })
         .catch(function (error) {
           console.warn("Offline cache registration failed:", error);
@@ -190,6 +223,11 @@
   };
 
   function render() {
+    if (!bootReady && !state) {
+      app.innerHTML = "";
+      return;
+    }
+
     if (!state || !State.player(state)) {
       app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
       return;
@@ -575,6 +613,5 @@
 
   setupPersistentSave();
   registerOfflineApp();
-  render();
-  restoreCareerAsync();
+  initializeBoot();
 }());

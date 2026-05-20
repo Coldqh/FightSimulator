@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "rank-ovr-hotfix-2.2.4.1",
+    appVersion: "fight-world-mobile-2.2.5",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 225,
+    saveSchemaVersion: 226,
 
     tracks: {
       amateur: {

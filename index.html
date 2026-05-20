@@ -6,15 +6,22 @@
   <meta name="theme-color" content="#0b0b0c">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="FightSim">
+  <meta name="apple-mobile-web-app-title" content="Fight World">
   <meta name="mobile-web-app-capable" content="yes">
-  <title>Fight Simulator</title>
+  <title>Fight World</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <link rel="stylesheet" href="src/styles.css">
 </head>
-<body>
+<body class="app-booting">
+  <div id="bootSplash" class="boot-splash">
+    <div class="boot-card">
+      <img class="boot-logo" src="assets/icons/icon-192.png" alt="Fight World">
+      <h1>Fight World</h1>
+      <div class="muted small">Загрузка карьеры...</div>
+    </div>
+  </div>
   <main id="app" class="app-shell"></main>
 
   <script src="src/data/game-data.js"></script>

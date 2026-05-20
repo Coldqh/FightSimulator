@@ -1,6 +1,6 @@
 {
-  "name": "Fight Simulator",
-  "short_name": "FightSim",
+  "name": "Fight World",
+  "short_name": "FightWorld",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -9,7 +9,7 @@
   "theme_color": "#0b0b0c",
   "lang": "ru",
   "orientation": "portrait",
-  "description": "Offline boxing career simulator.",
+  "description": "Offline boxing career simulator with persistent saves.",
   "icons": [
     {
       "src": "assets/icons/icon-192.png",

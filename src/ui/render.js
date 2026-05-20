@@ -79,8 +79,8 @@
       '<div class="start-card">' +
         '<div class="start-head">' +
           '<div class="brand">' +
-            '<img class="start-logo" src="assets/icons/icon-192.png" alt="Fight Simulator">' +
-            '<div><h1>Fight Simulator</h1><div class="muted small">Тёмный клубный стиль, боксёрские перчатки и живая карьера.</div><div class="pills" style="margin-top:8px"><span class="pill gold">Версия ' + U.escapeHtml(Data.appVersion) + '</span><span class="pill green">автосохранение</span></div></div>' +
+            '<img class="start-logo" src="assets/icons/icon-192.png" alt="Fight World">' +
+            '<div><h1>Fight World</h1><div class="muted small">Боксёрская карьера, живая мировая сцена и удобная мобильная игра.</div><div class="pills" style="margin-top:8px"><span class="pill gold">Версия ' + U.escapeHtml(Data.appVersion) + '</span><span class="pill green">автосохранение</span></div></div>' +
           '</div>' +
           '<div class="ring-line"></div>' +
         '</div>' +
@@ -105,7 +105,7 @@
     var status = State.pathProgress ? State.pathProgress(state, p).badge : "";
 
     return '<header class="topbar compact-topbar">' +
-      '<div class="topbar-brand"><img class="topbar-logo" src="assets/icons/icon-192.png" alt="Fight Simulator"></div>' +
+      '<div class="topbar-brand"><img class="topbar-logo" src="assets/icons/icon-192.png" alt="Fight World"></div>' +
       '<div class="top-pills">' +
         '<span class="pill">' + U.escapeHtml(timeText) + '</span>' +
         '<span class="pill gold">' + U.escapeHtml(p.name) + '</span>' +
@@ -732,7 +732,7 @@
     else if (tab === "settings") { content = renderSettingsTab(state); }
     else { content = renderPeopleTab(state); }
 
-    return "<section class=\"panel\">" + renderTabs(state) + "<div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</section>";
+    return "<section class=\"panel main-panel\">" + renderTabs(state) + "<div class=\"tab-scroll-area\"><div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</div></section>";
   }
 
   function renderClubModal(state, club) {
@@ -1132,7 +1132,7 @@
       body = "<div class=\"modal fight-modal\"><h2>Бой завершён</h2><button data-close-fight-window=\"1\">Закрыть</button></div>";
     }
 
-    return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Fight Simulator — бой</title><link rel=\"stylesheet\" href=\"src/styles.css\"></head><body class=\"fight-window-body\"><div class=\"app-shell\">" + body + "</div><script>document.addEventListener('click',function(e){var b=e.target.closest('button'); if(!b||!window.opener||!window.opener.FSApp){return;} window.opener.FSApp.handleFightWindowButton(b.dataset);});</script></body></html>";
+    return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Fight World — бой</title><link rel=\"stylesheet\" href=\"src/styles.css\"></head><body class=\"fight-window-body\"><div class=\"app-shell\">" + body + "</div><script>document.addEventListener('click',function(e){var b=e.target.closest('button'); if(!b||!window.opener||!window.opener.FSApp){return;} window.opener.FSApp.handleFightWindowButton(b.dataset);});</script></body></html>";
   }
 
   function renderDashboard(state) {
