@@ -1,7 +1,7 @@
 /* Fight World offline service worker */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-mobile-scroll-ui-2.2.7";
+const CACHE_VERSION = "fight-simulator-mobile-layout-2.2.8";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

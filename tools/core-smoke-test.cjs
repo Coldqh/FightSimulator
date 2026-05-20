@@ -46,8 +46,8 @@ sandbox.global=sandbox.window;
 ].forEach(f => vm.runInNewContext(fs.readFileSync(path.join(root,f),"utf8"), sandbox.window, {filename:f}));
 
 const FS = sandbox.window.FS;
-if (FS.Data.appVersion !== "mobile-scroll-ui-2.2.7") throw new Error("bad version "+FS.Data.appVersion);
-if (FS.Data.saveSchemaVersion !== 228) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
+if (FS.Data.appVersion !== "mobile-layout-2.2.8") throw new Error("bad version "+FS.Data.appVersion);
+if (FS.Data.saveSchemaVersion !== 229) throw new Error("bad schema "+FS.Data.saveSchemaVersion);
 
 function make(archetypeId, countryId="russia") {
   const state = FS.State.createCareer({name:"Smoke", archetypeId, countryId, weightClassId:"welter"});
@@ -219,4 +219,14 @@ console.log("tournament ranks save smoke ok", {
   if (!cssSource227.includes("overflow-y: auto !important") || !cssSource227.includes("height: auto !important")) {
     throw new Error("mobile page scroll fix missing");
   }
+}
+
+/* 2.2.8 mobile layout checks */
+{
+  const renderSource228 = fs.readFileSync(path.join(root,'src/ui/render.js'),'utf8');
+  const cssSource228 = fs.readFileSync(path.join(root,'src/styles.css'),'utf8');
+  if (renderSource228.includes('["economy", "Экономика"]')) throw new Error('economy tab still present');
+  if (!renderSource228.includes('Следующая неделя') || !renderSource228.includes('dashboard-actions')) throw new Error('dashboard actions missing');
+  if (!renderSource228.includes('training-row') || !renderSource228.includes('training-value')) throw new Error('compact training rows missing');
+  if (!cssSource228.includes('grid-template-columns: repeat(3, minmax(0,1fr))') || !cssSource228.includes('.feed { display:none')) throw new Error('mobile tabs/feed cleanup missing');
 }
