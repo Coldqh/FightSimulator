@@ -1,7 +1,7 @@
-/* Fight World service worker - gameplay update fix 2.3.9 */
+/* Fight World service worker - FINAL VERSION FIX 2.3.9 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-gameplay-update-fix-2.3.9";
+const CACHE_VERSION = "fight-simulator-final-version-fix-2.3.9";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -28,18 +28,18 @@ const PRECACHE_URLS = [
   "./src/core/world.js",
   "./src/core/fight.js",
   "./src/ui/render.js",
-  "./src/patches/gameplay-update-fix-2.3.9.js",
+  "./src/patches/final-version-fix-2.3.9.js",
   "./src/app.js"
 ];
 
-function fightCache(key) {
-  const low = String(key || "").toLowerCase();
-  return low.includes("fight") || low.includes("simulator") || low.startsWith("fw-");
+function isFightWorldCache(key) {
+  const value = String(key || "").toLowerCase();
+  return value.includes("fight") || value.includes("simulator") || value.startsWith("fw-");
 }
 
 function cleanOldCaches() {
   return caches.keys().then((keys) => Promise.all(keys.map((key) => {
-    if (key !== STATIC_CACHE && key !== RUNTIME_CACHE && fightCache(key)) {
+    if ((key !== STATIC_CACHE && key !== RUNTIME_CACHE) && isFightWorldCache(key)) {
       return caches.delete(key);
     }
     return false;
@@ -58,7 +58,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(cleanOldCaches().then(() => self.clients.claim()));
 });
 
-function alwaysFresh(url) {
+function isAlwaysFresh(url) {
   return (
     url.pathname.endsWith(".html") ||
     url.pathname.endsWith(".js") ||
@@ -87,6 +87,7 @@ async function networkFirst(request) {
 async function cacheFirst(request) {
   const cached = await caches.match(request);
   if (cached) return cached;
+
   const response = await fetch(request);
   if (response && response.ok && request.method === "GET") {
     const cache = await caches.open(RUNTIME_CACHE);
@@ -98,9 +99,16 @@ async function cacheFirst(request) {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (!request || request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith((request.mode === "navigate" || alwaysFresh(url)) ? networkFirst(request) : cacheFirst(request));
+
+  if (request.mode === "navigate" || isAlwaysFresh(url)) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
 });
 
 self.addEventListener("message", (event) => {

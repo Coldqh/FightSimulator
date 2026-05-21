@@ -1,16 +1,14 @@
 cd C:\FightSimulator_GitHub
 
-node apply-update-button-hard-reset-2.3.7.cjs
-node verify-update-button-hard-reset-2.3.7.cjs
-node start-clean-local-2.3.7.cjs
+node apply-2.3.9-final.cjs
+node verify-2.3.9-final.cjs
+node start-clean-local-2.3.9-final.cjs
 
 git status
 git add .
-git commit -m "Fix update button hard reset 2.3.7"
+git commit -m "Fix final 2.3.9 update target and compact rows"
 git push origin main
 
-After GitHub Pages deploy, open once:
-https://coldqh.github.io/FightSimulator/reset-cache.html
-
-Then:
-https://coldqh.github.io/FightSimulator/?cacheReset=2.3.7
+After deploy:
+https://coldqh.github.io/FightSimulator/reset-cache.html?target=2.3.9
+https://coldqh.github.io/FightSimulator/?cacheReset=2.3.9
