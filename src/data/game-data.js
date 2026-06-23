@@ -1,30 +1,43 @@
-/* FightSimulator core data restored by boot hotfix 2.6.1 */
+/* FightSimulator core data */
 (function () {
   "use strict";
   window.FS = window.FS || {};
   window.FS.Data = {
   "saveKey": "fight_world_save_v1",
-  "legacySaveKeys": ["fight_simulator_save", "fight_world_save", "undefined", "undefined_backup", "undefined_last_good", "fight_simulator_autosave"],
-  "appVersion": "stability-fight-save-2.6.2",
-  "saveSchemaVersion": 262,
+  "legacySaveKeys": [
+    "fight_simulator_save",
+    "fight_world_save",
+    "undefined",
+    "undefined_backup",
+    "undefined_last_good",
+    "fight_simulator_autosave"
+  ],
+  "appVersion": "career-start-hotfix-2.6.3",
+  "saveSchemaVersion": 263,
   "tracks": {
     "amateur": {
       "id": "amateur",
       "label": "Любители",
       "short": "Л",
-      "maxStat": 120
+      "maxStat": 120,
+      "rounds": 3,
+      "basePurse": 45
     },
     "street": {
       "id": "street",
       "label": "Улица",
       "short": "У",
-      "maxStat": 150
+      "maxStat": 150,
+      "rounds": 3,
+      "basePurse": 120
     },
     "pro": {
       "id": "pro",
       "label": "Профи",
       "short": "П",
-      "maxStat": 220
+      "maxStat": 220,
+      "rounds": 8,
+      "basePurse": 650
     }
   },
   "statKeys": [
@@ -105,22 +118,26 @@
     {
       "id": "easy",
       "label": "Лёгкий",
-      "offset": -18
+      "offset": -18,
+      "purseMul": 0.85
     },
     {
       "id": "even",
       "label": "Равный",
-      "offset": 0
+      "offset": 0,
+      "purseMul": 1
     },
     {
       "id": "hard",
       "label": "Сильный",
-      "offset": 18
+      "offset": 18,
+      "purseMul": 1.25
     },
     {
       "id": "elite",
       "label": "Элита",
-      "offset": 36
+      "offset": 36,
+      "purseMul": 1.6
     }
   ],
   "amateurRanks": [

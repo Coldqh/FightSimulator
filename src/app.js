@@ -142,16 +142,30 @@
 
   function createCareerFromForm() {
     var archetypeInput = document.querySelector("input[name='careerArchetype']:checked");
-    state = State.createCareer({
+    var payload = {
       name: document.getElementById("careerName").value.trim(),
       archetypeId: archetypeInput ? archetypeInput.value : "amateur",
       countryId: document.getElementById("careerCountry").value,
       weightClassId: document.getElementById("careerWeightClass").value,
       stanceId: ""
-    });
+    };
 
-    World.bootstrapWorld(state);
-    saveAndRender();
+    app.innerHTML = '<section class="start-screen"><div class="start-card"><div class="start-body"><div class="content-card"><h3>Создаём карьеру</h3><div class="muted small">Генерируем бойцов, клубы, рейтинги и первые бои.</div></div></div></div></section>';
+
+    window.setTimeout(function () {
+      try {
+        state = State.createCareer(payload);
+        World.bootstrapWorld(state);
+        State.repairState(state);
+        persistNow();
+        render();
+      } catch (error) {
+        console.error("Career creation failed:", error);
+        state = null;
+        app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
+        window.alert("Не удалось создать карьеру. Открой консоль и скинь ошибку.");
+      }
+    }, 20);
   }
 
   function resetCareer() {
@@ -244,7 +258,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.2&target=2.6.2&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.3&target=2.6.3&t=" + Date.now());
     }
 
     function clearFightCaches() {

@@ -391,12 +391,32 @@
     var count;
     var perWeight;
     var rankId;
+    var rawCount;
 
-    /* Профи: 1800 всего, 300 на вес. Страна зависит от итогового распределения Data.countries[].proCount. */
+    function initialCount(country, trackId) {
+      var isPlayerCountry = player && country.id === player.countryId;
+      if (trackId === "pro") {
+        rawCount = Number(country.proCount) || 0;
+        return Math.min(rawCount, isPlayerCountry ? 36 : 10);
+      }
+      if (trackId === "street") {
+        rawCount = Number(country.streetCount) || 0;
+        return Math.min(rawCount, isPlayerCountry ? 28 : 8);
+      }
+      rawCount = Number(country.amateurCount) || 0;
+      return Math.min(rawCount, isPlayerCountry ? 72 : 18);
+    }
+
+    /*
+      Важно для браузера/телефона:
+      Data хранит желаемую плотность мира, но старт карьеры не должен синхронно создавать весь максимум.
+      Полный рост мира дальше идёт через существующие weekly-механики World.advanceWeek().
+    */
+
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       country = Data.countries[countryIndex];
       countryId = country.id;
-      perWeight = distributeCount(Number(country.proCount) || 0, Data.weightClasses.length);
+      perWeight = distributeCount(initialCount(country, "pro"), Data.weightClasses.length);
       for (weightIndex = 0; weightIndex < Data.weightClasses.length; weightIndex += 1) {
         weightClassId = Data.weightClasses[weightIndex].id;
         for (fighterIndex = 0; fighterIndex < perWeight[weightIndex]; fighterIndex += 1) {
@@ -411,11 +431,9 @@
       }
     }
 
-    /* Улица: суммарно до 5000. Количество по стране уже посчитано в Data.countries[].streetCount. */
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       country = Data.countries[countryIndex];
-      countryId = country.id;
-      count = Number(country.streetCount) || 0;
+      count = initialCount(country, "street");
       for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
         seed = 200000 + countryIndex * 10000 + fighterIndex;
         base = U.clamp(Math.round((fighterIndex / Math.max(1, count - 1)) * 150) + U.randomInt(-6, 6), 0, 150);
@@ -426,11 +444,9 @@
       }
     }
 
-    /* Любители: 20000 всего. Распределение по странам — финальное, по популярности/успехам/населению. */
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
       country = Data.countries[countryIndex];
-      countryId = country.id;
-      count = Number(country.amateurCount) || 0;
+      count = initialCount(country, "amateur");
       for (fighterIndex = 0; fighterIndex < count; fighterIndex += 1) {
         seed = 300000 + countryIndex * 100000 + fighterIndex;
         base = scaledBaseForAmateurIndex(fighterIndex, count);

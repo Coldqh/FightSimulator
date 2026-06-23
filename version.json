@@ -1,7 +1,7 @@
 {
-  "version": "stability-fight-save-2.6.2",
-  "mode": "stability-fight-save",
-  "cacheVersion": "fight-simulator-stability-fight-save-2.6.2",
+  "version": "career-start-hotfix-2.6.3",
+  "mode": "career-start-hotfix",
+  "cacheVersion": "fight-simulator-career-start-hotfix-2.6.3",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
