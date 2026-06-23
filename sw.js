@@ -1,7 +1,7 @@
-/* Fight World service worker - UI REMAKE 2.4.0 */
+/* Fight World service worker - Clean UI 2.4.1 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-ui-remake-2.4.0";
+const CACHE_VERSION = "fight-simulator-clean-ui-2.4.1";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -16,7 +16,6 @@ const PRECACHE_URLS = [
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./src/styles.css",
-  "./src/ui-remake-2.4.0.css",
   "./src/data/game-data.js",
   "./src/core/utils.js",
   "./src/core/storage.js",
@@ -29,8 +28,6 @@ const PRECACHE_URLS = [
   "./src/core/world.js",
   "./src/core/fight.js",
   "./src/ui/render.js",
-  "./src/patches/gameplay-update-fix-2.3.8.js",
-  "./src/patches/ui-remake-2.4.0.js",
   "./src/app.js"
 ];
 

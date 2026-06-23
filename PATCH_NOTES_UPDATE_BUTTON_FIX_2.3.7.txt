@@ -1,6 +1,0 @@
-Fight World 2.3.7 - update button hard reset.
-
-Fixed:
-- Update notice button no longer reloads the old cached 2.3.5 / 2.3.6 build.
-- On click it unregisters service workers, deletes Fight World caches, then opens reset-cache.html.
-- Fight rows fix remains included.

@@ -6,72 +6,52 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Fight World reset 2.3.9</title>
+  <title>Fight World reset</title>
   <style>
-    :root { color-scheme: dark; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; background:#08090b; color:#f4f4f5; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    .card { width:min(720px,calc(100vw - 28px)); border:1px solid rgba(255,255,255,.12); border-radius:22px; padding:22px; background:linear-gradient(180deg,#181b21,#0e1014); box-shadow:0 24px 80px rgba(0,0,0,.55); }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; background:#eef4ff; color:#142033; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .card { width:min(720px,calc(100vw - 28px)); border:1px solid rgba(36,58,98,.14); border-radius:22px; padding:22px; background:rgba(255,255,255,.88); box-shadow:0 24px 80px rgba(43,72,118,.18); }
     h1 { margin:0 0 8px; font-size:24px; }
-    p { color:#a7adba; line-height:1.5; }
-    pre { white-space:pre-wrap; background:#050609; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; max-height:340px; overflow:auto; color:#d6d9e1; }
-    a,button { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 14px; border-radius:12px; border:1px solid rgba(255,255,255,.16); background:#cf2525; color:white; text-decoration:none; font-weight:700; cursor:pointer; }
+    p { color:#64748b; line-height:1.5; }
+    pre { white-space:pre-wrap; background:#f8fbff; border:1px solid rgba(36,58,98,.12); border-radius:14px; padding:14px; max-height:340px; overflow:auto; color:#334155; }
+    a,button { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 14px; border-radius:12px; border:1px solid rgba(37,99,235,.22); background:#2563eb; color:white; text-decoration:none; font-weight:700; cursor:pointer; }
   </style>
 </head>
 <body>
   <main class="card">
-    <h1>Fight World reset 2.3.9</h1>
+    <h1>Fight World reset</h1>
     <p>Сбрасываю старый Service Worker и кэш. Сохранение карьеры не трогаю.</p>
     <pre id="log">start</pre>
-    <a id="go" href="index.html?cacheReset=2.3.9">Открыть игру</a>
+    <a id="go" href="index.html?cacheReset=2.4.1">Открыть игру</a>
   </main>
-
   <script>
-    "use strict";
-
-    const logNode = document.getElementById("log");
-
-    function log(text) {
-      logNode.textContent += "\n" + text;
-    }
-
-    function freshUrl() {
-      return "index.html?cacheReset=2.3.9&target=2.3.9&t=" + Date.now();
-    }
-
-    async function reset() {
-      document.getElementById("go").href = freshUrl();
-
-      if ("serviceWorker" in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        log("SW: " + registrations.length);
-        for (const registration of registrations) {
-          await registration.unregister();
-          log("unregister " + registration.scope);
-        }
-      }
-
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        log("caches: " + keys.length);
-        for (const key of keys) {
-          const low = key.toLowerCase();
-          if (low.includes("fight") || low.includes("simulator") || low.startsWith("fw-")) {
-            await caches.delete(key);
-            log("delete " + key);
+    const log = document.getElementById("log");
+    function line(text) { log.textContent += "\n" + text; }
+    async function clean() {
+      try {
+        if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistrations) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const reg of regs) {
+            await reg.unregister();
+            line("service worker removed");
           }
         }
+        if (window.caches && caches.keys) {
+          const keys = await caches.keys();
+          for (const key of keys) {
+            const low = String(key).toLowerCase();
+            if (low.includes("fight") || low.includes("simulator") || low.startsWith("fw-")) {
+              await caches.delete(key);
+              line("cache removed: " + key);
+            }
+          }
+        }
+      } catch (error) {
+        line("error: " + error.message);
       }
-
-      try {
-        localStorage.setItem("fightWorldUpdateTarget", "final-version-fix-2.3.9");
-        sessionStorage.setItem("fightWorldUpdateTarget", "final-version-fix-2.3.9");
-      } catch (error) {}
-
-      log("done -> 2.3.9");
-      setTimeout(() => window.location.replace(freshUrl()), 650);
+      line("done");
+      setTimeout(() => { location.href = "index.html?cacheReset=2.4.1&t=" + Date.now(); }, 700);
     }
-
-    reset().catch((error) => log("ERR " + (error && error.message ? error.message : error)));
+    clean();
   </script>
 </body>
 </html>

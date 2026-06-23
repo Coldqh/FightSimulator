@@ -192,9 +192,35 @@
   function applyUpdateNow() {
     updateReloading = true;
     persistNow();
-    function go() { window.location.replace("./reset-cache.html?fromUpdateButton=2.3.8&t=" + Date.now()); }
-    function clearFightCaches() { if (!window.caches || !caches.keys) { return Promise.resolve(); } return caches.keys().then(function (keys) { return Promise.all(keys.map(function (key) { var low = String(key || "").toLowerCase(); if (low.indexOf("fight") !== -1 || low.indexOf("simulator") !== -1 || low.indexOf("fw-") === 0) { return caches.delete(key); } return false; })); }); }
-    function unregisterServiceWorkers() { if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) { return Promise.resolve(); } return navigator.serviceWorker.getRegistrations().then(function (registrations) { return Promise.all(registrations.map(function (registration) { return registration.unregister(); })); }); }
+
+    function go() {
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.4.1&target=2.4.1&t=" + Date.now());
+    }
+
+    function clearFightCaches() {
+      if (!window.caches || !caches.keys) { return Promise.resolve(); }
+      return caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (key) {
+          var low = String(key || "").toLowerCase();
+          if (low.indexOf("fight") !== -1 || low.indexOf("simulator") !== -1 || low.indexOf("fw-") === 0) {
+            return caches.delete(key);
+          }
+          return false;
+        }));
+      });
+    }
+
+    function unregisterServiceWorkers() {
+      if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistrations) {
+        return Promise.resolve();
+      }
+      return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        return Promise.all(registrations.map(function (registration) {
+          return registration.unregister();
+        }));
+      });
+    }
+
     unregisterServiceWorkers().then(clearFightCaches).then(go).catch(go);
   }
 
@@ -320,6 +346,160 @@
     }
   };
 
+
+  function applyIntegratedGameplayFixes(targetState) {
+    var U = window.FS && window.FS.Utils ? window.FS.Utils : {};
+    var D = window.FS && window.FS.Data ? window.FS.Data : {};
+    var T = window.FS && window.FS.Titles ? window.FS.Titles : {};
+
+    function byId(id) {
+      if (!targetState || !id) { return null; }
+      if (U.getFighterById) { return U.getFighterById(targetState, id); }
+      return (targetState.roster || []).find(function (fighter) { return fighter && fighter.id === id; }) || null;
+    }
+
+    function ovr(fighter) {
+      if (!fighter) { return 0; }
+      if (U.statAverage) { return U.statAverage(fighter.stats || fighter); }
+      return Math.round(Number(fighter.ovr || fighter.rating || 0));
+    }
+
+    function ensureAges() {
+      if (!targetState || !targetState.roster) { return; }
+      var week = Number(targetState.week) || 1;
+      targetState.roster.forEach(function (fighter) {
+        var age;
+        if (!fighter) { return; }
+        age = Math.max(14, Number(fighter.age) || (fighter.isPlayer ? 18 : 20));
+        if (!fighter.birthWeek) {
+          fighter.birthWeek = Math.max(1, week - age * 48);
+          fighter.birthYear = Math.floor((fighter.birthWeek - 1) / 48) + 1;
+          fighter.birthMonth = Math.floor(((fighter.birthWeek - 1) % 48) / 4) + 1;
+          fighter.birthWeekOfMonth = ((fighter.birthWeek - 1) % 4) + 1;
+        }
+        fighter.age = Math.max(14, Math.floor((week - fighter.birthWeek) / 48));
+        fighter.birthdayLabel = "год " + fighter.birthYear + ", месяц " + fighter.birthMonth + ", " + fighter.birthWeekOfMonth + " неделя";
+      });
+    }
+
+    function updateStreetRating() {
+      if (!targetState || !targetState.roster) { return; }
+      targetState.roster.forEach(function (fighter) {
+        var record;
+        var total;
+        var winRate;
+        if (!fighter || fighter.trackId !== "street") { return; }
+        record = fighter.record || {};
+        total = (record.wins || 0) + (record.losses || 0) + (record.draws || 0);
+        winRate = total ? ((record.wins || 0) + 0.5 * (record.draws || 0)) / total : 0.5;
+        fighter.streetRating = Math.round(ovr(fighter) * 0.8 + Math.round(winRate * 150) * 0.2);
+      });
+    }
+
+    function updateProCadence() {
+      var list;
+      if (!targetState || !targetState.roster) { return; }
+      list = targetState.roster.filter(function (fighter) {
+        return fighter && fighter.trackId === "pro" && !fighter.retired;
+      }).sort(function (a, b) {
+        return (ovr(b) + ((b.record && b.record.wins) || 0)) - (ovr(a) + ((a.record && a.record.wins) || 0));
+      });
+
+      list.forEach(function (fighter, index) {
+        var total = Math.max(1, list.length - 1);
+        var t = index / total;
+        var wait = Math.round(20 - t * 10);
+        if (index < 4) { wait = 20; }
+        else if (index < 25) { wait = 15; }
+        else if (wait < 10) { wait = 10; }
+        fighter.proFightIntervalWeeks = wait;
+        if (!fighter.contractOpponentId && !fighter.nextFightWeek) {
+          fighter.nextFightWeek = (Number(targetState.week) || 1) + wait;
+        }
+      });
+    }
+
+    function repairProTitles() {
+      if (!targetState || !targetState.roster || !D.weightClasses) { return; }
+      targetState.titles = targetState.titles || {};
+      ["wbc", "wba", "wbo", "ibf"].forEach(function (bodyId) {
+        D.weightClasses.forEach(function (weight) {
+          var id = "pro_" + bodyId + "_" + weight.id;
+          var title = targetState.titles[id];
+          var champion = title && byId(title.championId);
+          var pool;
+          if (champion && !champion.retired) { return; }
+          pool = targetState.roster.filter(function (fighter) {
+            return fighter && fighter.trackId === "pro" && fighter.weightClassId === weight.id && !fighter.retired;
+          }).sort(function (a, b) { return ovr(b) - ovr(a); });
+          if (pool[0]) {
+            targetState.titles[id] = Object.assign(title || {}, {
+              id: id,
+              trackId: "pro",
+              countryId: "world",
+              weightClassId: weight.id,
+              bodyId: bodyId,
+              label: bodyId.toUpperCase(),
+              championId: pool[0].id,
+              active: true
+            });
+          }
+        });
+      });
+    }
+
+    function addForeignAmateurOffers() {
+      var player;
+      var rank;
+      var pool;
+      if (!targetState || !targetState.offers) { return; }
+      player = State.player(targetState);
+      if (!player || player.trackId !== "amateur") { return; }
+      rank = player.amateurRankId || "";
+      if (["ms", "msmk"].indexOf(rank) === -1) { return; }
+      if (targetState.offers.some(function (offer) {
+        var fighter = byId(offer.opponentId);
+        return fighter && fighter.countryId !== player.countryId;
+      })) { return; }
+
+      pool = (targetState.roster || []).filter(function (fighter) {
+        return fighter &&
+          fighter.trackId === "amateur" &&
+          fighter.weightClassId === player.weightClassId &&
+          fighter.countryId !== player.countryId &&
+          Math.abs(ovr(fighter) - ovr(player)) <= 18;
+      });
+
+      for (var i = 0; i < Math.min(3, pool.length, targetState.offers.length); i += 1) {
+        targetState.offers[i].opponentId = pool[i].id;
+      }
+    }
+
+    function tournamentXp() {
+      var modal = targetState && targetState.modal;
+      var player;
+      var key;
+      var opponentRating;
+      var gain;
+      if (!modal || modal.type !== "tournamentResult" || !modal.session) { return; }
+      player = State.player(targetState);
+      if (!player) { return; }
+      key = [targetState.week, modal.label, modal.roundLabel, modal.opponentName, modal.result].join("|");
+      if (targetState.__lastTournamentXpKey === key) { return; }
+      targetState.__lastTournamentXpKey = key;
+      opponentRating = Number(modal.opponentRating) || 0;
+      gain = modal.result === "Победа" ? Math.max(3, Math.round(3 + (opponentRating - ovr(player)) / 12)) : 2;
+      player.trainingPoints = (Number(player.trainingPoints) || 0) + gain;
+    }
+
+    ensureAges();
+    updateStreetRating();
+    updateProCadence();
+    repairProTitles();
+    addForeignAmateurOffers();
+    tournamentXp();
+  }
+
   function render() {
     if (!bootReady && !state) {
       app.innerHTML = "";
@@ -331,6 +511,7 @@
       return;
     }
 
+    applyIntegratedGameplayFixes(state);
     State.repairState(state);
 
     var normalOfferCount = (state.offers || []).filter(function (offer) {

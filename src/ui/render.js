@@ -151,26 +151,26 @@
   function renderTabs(state) {
     var p = State.player(state);
     var tabs = [
-      ["dashboard", "Обзор"],
-      ["profile", "Профиль"],
-      ["favorites", "Избранные"],
-      ["news", "Новости"],
-      ["training", "Хар"],
-      ["ranking", "Рейтинг"],
-      ["myclub", "Мой клуб"],
-      ["clubs", "Клубы"],
-      ["people", "Люди"],
-      ["settings", "Настройки"]
+      ["dashboard", "🏠 Обзор"],
+      ["profile", "🥊 Профиль"],
+      ["favorites", "⭐ Избранные"],
+      ["news", "📰 Новости"],
+      ["training", "📈 Статы"],
+      ["ranking", "🏆 Рейтинг"],
+      ["myclub", "🏟️ Мой клуб"],
+      ["clubs", "🏛️ Клубы"],
+      ["people", "👥 Люди"],
+      ["settings", "⚙️ Настройки"]
     ];
 
     if (p.trackId !== "pro") {
-      tabs.splice(2, 0, ["fights", "Бои"]);
+      tabs.splice(2, 0, ["fights", "🔥 Бои"]);
     }
     if (p.trackId === "pro") {
-      tabs.splice(3, 0, ["pro", "Профи"]);
+      tabs.splice(3, 0, ["pro", "💼 Профи"]);
     }
     if (p.trackId === "amateur") {
-      tabs.splice(tabs.length - 2, 0, ["world", "Люб. путь"]);
+      tabs.splice(tabs.length - 2, 0, ["world", "🌍 Люб. путь"]);
     }
 
     return '<div class="tabs">' + tabs.map(function (tab) {
@@ -761,7 +761,9 @@
     else if (tab === "settings") { content = renderSettingsTab(state); }
     else { content = renderPeopleTab(state); }
 
-    return "<section class=\"panel main-panel\">" + renderTabs(state) + "<div class=\"tab-scroll-area\"><div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</div></section>";
+    var sideTabs = renderTabs(state).replace('class="tabs"', 'class="tabs side-tabs"');
+    var trackLabel = p && p.trackId ? U.findTrack(p.trackId).label : "Карьера";
+    return "<div class=\"ui-remake-layout\"><aside class=\"ui-side-nav\"><div class=\"side-title\"><span>🥊 Fight World</span><small>" + U.escapeHtml(trackLabel) + "</small></div>" + sideTabs + "</aside><section class=\"panel main-panel ui-remake-main\"><div class=\"tab-scroll-area\"><div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</div></section></div>";
   }
 
   function renderClubModal(state, club) {
@@ -1165,7 +1167,7 @@
   }
 
   function renderDashboard(state) {
-    return renderHeader(state) + "<div class=\"layout single-layout\">" + renderMain(state) + "</div>" + renderModal(state);
+    return renderHeader(state) + renderMain(state) + renderModal(state);
   }
 
   window.FS.Render = {

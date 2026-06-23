@@ -1,9 +1,0 @@
-Fight World 2.3.6 - fight rows fix.
-
-Fixed:
-- The `Бои` tab no longer collapses into a long `Бой` button.
-- Each opponent row is rebuilt as:
-  name, record, flag/country, win chance, purse, opponent OVR, fight button.
-- The name button is no longer stretched.
-- The row stays horizontal and can scroll inside itself on narrow screens.
-- Root cache reset and network-first service worker are kept.

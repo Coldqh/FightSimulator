@@ -1,7 +1,7 @@
 {
-  "version": "ui-remake-2.4.0",
-  "mode": "ui-remake",
-  "cacheVersion": "fight-simulator-ui-remake-2.4.0",
+  "version": "clean-ui-2.4.1",
+  "mode": "clean-main-files",
+  "cacheVersion": "fight-simulator-clean-ui-2.4.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
