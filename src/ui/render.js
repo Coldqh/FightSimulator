@@ -30,11 +30,10 @@
 
   function flagImg(countryId) {
     var iso = f1CountryIso(countryId);
-    var emoji = flagEmoji(countryId);
     if (!iso || iso === "unknown") {
-      return '<span class="flag-wrap"><span class="flag-fallback" style="display:inline-flex">' + emoji + '</span></span>';
+      return '<span class="flag-wrap"><span class="flag-code" style="display:inline-flex">--</span></span>';
     }
-    return '<span class="flag-wrap"><img class="flag-png" src="assets/flags/' + U.escapeHtml(iso) + '.png" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\';"><span class="flag-fallback">' + emoji + '</span></span>';
+    return '<span class="flag-wrap"><img class="flag-png" src="assets/flags/' + U.escapeHtml(iso) + '.png" alt="" loading="eager" decoding="async" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\';"><span class="flag-code">' + U.escapeHtml(iso) + '</span></span>';
   }
 
   function countryLabel(countryId) {
@@ -372,11 +371,7 @@
   }
 
   function f1NormalizeKey(value) {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/[ё]/g, "е")
-      .replace(/[^a-zа-я0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
+    return String(value || "").toLowerCase().replace(/[ё]/g, "е").replace(/[^a-zа-я0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
 
   function f1PrimaryCountryId(fighterOrId) {
@@ -486,7 +481,39 @@
       ng:"ng", nigeria:"ng", нигерия:"ng",
       za:"za", south_africa:"za", юар:"za", южная_африка:"za",
       ke:"ke", kenya:"ke", кения:"ke",
-      et:"et", ethiopia:"et", эфиопия:"et"
+      et:"et", ethiopia:"et", эфиопия:"et",
+      ec:"ec", ecuador:"ec", эквадор:"ec",
+      do:"do", dominican_republic:"do", dominicana:"do", доминикана:"do", доминиканская_республика:"do",
+      pr:"pr", puerto_rico:"pr", пуэрто_рико:"pr", пурто_рико:"pr",
+      gh:"gh", ghana:"gh", гана:"gh",
+      ug:"ug", uganda:"ug", уганда:"ug",
+      tz:"tz", tanzania:"tz", танзания:"tz",
+      cm:"cm", cameroon:"cm", камерун:"cm",
+      sn:"sn", senegal:"sn", сенегал:"sn",
+      my:"my", malaysia:"my", малайзия:"my",
+      be:"be", belgium:"be", бельгия:"be",
+      il:"il", israel:"il", израиль:"il",
+      ly:"ly", libya:"ly", ливия:"ly",
+      ao:"ao", angola:"ao", ангола:"ao",
+      mz:"mz", mozambique:"mz", мозамбик:"mz",
+      zw:"zw", zimbabwe:"zw", зимбабве:"zw",
+      zm:"zm", zambia:"zm", замбия:"zm",
+      cd:"cd", dr_congo:"cd", democratic_republic_of_congo:"cd", д_р_конго:"cd", др_конго:"cd", демократическая_республика_конго:"cd",
+      ci:"ci", cote_d_ivoire:"ci", ivory_coast:"ci", котдивуар:"ci", кот_д_ивуар:"ci",
+      ml:"ml", mali:"ml", мали:"ml",
+      bf:"bf", burkina_faso:"bf", буркина_фасо:"bf",
+      uy:"uy", uruguay:"uy", уругвай:"uy",
+      py:"py", paraguay:"py", парагвай:"py",
+      bo:"bo", bolivia:"bo", боливия:"bo",
+      cr:"cr", costa_rica:"cr", коста_рика:"cr",
+      pa:"pa", panama:"pa", панама:"pa",
+      ni:"ni", nicaragua:"ni", никарагуа:"ni",
+      hn:"hn", honduras:"hn", гондурас:"hn",
+      gt:"gt", guatemala:"gt", гватемала:"gt",
+      sv:"sv", el_salvador:"sv", salvador:"sv", сальвадор:"sv",
+      ht:"ht", haiti:"ht", гаити:"ht",
+      jm:"jm", jamaica:"jm", ямайка:"jm",
+      tt:"tt", trinidad_and_tobago:"tt", тринидад_и_тобаго:"tt"
     };
     for (var i = 0; i < keys.length; i += 1) {
       if (map[keys[i]]) { return map[keys[i]]; }
@@ -496,7 +523,7 @@
   }
 
   function f1EscapeRegExp(value) {
-    return String(value).replace(/[\^$.*+?()[]{}|]/g, "\\$&");
+    return String(value).replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
   }
 
   function f1AllFighters(state) {
@@ -507,9 +534,11 @@
       seen[fighter.id] = true;
       out.push(fighter);
     }
+    (state.roster || []).forEach(add);
     (state.fighters || []).forEach(add);
     (state.retiredFighters || []).forEach(add);
     if (state.world) {
+      (state.world.roster || []).forEach(add);
       (state.world.fighters || []).forEach(add);
       if (state.world.fightersById) {
         Object.keys(state.world.fightersById).forEach(function (id) { add(state.world.fightersById[id]); });
@@ -545,7 +574,7 @@
     }
     return "<div class=\"content-card favorites-card\"><div class=\"split-row\"><h3>Избранные</h3><strong>" + fighters.length + "</strong></div><div class=\"f1-row-list\">" +
       fighters.slice(0, 12).map(function (fighter) {
-        return f1FighterRow(state, fighter, { showStatus: true, className: "favorite-row" });
+        return f1FighterRow(state, fighter, { countryMode: "flag", showStatus: true, className: "favorite-row" });
       }).join("") +
     "</div></div>";
   }
@@ -678,7 +707,7 @@
       return '<div class="content-card"><h3>Избранные</h3><div class="muted small">Пусто.</div></div>';
     }
     return '<div class="content-card"><div class="split-row"><h3>Избранные</h3><strong>' + fighters.length + '</strong></div><div class="f1-row-list favorite-tab-list">' + fighters.map(function (fighter) {
-      return f1FighterRow(state, fighter, { showStatus: true, className: "favorite-tab-row" });
+      return f1FighterRow(state, fighter, { countryMode: "flag", showStatus: true, className: "favorite-tab-row" });
     }).join('') + '</div></div>';
   }
 
@@ -819,11 +848,12 @@
 
     function statRow(stat) {
       return '<div class="training-row">' +
-        '<div class="training-info"><span class="training-name">' + U.escapeHtml(stat.label) + '</span><span class="training-value">' + (p.stats[stat.id] || 0) + '</span></div>' +
         '<div class="training-actions">' + amounts.map(function (amount) {
           var disabled = points < amount ? ' disabled' : '';
           return '<button class="training-add-btn" data-train-stat="' + U.escapeHtml(stat.id) + '" data-train-amount="' + amount + '"' + disabled + '>+' + amount + '</button>';
         }).join('') + '</div>' +
+        '<span class="training-name">' + U.escapeHtml(stat.label) + '</span>' +
+        '<span class="training-value">' + (p.stats[stat.id] || 0) + '</span>' +
       '</div>';
     }
 
@@ -847,12 +877,12 @@
   }
 
   function renderRankingFilters(state) {
-    var countryGroup = state.rankingTrackId === "pro" ? "<div class=\"filter-group\"><span class=\"filter-title\">Страна</span><span class=\"pill gold\">Мировой рейтинг</span></div>" :
+    var countryGroup = state.rankingTrackId === "pro" ? "" :
       "<div class=\"filter-group compact-country-filter\"><span class=\"filter-title\">Страна</span>" +
       countryDropdown(state.rankingCountryId, "data-ranking-country", "ranking-country-dropdown") +
       "</div>";
 
-    var weightGroup = state.rankingTrackId === "street" ? "<div class=\"filter-group\"><span class=\"filter-title\">Вес</span><span class=\"pill gold\">Без весов</span></div>" :
+    var weightGroup = state.rankingTrackId === "street" ? "" :
       "<div class=\"filter-group\"><span class=\"filter-title\">Вес</span>" +
       Data.weightClasses.map(function (weightClass) {
         return "<button class=\"small-btn " + (state.rankingWeightClassId === weightClass.id ? "active" : "") + "\" data-ranking-weight=\"" + weightClass.id + "\">" + U.escapeHtml(weightClass.label) + "</button>";
@@ -980,11 +1010,7 @@
     }
 
     if (club) {
-      var strongest = window.FS.Clubs.strongestFighter(state, club.id);
       return '<div class="content-card"><div class="f1-card-hero"><div class="f1-card-title"><h3>' + U.escapeHtml(club.name) + '</h3><span class="f1-metric ovr">Ур. ' + club.level + '</span></div><div class="f1-card-sub">' + f1CountryFull(club.countryId) + ' · x' + club.trainingModifier + ' очков</div></div>' +
-        '<div class="f1-row-list">' +
-          (strongest ? f1FighterRow(state, strongest, { countryMode: "flag", extra: 'Сильнейший', showStatus: true }) : '') +
-        '</div>' +
         '<div class="row" style="margin-top:12px"><button class="small-btn primary" data-club="' + U.escapeHtml(club.id) + '">Ростер</button><button class="danger" data-action="leave-club">Покинуть клуб</button></div>' +
       '</div>';
     }

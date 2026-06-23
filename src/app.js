@@ -12,6 +12,20 @@
   var bootSplash = document.getElementById("bootSplash");
   var state = null;
   var bootReady = false;
+  var flagPreloadDone = false;
+
+  function preloadFlagAssets() {
+    var codes;
+    if (flagPreloadDone) { return; }
+    flagPreloadDone = true;
+    codes = ["ru","jp","us","gb","de","fr","es","it","nl","ca","mx","br","ar","cl","co","pe","cu","ie","pl","ua","by","md","ro","bg","rs","hr","gr","hu","lt","lv","ee","cz","sk","se","no","dk","fi","tr","kz","uz","kg","tj","tm","mn","cn","kr","kp","in","pk","ir","iq","sa","ae","qa","sy","jo","az","am","ge","au","nz","th","ph","id","vn","eg","ma","dz","tn","ng","za","ke","et","ec","do","pr","gh","ug","tz","cm","sn","my","be","il","ly","ao","mz","zw","zm","cd","ci","ml","bf","uy","py","bo","cr","pa","ni","hn","gt","sv","ht","jm","tt"];
+    codes.forEach(function (code) {
+      var img = new Image();
+      img.decoding = "async";
+      img.src = "assets/flags/" + code + ".png";
+    });
+  }
+
 
   function prepareLoadedState(loaded, restoreMessage) {
     if (!loaded) { return null; }
@@ -37,6 +51,7 @@
   }
 
   function initializeBoot() {
+    preloadFlagAssets();
     var loadedSync = prepareLoadedState(Storage.load(), "Карьера восстановлена.");
     if (loadedSync && State.player(loadedSync)) {
       state = loadedSync;
@@ -194,7 +209,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.8&target=2.5.8&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.9&target=2.5.9&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -501,31 +516,38 @@
   }
 
   function render() {
-    if (!bootReady && !state) {
-      app.innerHTML = "";
-      return;
-    }
+    try {
+      if (!bootReady && !state) {
+        app.innerHTML = "";
+        return;
+      }
 
-    if (!state || !State.player(state)) {
-      app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
-      return;
-    }
+      if (!state || !State.player(state)) {
+        app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
+        return;
+      }
 
-    applyIntegratedGameplayFixes(state);
-    State.repairState(state);
+      applyIntegratedGameplayFixes(state);
+      State.repairState(state);
 
-    var normalOfferCount = (state.offers || []).filter(function (offer) {
-      return !offer.isCompetition;
-    }).length;
+      var normalOfferCount = (state.offers || []).filter(function (offer) {
+        return !offer.isCompetition;
+      }).length;
 
-    if (!state.offers || normalOfferCount !== 10) {
-      World.refreshOffers(state);
-      Storage.save(state);
-    }
+      if (!state.offers || normalOfferCount !== 10) {
+        World.refreshOffers(state);
+        Storage.save(state);
+      }
 
-    app.innerHTML = Render.dashboard(state);
-    applyMobileCollapse();
-    if (fightModalOpenInWindow()) {
+      app.innerHTML = Render.dashboard(state);
+      applyMobileCollapse();
+      if (fightModalOpenInWindow()) {
+      }
+    } catch (error) {
+      console.error("Render failed:", error);
+      if (app) {
+        app.innerHTML = '<div class="render-error-card"><strong>Ошибка интерфейса</strong><div class="muted small">Сохранение не удалено. Открой консоль и скинь ошибку, если повторится.</div><pre>' + String(error && (error.stack || error.message) || error).replace(/[<>&]/g, function (ch) { return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;"); }) + '</pre><button class="primary" data-action="continue-career">Перезагрузить интерфейс</button></div>';
+      }
     }
   }
 

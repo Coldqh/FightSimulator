@@ -1,7 +1,7 @@
 {
-  "version": "ui-flags-ranking-2.5.8",
-  "mode": "ui-flags-ranking",
-  "cacheVersion": "fight-simulator-ui-flags-ranking-2.5.8",
+  "version": "ui-stability-flags-2.5.9",
+  "mode": "ui-stability-flags",
+  "cacheVersion": "fight-simulator-ui-stability-flags-2.5.9",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
