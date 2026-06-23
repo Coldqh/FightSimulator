@@ -542,15 +542,24 @@
   }
 
   document.addEventListener("click", function (event) {
-
+    var clickedButton = event.target && event.target.closest ? event.target.closest("button") : null;
     var mobileMoreCloseTarget = event.target && event.target.closest ? event.target.closest("[data-mobile-more-close]") : null;
+    var rowFighterTarget = event.target && event.target.closest ? event.target.closest("[data-row-fighter]") : null;
+    var rowClubTarget = event.target && event.target.closest ? event.target.closest("[data-row-club]") : null;
+    var button = clickedButton;
+
     if (mobileMoreCloseTarget && state) {
       state.mobileMoreOpen = false;
       saveAndRender();
       return;
     }
 
-    var clickedButton = event.target && event.target.closest ? event.target.closest("button") : null;
+    if (rowFighterTarget && state && !clickedButton) {
+      state.modal = { type: "fighter", fighterId: rowFighterTarget.getAttribute("data-row-fighter") };
+      state.mobileMoreOpen = false;
+      saveAndRender();
+      return;
+    }
 
     if (rowClubTarget && state && !clickedButton) {
       state.modal = { type: "club", clubId: rowClubTarget.getAttribute("data-row-club") };
@@ -559,7 +568,6 @@
       return;
     }
 
-    var button = clickedButton;
     var preview;
 
     if (!button) {

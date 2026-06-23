@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "core-ui-cleanup-2.5.6",
+    appVersion: "stability-fix-2.5.7",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 256,
+    saveSchemaVersion: 257,
 
     tracks: {
       amateur: {

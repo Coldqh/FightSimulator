@@ -1,7 +1,7 @@
 {
-  "version": "core-ui-cleanup-2.5.6",
-  "mode": "core-ui-cleanup",
-  "cacheVersion": "fight-simulator-core-ui-cleanup-2.5.6",
+  "version": "stability-fix-2.5.7",
+  "mode": "stability-fix",
+  "cacheVersion": "fight-simulator-stability-fix-2.5.7",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
