@@ -4,6 +4,7 @@
   window.FS = window.FS || {};
 
   var Storage = window.FS.Storage;
+  var Data = window.FS.Data;
   var State = window.FS.State;
   var World = window.FS.World;
   var Fight = window.FS.Fight;
@@ -258,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.4&target=2.6.4&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.5&target=2.6.5&t=" + Date.now());
     }
 
     function clearFightCaches() {
