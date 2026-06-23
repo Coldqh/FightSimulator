@@ -145,15 +145,15 @@
     var money = Number(p.money) || 0;
     var moneyText = money >= 1000000 ? (Math.round(money / 10000) / 100 + "м") : (money >= 1000 ? (Math.round(money / 100) / 10 + "к") : String(money));
 
-    return '<header class="topbar compact-topbar mobile-fit-topbar">' +
-      '<div class="top-pills player-strip">' +
-        '<span class="pill date-pill">' + U.escapeHtml(shortDateText(state)) + '</span>' +
-        '<span class="pill flag-pill country-pill">' + countryLabel(p.countryId) + '</span>' +
-        '<span class="pill blue">OVR ' + U.statAverage(p.stats) + '</span>' +
-        '<span class="pill record-pill">' + U.escapeHtml(U.recordText(p.record)) + '</span>' +
-        '<span class="pill gold">$' + U.escapeHtml(moneyText) + '</span>' +
-        '<span class="pill red">Уст ' + (Number(p.fatigue) || 0) + '</span>' +
-        (status ? '<button class="pill-link green rank-pill" data-path-rank-info="' + U.escapeHtml(p.trackId) + '">' + U.escapeHtml(status) + '</button>' : '') +
+    return '<header class="f1-status-panel">' +
+      '<div class="f1-status-scroll">' +
+        '<span class="f1-status-chip">' + U.escapeHtml(shortDateText(state)) + '</span>' +
+        '<span class="f1-status-chip">' + countryLabel(p.countryId) + '</span>' +
+        '<span class="f1-status-chip blue">OVR ' + U.statAverage(p.stats) + '</span>' +
+        '<span class="f1-status-chip">' + U.escapeHtml(U.recordText(p.record)) + '</span>' +
+        '<span class="f1-status-chip gold">$' + U.escapeHtml(moneyText) + '</span>' +
+        '<span class="f1-status-chip red">Уст ' + (Number(p.fatigue) || 0) + '</span>' +
+        (status ? '<button class="f1-status-chip green" data-path-rank-info="' + U.escapeHtml(p.trackId) + '">' + U.escapeHtml(status) + '</button>' : '') +
       '</div>' +
     '</header>';
   }
@@ -376,33 +376,68 @@
   }
 
   function renderFightsTab(state) {
-    var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
+    var p = State.player(state);
+    var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition && offer.opponentId; });
+    var competitions = (state.offers || []).filter(function (offer) { return offer && offer.isCompetition; });
+    var invite = state.world && state.world.pendingTournamentInvite;
 
-    function shortRecord(fighter) {
-      var text = U.recordText(fighter.record);
-      return text.replace(/\s*·\s*/g, " ").replace(/KO\s+/g, "KO");
+    function shortMoney(value) {
+      value = Number(value) || 0;
+      return value >= 1000 ? (Math.round(value / 100) / 10 + "к") : String(value);
+    }
+
+    function compactCountry(fighter) {
+      var id = fighter.countryId || fighter.currentCountryId || fighter.homeCountryId;
+      var country = U.findCountry(id);
+      return '<span>' + flagImg(id) + '</span><span>' + U.escapeHtml((country && country.label) || id || "—") + '</span>';
     }
 
     function fightRow(offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
+      var age;
       if (!opponent || !preview) { return ""; }
-
-      return '<div class="f1-fight-row">' +
-        '<div class="f1-fight-info">' +
-          '<button class="fighter-link f1-fight-name" data-fighter="' + U.escapeHtml(opponent.id) + '">' + U.escapeHtml(opponent.name) + '</button>' +
-          '<span class="f1-flag-only">' + flagImg(opponent.countryId || opponent.currentCountryId || opponent.homeCountryId) + '</span>' +
-          '<span class="f1-fight-chip ovr">O' + preview.opponentRating + '</span>' +
-          '<span class="f1-fight-chip rec">' + U.escapeHtml(shortRecord(opponent)) + '</span>' +
-          '<span class="f1-fight-chip money">$' + preview.purse + '</span>' +
-          '<span class="f1-fight-chip chance">' + preview.winChance + '%</span>' +
+      age = opponent.age ? (opponent.age + " лет") : "возраст —";
+      return '<div class="f1-driver-row" data-row-fighter="' + U.escapeHtml(opponent.id) + '">' +
+        '<div class="f1-driver-left">' +
+          '<div class="f1-driver-name">' + U.escapeHtml(opponent.name) + '</div>' +
+          '<div class="f1-driver-sub"><span>' + age + '</span><span>·</span><span class="country-label">' + compactCountry(opponent) + '</span></div>' +
         '</div>' +
-        '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '">Бой</button>' +
+        '<div class="f1-driver-right">' +
+          '<span class="f1-metric ovr">O' + preview.opponentRating + '</span>' +
+          '<span class="f1-metric money">$' + shortMoney(preview.purse) + '</span>' +
+          '<span class="f1-metric chance">' + preview.winChance + '%</span>' +
+          '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '">Бой</button>' +
+        '</div>' +
       '</div>';
     }
 
-    return '<div class="f1-section-head"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div>' +
-      '<div class="fight-lines f1-fight-lines">' + offers.map(fightRow).join("") + '</div>';
+    function competitionRow(offer) {
+      var title = offer.label || offer.name || offer.competitionLabel || "Турнир";
+      var subtitle = offer.roundLabel || offer.description || "доступен";
+      var id = offer.competitionId || offer.tournamentId || offer.id || "";
+      return '<div class="f1-tournament-row">' +
+        '<div class="f1-tournament-title"><strong>' + U.escapeHtml(title) + '</strong><span>' + U.escapeHtml(subtitle) + '</span></div>' +
+        '<span class="f1-metric gold">Турнир</span>' +
+        '<button data-amateur-competition="' + U.escapeHtml(id) + '">Открыть</button>' +
+      '</div>';
+    }
+
+    function inviteRow() {
+      if (!invite || invite.ignored) { return ""; }
+      return '<div class="f1-tournament-row">' +
+        '<div class="f1-tournament-title"><strong>' + U.escapeHtml(invite.label || "Доступен турнир") + '</strong><span>' + U.escapeHtml(invite.reason || "можно принять заявку") + '</span></div>' +
+        '<button data-tournament-invite="ignore">Скрыть</button>' +
+        '<button class="primary" data-tournament-invite="accept">Принять</button>' +
+      '</div>';
+    }
+
+    return '<div class="f1-fights-top">' +
+        '<div class="f1-section-head"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div>' +
+        inviteRow() +
+        (p.trackId === "amateur" ? competitions.map(competitionRow).join("") : "") +
+      '</div>' +
+      '<div class="f1-fight-list">' + offers.map(fightRow).join("") + '</div>';
   }
 
   function renderProTab(state) {

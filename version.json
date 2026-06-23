@@ -1,7 +1,7 @@
 {
-  "version": "mobile-fixes-2.5.2",
-  "mode": "mobile-fixes",
-  "cacheVersion": "fight-simulator-mobile-fixes-2.5.2",
+  "version": "core-mobile-rework-2.5.3",
+  "mode": "core-mobile-rework",
+  "cacheVersion": "fight-simulator-core-mobile-rework-2.5.3",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
