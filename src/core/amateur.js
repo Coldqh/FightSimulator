@@ -29,26 +29,26 @@
   }
 
   function scheduleText(comp) {
-    if (comp.schedule === "city") { return "12 раз в год"; }
-    if (comp.schedule === "oblast") { return "8 раз в год"; }
-    if (comp.schedule === "region") { return "6 раз в год"; }
-    if (comp.schedule === "country") { return "4 раза в год"; }
-    if (comp.schedule === "continent") { return "2 раза в год"; }
-    if (comp.schedule === "world") { return "1 раз в год"; }
-    if (comp.schedule === "olympiad") { return "1 раз в 2 года"; }
+    if (comp.schedule === "city") { return "6 раз в год"; }
+    if (comp.schedule === "oblast") { return "4 раза в год"; }
+    if (comp.schedule === "region") { return "3 раза в год"; }
+    if (comp.schedule === "country") { return "2 раза в год"; }
+    if (comp.schedule === "continent") { return "1 раз в год"; }
+    if (comp.schedule === "world") { return "1 раз в 2 года"; }
+    if (comp.schedule === "olympiad") { return "1 раз в 4 года"; }
     return "по расписанию";
   }
 
   function isScheduledNow(state, comp) {
     var w = Math.max(1, Number(state.week) || 1);
-    var idx = (w - 1) % 96;
-    if (comp.schedule === "city") { return idx % 4 === 1; }       /* 12 раз в год */
-    if (comp.schedule === "oblast") { return idx % 6 === 2; }     /* 8 раз в год */
-    if (comp.schedule === "region") { return idx % 8 === 3; }     /* 6 раз в год */
-    if (comp.schedule === "country") { return idx % 12 === 5; }   /* 4 раза в год */
-    if (comp.schedule === "continent") { return idx % 24 === 9; } /* 2 раза в год */
-    if (comp.schedule === "world") { return idx % 48 === 13; }    /* 1 раз в год */
-    if (comp.schedule === "olympiad") { return idx % 96 === 25; } /* 1 раз в 2 года */
+    var idx = (w - 1) % 192;
+    if (comp.schedule === "city") { return idx % 8 === 1; }
+    if (comp.schedule === "oblast") { return idx % 12 === 3; }
+    if (comp.schedule === "region") { return idx % 16 === 5; }
+    if (comp.schedule === "country") { return idx % 24 === 7; }
+    if (comp.schedule === "continent") { return idx % 48 === 11; }
+    if (comp.schedule === "world") { return idx % 96 === 17; }
+    if (comp.schedule === "olympiad") { return idx === 29; }
     return false;
   }
 
@@ -483,6 +483,7 @@
         return { type: "tournamentFinal", label: comp.label, blocked: true, reason: state.feed, fights: [] };
       }
     }
+    if (State.isLockedByFatigue && State.isLockedByFatigue(state)) { state.feed = "Усталость 100/100. Турнир недоступен, сначала восстановись."; return { type: "tournamentFinal", label: comp.label, blocked: true, reason: state.feed, fights: [] }; }
     if (!status.available) { state.feed = status.reason; return { type: "tournamentFinal", label: comp.label, blocked: true, reason: status.reason, fights: [] }; }
     var entryFee = Data.economy && Data.economy.tournamentEntryFees ? (Data.economy.tournamentEntryFees[comp.id] || 0) : 0;
     if (entryFee > 0 && State.spendMoney && !State.spendMoney(state, entryFee, "Заявка: " + comp.label)) {
@@ -519,6 +520,45 @@
     if (place === "3 место") { return Math.round(base * 0.32); }
     return 0;
   }
+
+  function npcAwardLabel(comp, place) {
+    if (place === "1 место") { return "Победитель · " + comp.label; }
+    if (place === "2 место") { return "Серебро · " + comp.label; }
+    if (place === "3 место") { return "Бронза · " + comp.label; }
+    return comp.label + " · " + place;
+  }
+
+  function npcMedalForPlace(place) {
+    if (place === "1 место") { return "gold"; }
+    if (place === "2 место") { return "silver"; }
+    if (place === "3 место") { return "bronze"; }
+    return "";
+  }
+
+  function awardNpcPlacement(state, fighter, comp, place) {
+    var label;
+    if (!fighter || fighter.isPlayer || !place) { return; }
+    label = npcAwardLabel(comp, place);
+    if (State.addFighterAward) {
+      State.addFighterAward(state, fighter, label, "amateur", {
+        medal: npcMedalForPlace(place),
+        competitionId: comp.id,
+        place: place
+      });
+    }
+    fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    fighter.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + label + ".", meta: { competitionId: comp.id, place: place } });
+    if (fighter.careerLog.length > 12) { fighter.careerLog.length = 12; }
+  }
+
+  function awardDirectOpponentPlacement(state, opponent, comp, playerPlace) {
+    if (playerPlace === "1 место") { awardNpcPlacement(state, opponent, comp, "2 место"); }
+    else if (playerPlace === "2 место") { awardNpcPlacement(state, opponent, comp, "1 место"); }
+    else if (playerPlace === "3 место") { awardNpcPlacement(state, opponent, comp, "4 место"); }
+    else if (playerPlace === "4 место") { awardNpcPlacement(state, opponent, comp, "3 место"); }
+  }
+
+  
 
   function awardPlacement(state, comp, place, result) {
     var p = State.player(state);
@@ -641,6 +681,7 @@
 
     session.continueMode = continueMode;
     session.finalPlace = finalPlace;
+    awardDirectOpponentPlacement(state, opponent, comp, finalPlace);
 
     return {
       type: "tournamentResult",
@@ -726,6 +767,7 @@
 
     session.continueMode = continueMode;
     session.finalPlace = finalPlace;
+    awardDirectOpponentPlacement(state, opponent, comp, finalPlace);
     session.pendingFatigue = (session.pendingFatigue || 0) + (result === "Победа" ? 25 : (result === "Ничья" ? 30 : 40));
 
     return {

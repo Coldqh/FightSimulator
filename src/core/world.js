@@ -117,14 +117,14 @@
     return window.FS.Amateur && window.FS.Amateur.availableCompetitions ?
       (function () {
         var w = Math.max(1, Number(state.week) || 1);
-        var idx = (w - 1) % 96;
-        if (comp.schedule === "city") { return idx % 4 === 1; }
-        if (comp.schedule === "oblast") { return idx % 6 === 2; }
-        if (comp.schedule === "region") { return idx % 8 === 3; }
-        if (comp.schedule === "country") { return idx % 12 === 5; }
-        if (comp.schedule === "continent") { return idx % 24 === 9; }
-        if (comp.schedule === "world") { return idx % 48 === 13; }
-        if (comp.schedule === "olympiad") { return idx % 96 === 25; }
+        var idx = (w - 1) % 192;
+        if (comp.schedule === "city") { return idx % 8 === 1; }
+        if (comp.schedule === "oblast") { return idx % 12 === 3; }
+        if (comp.schedule === "region") { return idx % 16 === 5; }
+        if (comp.schedule === "country") { return idx % 24 === 7; }
+        if (comp.schedule === "continent") { return idx % 48 === 11; }
+        if (comp.schedule === "world") { return idx % 96 === 17; }
+        if (comp.schedule === "olympiad") { return idx === 29; }
         return false;
       }()) : false;
   }
@@ -1130,11 +1130,18 @@ function simulateInternationalGymMoves(state) {
     var npcReport;
     var playerClubBefore;
     var p = State.player(state);
+    var fatigueRecovery;
 
     state.week += 1;
     if (State.invalidateCaches) { State.invalidateCaches(state); }
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
-    if ((action === "rest" || action === "skip" || action === "week") && State.restPlayer) { State.restPlayer(state); }
+
+    if (action === "rest" && State.restPlayer) {
+      State.restPlayer(state);
+    } else if (State.adjustFatigue) {
+      fatigueRecovery = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.weeklyRecovery) || 10) : 10;
+      State.adjustFatigue(state, -fatigueRecovery, "Еженедельное восстановление");
+    }
 
     playerClubBefore = p ? p.gymId : "";
     if (window.FS.Clubs) {

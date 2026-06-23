@@ -1116,12 +1116,13 @@
   }
 
   function renderPeopleTab(state) {
-    var people = state.people instanceof Array ? state.people : [];
+    var people = state.people instanceof Array ? state.people.filter(function (person) { return person && person.id; }) : [];
+    var roleLabels = Data.peopleRoles || { coach: "Тренер", clubmate: "Одноклубник", rival: "Соперник", promoter: "Промоутер" };
     if (!people.length) {
       return "<div class=\"content-card\"><h3>Люди</h3><div class=\"muted small\">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>";
     }
     return "<div class=\"content-card\"><h3>Люди</h3><div class=\"people-list\">" + people.map(function (person) {
-      return "<div class=\"split-row\"><div><button class=\"small-btn\" data-person=\"" + U.escapeHtml(person.id) + "\">" + U.escapeHtml(person.name) + "</button><div class=\"muted small\">" + U.escapeHtml(person.note || "") + "</div></div><span class=\"pill\">" + U.escapeHtml(Data.peopleRoles[person.role] || person.role) + "</span></div>";
+      return "<div class=\"split-row\"><div><button class=\"small-btn\" data-person=\"" + U.escapeHtml(person.id) + "\">" + U.escapeHtml(person.name || "Без имени") + "</button><div class=\"muted small\">" + U.escapeHtml(person.note || "") + "</div></div><span class=\"pill\">" + U.escapeHtml(roleLabels[person.role] || person.role || "Контакт") + "</span></div>";
     }).join("") + "</div></div>";
   }
 

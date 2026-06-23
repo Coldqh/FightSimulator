@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.6&target=2.6.6&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.7&target=2.6.7&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -616,10 +616,27 @@
 
 
   function isFatigueLockedAction(button) {
-    if (!state || !State.isLockedByFatigue || !State.isLockedByFatigue(state)) { return false; }
-    if (button.dataset.action === "rest-week" || button.dataset.action === "reset-career" || button.dataset.action === "close-modal" || button.dataset.action === "export-save" || button.dataset.action === "patch-notes") { return false; }
-    if (button.dataset.mobileToggle || button.dataset.tab || button.dataset.rankingPage || button.dataset.teamPage || button.dataset.tournamentParticipantsPage || button.dataset.backToTournament) { return false; }
-    return true;
+    if (!state || !button || !button.dataset || !State.isLockedByFatigue || !State.isLockedByFatigue(state)) { return false; }
+
+    if (button.dataset.action === "train-week") { return true; }
+
+    if (button.dataset.acceptFight ||
+        button.dataset.skipFight ||
+        button.dataset.acceptTitleChallenge ||
+        button.dataset.startProContract ||
+        button.dataset.skipProContract) {
+      return true;
+    }
+
+    if (button.dataset.amateurCompetition ||
+        button.dataset.tournamentFight ||
+        button.dataset.tournamentRing ||
+        button.dataset.tournamentContinue ||
+        button.dataset.tournamentInvite === "accept") {
+      return true;
+    }
+
+    return false;
   }
 
   function isFightLockedModal() {

@@ -949,13 +949,12 @@
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
-    if (p.fatigue >= 100) {
-      state.feed = "Усталость 100/100. Можно только отдыхать.";
-      state.modal = { type: "fatigueLock", fatigue: p.fatigue };
-      return;
-    }
-
     if (!statKey) {
+      if (p.fatigue >= 100) {
+        state.feed = "Усталость 100/100. Тренироваться нельзя, сначала восстановись.";
+        state.modal = { type: "fatigueLock", fatigue: p.fatigue };
+        return;
+      }
       p.trainingPoints += 3;
       adjustFatigue(state, 20, "Тренировка");
       p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/100." });
@@ -1007,15 +1006,25 @@
 
   function addFighterAward(state, fighter, awardLabel, source, meta) {
     var data = meta || {};
+    var awardSource = source || "award";
+    var exists;
     if (!fighter || !awardLabel) { return; }
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
 
-    if (!fighter.awards.some(function (award) { return award.label === awardLabel && award.source === (source || "award"); })) {
+    exists = fighter.awards.some(function (award) {
+      return award.label === awardLabel &&
+        award.source === awardSource &&
+        (award.competitionId || "") === (data.competitionId || "") &&
+        (award.place || "") === (data.place || "") &&
+        (Number(award.week) || 0) === (Number(state.week) || 0);
+    });
+
+    if (!exists) {
       fighter.awards.unshift({
         id: U.uid("award"),
         week: state.week,
         label: awardLabel,
-        source: source || "award",
+        source: awardSource,
         medal: data.medal || "",
         competitionId: data.competitionId || "",
         place: data.place || ""

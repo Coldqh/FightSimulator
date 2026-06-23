@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "roster-names-clubs-restore-2.6.6",
-  "saveSchemaVersion": 266,
+  "appVersion": "fatigue-people-tournaments-2.6.7",
+  "saveSchemaVersion": 267,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -469,7 +469,9 @@
     },
     "fatigue": {
       "travel": 14,
-      "monthlyStressNoMoney": 16
+      "monthlyStressNoMoney": 16,
+      "weeklyRecovery": 10,
+      "restWeek": 28
     },
     "equipment": [
       {
@@ -10595,6 +10597,12 @@
       "streetCount": 15,
       "proCount": 8
     }
-  ]
+  ],
+  "peopleRoles": {
+    "coach": "Тренер",
+    "clubmate": "Одноклубник",
+    "rival": "Соперник",
+    "promoter": "Промоутер"
+  }
 };
 }());

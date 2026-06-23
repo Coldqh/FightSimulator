@@ -1,7 +1,7 @@
 {
-  "version": "roster-names-clubs-restore-2.6.6",
-  "mode": "roster-names-clubs-restore",
-  "cacheVersion": "fight-simulator-roster-names-clubs-restore-2.6.6",
+  "version": "fatigue-people-tournaments-2.6.7",
+  "mode": "fatigue-people-tournaments",
+  "cacheVersion": "fight-simulator-fatigue-people-tournaments-2.6.7",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
