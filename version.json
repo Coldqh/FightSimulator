@@ -1,7 +1,7 @@
 {
-  "version": "core-logic-rebuild-2.6.0",
-  "mode": "core-logic-rebuild",
-  "cacheVersion": "fight-simulator-core-logic-rebuild-2.6.0",
+  "version": "boot-core-hotfix-2.6.1",
+  "mode": "boot-core-hotfix",
+  "cacheVersion": "fight-simulator-boot-core-hotfix-2.6.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

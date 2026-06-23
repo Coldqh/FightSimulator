@@ -30,13 +30,27 @@
 
   function prepareLoadedState(loaded, restoreMessage) {
     if (!loaded) { return null; }
-    if (loaded._migrationReport) {
-      loaded.feed = loaded._migrationReport;
-      Storage.save(loaded);
+    try {
+      if (loaded._migrationReport) {
+        loaded.feed = loaded._migrationReport;
+      }
+      State.repairState(loaded);
+      loaded.feed = loaded.feed || restoreMessage || "Карьера восстановлена.";
+      return loaded;
+    } catch (error) {
+      console.error("Save repair failed:", error);
+      try {
+        loaded.feed = "Сохранение загружено с аварийной починкой. Открой настройки и нажми глубокую починку.";
+        loaded.version = (window.FS.Data && window.FS.Data.appVersion) || "boot-core-hotfix-2.6.1";
+        loaded.roster = loaded.roster instanceof Array ? loaded.roster : [];
+        loaded.offers = loaded.offers instanceof Array ? loaded.offers : [];
+        loaded.world = loaded.world || { news: [], weekReports: [], teamsByCountry: {}, stories: [] };
+        return loaded;
+      } catch (inner) {
+        console.error("Emergency save fallback failed:", inner);
+        return null;
+      }
     }
-    State.repairState(loaded);
-    loaded.feed = loaded.feed || restoreMessage || "Карьера восстановлена.";
-    return loaded;
   }
 
   function finishBoot() {
@@ -52,10 +66,19 @@
   }
 
   function initializeBoot() {
-    preloadFlagAssets();
-    var loadedSync = prepareLoadedState(Storage.load(), "Карьера восстановлена.");
-    if (loadedSync && State.player(loadedSync)) {
-      state = loadedSync;
+    var loadedSync = null;
+    try {
+      preloadFlagAssets();
+      loadedSync = prepareLoadedState(Storage.load(), "Карьера восстановлена.");
+      if (loadedSync && State.player(loadedSync)) {
+        state = loadedSync;
+        finishBoot();
+        render();
+        return;
+      }
+    } catch (error) {
+      console.error("Sync boot failed:", error);
+      state = null;
       finishBoot();
       render();
       return;
@@ -71,7 +94,8 @@
       state = prepareLoadedState(loadedAsync, "Карьера восстановлена.");
       finishBoot();
       render();
-    }).catch(function () {
+    }).catch(function (error) {
+      console.error("Async boot failed:", error);
       state = null;
       finishBoot();
       render();
@@ -215,7 +239,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.0&target=2.6.0&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.1&target=2.6.1&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -550,23 +574,17 @@
       applyIntegratedGameplayFixes(state);
       State.repairState(state);
 
-      var normalOfferCount = (state.offers || []).filter(function (offer) {
-        return !offer.isCompetition;
-      }).length;
-
-      if (!state.offers || normalOfferCount !== 10) {
+      if (!state.offers || !(state.offers instanceof Array) || !state.offers.length) {
         World.refreshOffers(state);
-        Storage.save(state);
       }
 
       app.innerHTML = Render.dashboard(state);
       applyMobileCollapse();
-      if (fightModalOpenInWindow()) {
-      }
     } catch (error) {
       console.error("Render failed:", error);
+      finishBoot();
       if (app) {
-        app.innerHTML = '<div class="render-error-card"><strong>Ошибка интерфейса</strong><div class="muted small">Сохранение не удалено. Открой консоль и скинь ошибку, если повторится.</div><pre>' + String(error && (error.stack || error.message) || error).replace(/[<>&]/g, function (ch) { return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;"); }) + '</pre><button class="primary" data-action="continue-career">Перезагрузить интерфейс</button></div>';
+        app.innerHTML = '<div class="render-error-card"><strong>Ошибка интерфейса</strong><div class="muted small">Сохранение не удалено. Скинь ошибку из консоли, если повторится.</div><pre>' + String(error && (error.stack || error.message) || error).replace(/[<>&]/g, function (ch) { return ch === "<" ? "&lt;" : (ch === ">" ? "&gt;" : "&amp;"); }) + '</pre><button class="primary" data-action="continue-career">Перезагрузить интерфейс</button><button class="danger" data-action="reset-save">Удалить сохранение</button></div>';
       }
     }
   }

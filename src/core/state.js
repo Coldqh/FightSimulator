@@ -1111,49 +1111,51 @@
   }
 
   function repairAgeAndNameSchema(state) {
-    var usedNames = {};
     var i;
     var fighter;
     var originCountryId;
-    var repairedAge;
+    var seed;
     var baseAge;
     var elapsedYears;
+    var currentWeek;
     if (!state || !(state.roster instanceof Array)) { return; }
+
+    currentWeek = Math.max(1, Number(state.week) || 1);
+
     for (i = 0; i < state.roster.length; i += 1) {
       fighter = state.roster[i];
       if (!fighter) { continue; }
 
+      seed = Math.abs(Number(fighter.seed) || i + 1);
+
       if (!fighter.ageBaseWeek || Number(fighter.age) <= 15 || fighter.__ageSchemaVersion !== "age-v2") {
-        repairedAge = inferStableAge(fighter, i, state.week);
-        fighter.baseAge = repairedAge;
-        fighter.ageBaseWeek = Math.max(1, Number(state.week) || 1);
-        fighter.__ageBugRepaired260 = true;
+        if (fighter.isPlayer) {
+          if (Number(fighter.age) > 15) { baseAge = Number(fighter.age); }
+          else { baseAge = fighter.trackId === "pro" ? 20 : 18; }
+        } else if (fighter.trackId === "pro") {
+          baseAge = U.clamp(20 + (seed % 18), 20, 41);
+        } else if (fighter.trackId === "street") {
+          baseAge = U.clamp(18 + (seed % 24), 18, 45);
+        } else {
+          baseAge = U.clamp(16 + (seed % 15), 16, 31);
+        }
+        fighter.baseAge = baseAge;
+        fighter.ageBaseWeek = currentWeek;
         fighter.__ageSchemaVersion = "age-v2";
+        fighter.__ageBugRepaired260 = true;
       }
 
-      baseAge = Number(fighter.baseAge) || inferStableAge(fighter, i, state.week);
-      elapsedYears = Math.max(0, Math.floor(((Number(state.week) || 1) - (Number(fighter.ageBaseWeek) || 1)) / 48));
-      fighter.age = U.clamp(baseAge + elapsedYears, 14, 60);
+      elapsedYears = Math.max(0, Math.floor((currentWeek - (Number(fighter.ageBaseWeek) || currentWeek)) / 48));
+      fighter.age = U.clamp((Number(fighter.baseAge) || Number(fighter.age) || 18) + elapsedYears, 14, 60);
       fighter.birthMonth = Number(fighter.birthMonth) || U.randomInt(1, 12);
       fighter.birthWeek = Number(fighter.birthWeek) || U.randomInt(1, 4);
-      fighter.birthdayLabel = "месяц " + fighter.birthMonth + ", " + fighter.birthWeek + " неделя";
 
       originCountryId = fighter.originCountryId || fighter.homeCountryId || fighter.nameCountryId || fighter.countryId;
       if (!fighter.isPlayer && fighter.namesSchemaVersion !== NAME_SCHEMA_VERSION) {
-        fighter.name = countrySpecificName(U.findCountry(originCountryId), (Number(fighter.seed) || i + 1) + i * 97);
+        fighter.name = countrySpecificName(U.findCountry(originCountryId), seed + i * 131);
         fighter.nameCountryId = originCountryId;
         fighter.namesSchemaVersion = NAME_SCHEMA_VERSION;
       }
-
-      if (!fighter.isPlayer) {
-        while (usedNames[fighter.name]) {
-          fighter.name = countrySpecificName(U.findCountry(originCountryId), (Number(fighter.seed) || i + 1) + i * 997 + Object.keys(usedNames).length * 13);
-          fighter.namesSchemaVersion = NAME_SCHEMA_VERSION;
-          if (!usedNames[fighter.name]) { break; }
-          fighter.name = fighter.name + " " + String.fromCharCode(65 + (i % 26));
-        }
-      }
-      usedNames[fighter.name] = true;
     }
   }
 
@@ -1165,7 +1167,7 @@
     if (state._fullRepairDone && state._lastRepairVersion === Data.appVersion && state._lastRepairWeek === state.week) {
       return state;
     }
-    state.version = Data.appVersion;
+    state.version = (Data && Data.appVersion) || "boot-core-hotfix-2.6.1";
     state.week = Math.max(1, Number(state.week) || 1);
     state.rankingPage = Math.max(0, Number(state.rankingPage) || 0);
     state.offerRefreshSalt = Number(state.offerRefreshSalt) || 0;
