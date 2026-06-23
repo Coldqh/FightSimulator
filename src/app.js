@@ -13,6 +13,7 @@
   var state = null;
   var bootReady = false;
   var renderQueued = false;
+  var persistQueued = false;
   var flagPreloadDone = false;
 
   function preloadFlagAssets() {
@@ -119,11 +120,15 @@
   }
 
   function saveAndRender() {
-    persistNow();
-    if (renderQueued) { return; }
+    if (renderQueued) { persistQueued = true; return; }
+    persistQueued = true;
     renderQueued = true;
     (window.requestAnimationFrame || window.setTimeout)(function () {
       renderQueued = false;
+      if (persistQueued) {
+        persistQueued = false;
+        persistNow();
+      }
       render();
     }, 0);
   }
@@ -239,7 +244,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.1&target=2.6.1&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.2&target=2.6.2&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -383,11 +388,7 @@
         state.modal = null;
       }
 
-      Storage.save(state);
-      render();
-      if (fightModalOpenInWindow()) {
-      } else {
-      }
+      saveAndRender();
     }
   };
 
@@ -560,6 +561,8 @@
   }
 
   function render() {
+    var gameplayFixKey;
+    var modalType;
     try {
       if (!bootReady && !state) {
         app.innerHTML = "";
@@ -571,10 +574,17 @@
         return;
       }
 
-      applyIntegratedGameplayFixes(state);
-      State.repairState(state);
+      modalType = state.modal && state.modal.type;
+      if (modalType !== "activeFight" && modalType !== "fightCount") {
+        gameplayFixKey = [Data.appVersion, state.week, state.roster ? state.roster.length : 0].join("|");
+        if (state._lastGameplayFixKey !== gameplayFixKey) {
+          applyIntegratedGameplayFixes(state);
+          state._lastGameplayFixKey = gameplayFixKey;
+        }
+        State.repairState(state);
+      }
 
-      if (!state.offers || !(state.offers instanceof Array) || !state.offers.length) {
+      if ((!state.offers || !(state.offers instanceof Array) || !state.offers.length) && modalType !== "activeFight" && modalType !== "fightCount") {
         World.refreshOffers(state);
       }
 

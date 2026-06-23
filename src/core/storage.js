@@ -12,6 +12,7 @@
   var IDB_NAME = "fight_simulator_save_db";
   var IDB_STORE = "saves";
   var IDB_KEY = "main";
+  var idbSaveQueue = Promise.resolve();
 
   function idbAvailable() {
     return typeof indexedDB !== "undefined";
@@ -35,14 +36,17 @@
 
   function saveRawToIdb(raw) {
     if (!raw || !idbAvailable()) { return Promise.resolve(false); }
-    return openSaveDb().then(function (db) {
-      return new Promise(function (resolve, reject) {
-        var tx = db.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(raw, IDB_KEY);
-        tx.oncomplete = function () { db.close(); resolve(true); };
-        tx.onerror = function () { db.close(); reject(tx.error || new Error("indexedDB save failed")); };
-      });
-    }).catch(function () { return false; });
+    idbSaveQueue = idbSaveQueue.catch(function () { return false; }).then(function () {
+      return openSaveDb().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(IDB_STORE, "readwrite");
+          tx.objectStore(IDB_STORE).put(raw, IDB_KEY);
+          tx.oncomplete = function () { db.close(); resolve(true); };
+          tx.onerror = function () { db.close(); reject(tx.error || new Error("indexedDB save failed")); };
+        });
+      }).catch(function () { return false; });
+    });
+    return idbSaveQueue;
   }
 
   function loadRawFromIdb() {
@@ -125,21 +129,36 @@
   function newestRawSave() {
     var keys = rawKeys();
     var best = null;
-    var bestWeek = -1;
+    var bestScore = null;
     var i;
     var raw;
     var parsed;
-    var week;
+    var score;
+
+    function saveScore(state) {
+      return [
+        Number(state.saveRevision) || 0,
+        Number(state.savedAt) || 0,
+        Number(state.week) || 0
+      ];
+    }
+
+    function newer(left, right) {
+      if (!right) { return true; }
+      if (left[0] !== right[0]) { return left[0] > right[0]; }
+      if (left[1] !== right[1]) { return left[1] > right[1]; }
+      return left[2] >= right[2];
+    }
 
     for (i = 0; i < keys.length; i += 1) {
       raw = readRaw(keys[i]);
       if (!raw) { continue; }
       parsed = parse(raw);
       if (!isUsableState(parsed)) { continue; }
-      week = Number(parsed.week) || 0;
-      if (!best || week >= bestWeek) {
+      score = saveScore(parsed);
+      if (newer(score, bestScore)) {
         best = raw;
-        bestWeek = week;
+        bestScore = score;
       }
     }
 
@@ -315,21 +334,22 @@
   function save(state) {
     var safe;
     var raw;
+    var wroteMain;
     try {
       if (!state || !isUsableState(state)) {
         return false;
       }
       state.version = Data.appVersion;
       state.schemaVersion = Data.saveSchemaVersion || state.schemaVersion || 224;
+      state.saveRevision = (Number(state.saveRevision) || 0) + 1;
+      state.savedAt = Date.now();
       safe = cleanTransientFields(state);
       raw = JSON.stringify(safe);
 
-      writeRaw(Data.saveKey, raw);
-      writeRaw(BACKUP_KEYS[0], raw);
+      wroteMain = writeRaw(Data.saveKey, raw);
       writeRaw(BACKUP_KEYS[1], raw);
-      writeRaw(BACKUP_KEYS[2], raw);
       saveRawToIdb(raw);
-      return true;
+      return !!wroteMain;
     } catch (error) {
       console.error(error);
       return false;

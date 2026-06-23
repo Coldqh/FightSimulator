@@ -3,8 +3,10 @@
   "use strict";
   window.FS = window.FS || {};
   window.FS.Data = {
-  "appVersion": "boot-core-hotfix-2.6.1",
-  "saveSchemaVersion": 261,
+  "saveKey": "fight_world_save_v1",
+  "legacySaveKeys": ["fight_simulator_save", "fight_world_save", "undefined", "undefined_backup", "undefined_last_good", "fight_simulator_autosave"],
+  "appVersion": "stability-fight-save-2.6.2",
+  "saveSchemaVersion": 262,
   "tracks": {
     "amateur": {
       "id": "amateur",

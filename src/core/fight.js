@@ -603,26 +603,33 @@
 
   function applyFightResult(state, p, opponent, result, method) {
     var oppLine;
+    if (!p || !opponent) { return false; }
+    p.record = p.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
+    opponent.record = opponent.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
+    p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+    opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
+    state.offers = state.offers instanceof Array ? state.offers : [];
+    state.world = state.world && typeof state.world === "object" ? state.world : {};
+
     if (result === "Ничья") {
-      p.record.draws += 1;
-      opponent.record.draws += 1;
+      p.record.draws = (Number(p.record.draws) || 0) + 1;
+      opponent.record.draws = (Number(opponent.record.draws) || 0) + 1;
       oppLine = "Ничья с " + p.name + " решением.";
     } else if (result === "Победа") {
-      p.record.wins += 1;
-      opponent.record.losses += 1;
-      if (method === "KO/TKO") { p.record.kos += 1; }
+      p.record.wins = (Number(p.record.wins) || 0) + 1;
+      opponent.record.losses = (Number(opponent.record.losses) || 0) + 1;
+      if (method === "KO/TKO") { p.record.kos = (Number(p.record.kos) || 0) + 1; }
       oppLine = "Поражение от " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     } else {
-      p.record.losses += 1;
-      opponent.record.wins += 1;
-      if (method === "KO/TKO") { opponent.record.kos += 1; }
+      p.record.losses = (Number(p.record.losses) || 0) + 1;
+      opponent.record.wins = (Number(opponent.record.wins) || 0) + 1;
+      if (method === "KO/TKO") { opponent.record.kos = (Number(opponent.record.kos) || 0) + 1; }
       oppLine = "Победа над " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     }
     if (p.trackRecords) { p.trackRecords[p.trackId] = window.FS.State.cloneRecord(p.record); }
     if (opponent.trackRecords) { opponent.trackRecords[opponent.trackId] = window.FS.State.cloneRecord(opponent.record); }
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
-    opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
     p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
     opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
     p.recentOpponentIds.unshift(opponent.id); opponent.recentOpponentIds.unshift(p.id);
@@ -633,6 +640,7 @@
       else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
     }
     if (State.invalidateCaches) { State.invalidateCaches(state); }
+    return true;
   }
 
   function completeFightEconomy(state, p, opponent, result, purse, fatigue) {
@@ -659,6 +667,22 @@
     finalFatigue = typeof fatigue === "number" ? fatigue : (result === "Победа" ? 25 : (result === "Ничья" ? 30 : 40));
     if (State.adjustFatigue) { State.adjustFatigue(state, finalFatigue, "Бой"); }
     if (result === "Победа" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, p.id, opponent.id); }
+  }
+
+  function advanceAfterFight(state) {
+    try {
+      advanceAfterFight(state);
+    } catch (error) {
+      console.error("advanceWeek after fight failed:", error);
+      state.week = (Number(state.week) || 1) + 1;
+      state.feed = "Бой завершён. Недельный ход мира был восстановлен после ошибки.";
+      state.offers = state.offers instanceof Array ? state.offers : [];
+      try {
+        if (World.refreshOffers) { World.refreshOffers(state); }
+      } catch (refreshError) {
+        console.error("refreshOffers after fight failed:", refreshError);
+      }
+    }
   }
 
   function finishInteractiveFight(state, session, reason) {
@@ -708,14 +732,18 @@
     }
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
+    p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+    opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
     p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method, meta: { fighterId: opponent.id, opponentId: opponent.id, result: result, method: method } });
     opponent.careerLog.unshift({ week: state.week, text: (result === "Победа" ? "Поражение от " : (result === "Поражение" ? "Победа над " : "Ничья с ")) + p.name + ", " + method, meta: { fighterId: p.id, opponentId: p.id, result: result === "Победа" ? "Поражение" : (result === "Поражение" ? "Победа" : "Ничья"), method: method } });
 
+    state.offers = state.offers instanceof Array ? state.offers : [];
     if (offer) {
-      state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
+      state.offers = state.offers instanceof Array ? state.offers : [];
+    state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
     }
 
-    World.advanceWeek(state, "fight");
+    advanceAfterFight(state);
 
     state.modal = {
       type: "fightResult",
@@ -847,7 +875,7 @@
     applyFightResult(state, p, opponent, result, method);
     completeFightEconomy(state, p, opponent, result, purse, result === "Победа" ? 25 : 40);
     state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
-    World.advanceWeek(state, "fight");
+    advanceAfterFight(state);
     state.modal = { type: "fightResult", result: result, method: method, scoreLine: scoreLine + " · шанс " + chance + "%", opponentName: opponent.name, week: state.week, playerRating: U.statAverage(p.stats), opponentRating: U.statAverage(opponent.stats), purse: purse, winChance: chance, roundLog: [], knockdown: method === "KO/TKO" ? { round: 1, by: result === "Победа" ? "player" : "opponent" } : null, statsLine: "Бой решён автоматически." };
     return true;
   }
@@ -887,6 +915,7 @@
       difficultyId: "even"
     };
 
+    state.offers = state.offers instanceof Array ? state.offers : [];
     state.offers.push(fakeOffer);
     result = resolveRandomFight(state, fakeOffer.id);
     state.offers = state.offers.filter(function (offer) { return offer.id !== fakeOffer.id; });

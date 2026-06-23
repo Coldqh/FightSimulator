@@ -1,7 +1,7 @@
 {
-  "version": "boot-core-hotfix-2.6.1",
-  "mode": "boot-core-hotfix",
-  "cacheVersion": "fight-simulator-boot-core-hotfix-2.6.1",
+  "version": "stability-fight-save-2.6.2",
+  "mode": "stability-fight-save",
+  "cacheVersion": "fight-simulator-stability-fight-save-2.6.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

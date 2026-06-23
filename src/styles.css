@@ -4044,3 +4044,25 @@ h1, h2, h3 { color: #f2f4f7; }
   }
 }
 /* ===== /UI Stability Flags 2.5.9 ===== */
+
+/* ===== Profile Country 2.6.2 ===== */
+.f1-country-bright {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  color: #f2f4f7 !important;
+  font-weight: 850 !important;
+  white-space: nowrap !important;
+}
+.f1-country-bright .flag-wrap {
+  flex: 0 0 auto !important;
+}
+.f1-profile-stat strong .f1-country-bright span:last-child {
+  display: inline !important;
+  max-width: 96px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+/* ===== /Profile Country 2.6.2 ===== */
