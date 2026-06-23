@@ -29,12 +29,7 @@
   }
 
   function flagImg(countryId) {
-    var country = U.findCountry(countryId);
-    var emoji = flagEmoji(countryId);
-    if (!country || !country.flag) {
-      return '<span class="flag-emoji">' + emoji + '</span>';
-    }
-    return "<img class=\"flag-icon\" src=\"" + U.escapeHtml(country.flag) + "\" alt=\"" + U.escapeHtml(country.label) + "\" onerror=\"this.outerHTML='&lt;span class=&quot;flag-emoji&quot;&gt;" + emoji + "&lt;/span&gt;';\">";
+    return '<span class="flag-emoji">' + flagEmoji(countryId) + '</span>';
   }
 
   function countryLabel(countryId) {
@@ -383,28 +378,30 @@
   function renderFightsTab(state) {
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
 
+    function shortRecord(fighter) {
+      var text = U.recordText(fighter.record);
+      return text.replace(/\s*·\s*/g, " ").replace(/KO\s+/g, "KO");
+    }
+
     function fightRow(offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
       if (!opponent || !preview) { return ""; }
+
       return '<div class="f1-fight-row">' +
-        '<div class="f1-fight-main">' +
-          '<div class="f1-fight-name-row">' +
-            '<button class="fighter-link" data-fighter="' + U.escapeHtml(opponent.id) + '">' + U.escapeHtml(opponent.name) + '</button>' +
-            '<span class="mini-chip flag-mini">' + fighterCountryLabel(opponent) + '</span>' +
-          '</div>' +
-          '<div class="f1-fight-meta">' +
-            '<span class="mini-chip">OVR ' + preview.opponentRating + '</span>' +
-            '<span class="mini-chip record-mini">' + U.escapeHtml(U.recordText(opponent.record)) + '</span>' +
-            '<span class="mini-chip gold">$' + preview.purse + '</span>' +
-            '<span class="mini-chip blue">' + preview.winChance + '%</span>' +
-          '</div>' +
+        '<div class="f1-fight-info">' +
+          '<button class="fighter-link f1-fight-name" data-fighter="' + U.escapeHtml(opponent.id) + '">' + U.escapeHtml(opponent.name) + '</button>' +
+          '<span class="f1-flag-only">' + flagImg(opponent.countryId || opponent.currentCountryId || opponent.homeCountryId) + '</span>' +
+          '<span class="f1-fight-chip ovr">O' + preview.opponentRating + '</span>' +
+          '<span class="f1-fight-chip rec">' + U.escapeHtml(shortRecord(opponent)) + '</span>' +
+          '<span class="f1-fight-chip money">$' + preview.purse + '</span>' +
+          '<span class="f1-fight-chip chance">' + preview.winChance + '%</span>' +
         '</div>' +
         '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '">Бой</button>' +
       '</div>';
     }
 
-    return '<div class="content-card fights-head"><div class="split-row"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div></div>' +
+    return '<div class="f1-section-head"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div>' +
       '<div class="fight-lines f1-fight-lines">' + offers.map(fightRow).join("") + '</div>';
   }
 
@@ -1132,7 +1129,7 @@
     }
 
     if (modal.type === "eventNotice") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Новость") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+      return "<div class=\"modal-backdrop event-notice-backdrop\"><div class=\"modal event-notice-modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Новость") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "tournamentAvailable") {
