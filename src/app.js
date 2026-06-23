@@ -194,7 +194,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.5&target=2.5.5&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.6&target=2.5.6&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -551,15 +551,6 @@
     }
 
     var clickedButton = event.target && event.target.closest ? event.target.closest("button") : null;
-    var rowFighterTarget = event.target && event.target.closest ? event.target.closest("[data-row-fighter]") : null;
-    var rowClubTarget = event.target && event.target.closest ? event.target.closest("[data-row-club]") : null;
-
-    if (rowFighterTarget && state && !clickedButton) {
-      state.modal = { type: "fighter", fighterId: rowFighterTarget.getAttribute("data-row-fighter") };
-      state.mobileMoreOpen = false;
-      saveAndRender();
-      return;
-    }
 
     if (rowClubTarget && state && !clickedButton) {
       state.modal = { type: "club", clubId: rowClubTarget.getAttribute("data-row-club") };
@@ -879,7 +870,12 @@
       if (State.buyMedicalService) { State.buyMedicalService(state, button.dataset.medicalService); }
       saveAndRender();
     } else if (button.dataset.trainStat) {
-      State.trainPlayer(state, button.dataset.trainStat);
+      var trainAmount = Math.max(1, parseInt(button.dataset.trainAmount, 10) || 1);
+      var trained = 0;
+      while (trained < trainAmount && State.player(state).trainingPoints > 0) {
+        State.trainPlayer(state, button.dataset.trainStat);
+        trained += 1;
+      }
       saveAndRender();
     } else if (button.dataset.rankingPage) {
       state.rankingPage = Math.max(0, parseInt(button.dataset.rankingPage, 10) || 0);

@@ -1,7 +1,7 @@
 {
-  "version": "core-profile-system-2.5.5",
-  "mode": "core-profile-system",
-  "cacheVersion": "fight-simulator-core-profile-system-2.5.5",
+  "version": "core-ui-cleanup-2.5.6",
+  "mode": "core-ui-cleanup",
+  "cacheVersion": "fight-simulator-core-ui-cleanup-2.5.6",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
