@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "career-start-hotfix-2.6.3",
-  "saveSchemaVersion": 263,
+  "appVersion": "career-start-clubs-fix-2.6.4",
+  "saveSchemaVersion": 264,
   "tracks": {
     "amateur": {
       "id": "amateur",

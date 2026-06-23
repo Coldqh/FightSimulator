@@ -1,7 +1,7 @@
 {
-  "version": "career-start-hotfix-2.6.3",
-  "mode": "career-start-hotfix",
-  "cacheVersion": "fight-simulator-career-start-hotfix-2.6.3",
+  "version": "career-start-clubs-fix-2.6.4",
+  "mode": "career-start-clubs-fix",
+  "cacheVersion": "fight-simulator-career-start-clubs-fix-2.6.4",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
