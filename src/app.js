@@ -194,7 +194,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.0&target=2.5.0&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.1&target=2.5.1&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -542,6 +542,13 @@
   }
 
   document.addEventListener("click", function (event) {
+    var mobileMoreCloseTarget = event.target && event.target.closest ? event.target.closest("[data-mobile-more-close]") : null;
+    if (mobileMoreCloseTarget && state) {
+      state.mobileMoreOpen = false;
+      saveAndRender();
+      return;
+    }
+
     var button = event.target.closest("button");
     var preview;
 

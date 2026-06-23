@@ -1,7 +1,7 @@
 {
-  "version": "f1-mobile-ui-2.5.0",
-  "mode": "f1-mobile-ui",
-  "cacheVersion": "fight-simulator-f1-mobile-ui-2.5.0",
+  "version": "mobile-fixes-2.5.1",
+  "mode": "mobile-fixes",
+  "cacheVersion": "fight-simulator-mobile-fixes-2.5.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

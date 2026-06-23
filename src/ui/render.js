@@ -12,10 +12,29 @@
     return "<div class=\"skill-row\"><span>" + U.escapeHtml(label) + "</span><strong>" + value + "</strong></div>";
   }
 
+  function flagEmoji(countryId) {
+    var id = String(countryId || "").toLowerCase();
+    var map = {
+      russia: "🇷🇺", ru: "🇷🇺",
+      usa: "🇺🇸", us: "🇺🇸", united_states: "🇺🇸",
+      mexico: "🇲🇽", brazil: "🇧🇷", argentina: "🇦🇷",
+      uk: "🇬🇧", britain: "🇬🇧", england: "🇬🇧",
+      germany: "🇩🇪", france: "🇫🇷", spain: "🇪🇸", italy: "🇮🇹",
+      ireland: "🇮🇪", netherlands: "🇳🇱", poland: "🇵🇱", ukraine: "🇺🇦",
+      japan: "🇯🇵", china: "🇨🇳", korea: "🇰🇷", kazakhstan: "🇰🇿",
+      cuba: "🇨🇺", canada: "🇨🇦", australia: "🇦🇺",
+      turkey: "🇹🇷", thailand: "🇹🇭", philippines: "🇵🇭"
+    };
+    return map[id] || "🏳️";
+  }
+
   function flagImg(countryId) {
     var country = U.findCountry(countryId);
-    if (!country || !country.flag) { return ""; }
-    return "<img class=\"flag-icon\" src=\"" + U.escapeHtml(country.flag) + "\" alt=\"" + U.escapeHtml(country.label) + "\">";
+    var emoji = flagEmoji(countryId);
+    if (!country || !country.flag) {
+      return '<span class="flag-emoji">' + emoji + '</span>';
+    }
+    return "<img class=\"flag-icon\" src=\"" + U.escapeHtml(country.flag) + "\" alt=\"" + U.escapeHtml(country.label) + "\" onerror=\"this.outerHTML='&lt;span class=&quot;flag-emoji&quot;&gt;" + emoji + "&lt;/span&gt;';\">";
   }
 
   function countryLabel(countryId) {
@@ -363,24 +382,30 @@
 
   function renderFightsTab(state) {
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition; });
-    return "<div class=\"content-card fights-head\"><div class=\"split-row\"><h3>Бои</h3><button class=\"small-btn primary\" data-action=\"refresh-offers\">Обновить</button></div></div>" +
-      "<div class=\"offer-list compact-offers fight-lines\">" + offers.map(function (offer) {
+
+    function fightRow(offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
       if (!opponent || !preview) { return ""; }
-      return "<div class=\"fight-line\">" +
-        "<div class=\"fight-line-main\">" +
-          favoriteButton(state, opponent.id) +
-          "<button class=\"fighter-link\" data-fighter=\"" + U.escapeHtml(opponent.id) + "\">" + U.escapeHtml(opponent.name) + "</button>" +
-          "<span class=\"mini-chip flag-mini\">" + fighterCountryLabel(opponent) + "</span>" +
-          "<span class=\"mini-chip\">OVR " + preview.opponentRating + "</span>" +
-          "<span class=\"mini-chip record-mini\">" + U.escapeHtml(U.recordText(opponent.record)) + "</span>" +
-          "<span class=\"mini-chip gold\">$" + preview.purse + "</span>" +
-          "<span class=\"mini-chip blue\">" + preview.winChance + "%</span>" +
-        "</div>" +
-        "<button class=\"fight-line-btn primary\" data-preview-fight=\"" + U.escapeHtml(offer.id) + "\">Бой</button>" +
-      "</div>";
-    }).join("") + "</div>";
+      return '<div class="f1-fight-row">' +
+        '<div class="f1-fight-main">' +
+          '<div class="f1-fight-name-row">' +
+            '<button class="fighter-link" data-fighter="' + U.escapeHtml(opponent.id) + '">' + U.escapeHtml(opponent.name) + '</button>' +
+            '<span class="mini-chip flag-mini">' + fighterCountryLabel(opponent) + '</span>' +
+          '</div>' +
+          '<div class="f1-fight-meta">' +
+            '<span class="mini-chip">OVR ' + preview.opponentRating + '</span>' +
+            '<span class="mini-chip record-mini">' + U.escapeHtml(U.recordText(opponent.record)) + '</span>' +
+            '<span class="mini-chip gold">$' + preview.purse + '</span>' +
+            '<span class="mini-chip blue">' + preview.winChance + '%</span>' +
+          '</div>' +
+        '</div>' +
+        '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '">Бой</button>' +
+      '</div>';
+    }
+
+    return '<div class="content-card fights-head"><div class="split-row"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div></div>' +
+      '<div class="fight-lines f1-fight-lines">' + offers.map(fightRow).join("") + '</div>';
   }
 
   function renderProTab(state) {
@@ -819,26 +844,77 @@
     var strongest = window.FS.Clubs.strongestFighter(state, club.id);
     var coach = club.coach || { name: club.coachName || "Тренер", age: "—", record: { wins: 0, losses: 0, draws: 0 }, id: "" };
     var coachButton = coach.id ? "<button class=\"small-btn\" data-person=\"" + U.escapeHtml(coach.id) + "\">" + U.escapeHtml(coach.name) + "</button>" : U.escapeHtml(coach.name);
-    return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(club.name) + "</h2><div class=\"muted small\">" + countryLabel(club.countryId) + " · уровень " + club.level + " · OVR " + club.minOvr + "–" + club.maxOvr + "</div></div><div class=\"modal-body\">" +
-      "<div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Тренер</div><div class=\"value\" style=\"font-size:18px\">" + coachButton + "</div><div class=\"muted small\">" + (coach.countryId ? countryLabel(coach.countryId) + " · " : "") + coach.age + " лет · " + (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) + "</div></div>" +
-      "<div class=\"stat-card\"><div class=\"label\">Сильнейший</div><div class=\"value\" style=\"font-size:18px\">" + (strongest ? U.escapeHtml(strongest.name) : "—") + "</div><div>" + (strongest ? "<button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(strongest.id) + "\">Открыть бойца</button>" : "") + "</div></div></div>" +
-      "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"split-row\"><span>Ростер</span><strong>" + roster.length + "+</strong></div>" + roster.map(function (fighter) {
-        return "<div class=\"split-row\"><div><button class=\"small-btn\" data-fighter=\"" + U.escapeHtml(fighter.id) + "\">" + U.escapeHtml(fighter.name) + "</button>" + (fighter.isPlayer ? " <span class=\"pill green\">ты</span>" : "") + "<div class=\"muted small\">" + fighterCountryLabel(fighter) + " · " + U.escapeHtml(U.findTrack(fighter.trackId).label) + " · " + U.escapeHtml(U.recordText(fighter.record)) + "</div></div><span class=\"pill gold\">OVR " + U.statAverage(fighter.stats) + "</span></div>";
-      }).join("") + "</div>" +
-      "</div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+
+    function rosterRow(fighter) {
+      return '<div class="f1-roster-row">' +
+        '<div class="f1-roster-info">' +
+          '<button class="small-btn fighter-name-btn" data-fighter="' + U.escapeHtml(fighter.id) + '">' + U.escapeHtml(fighter.name) + '</button>' +
+          (fighter.isPlayer ? ' <span class="pill green">ты</span>' : '') +
+          '<span class="pill flag-mini">' + fighterCountryLabel(fighter) + '</span>' +
+          '<span class="pill">' + U.escapeHtml(U.findTrack(fighter.trackId).label) + '</span>' +
+          '<span class="pill">' + U.escapeHtml(U.recordText(fighter.record)) + '</span>' +
+        '</div>' +
+        '<span class="pill gold">OVR ' + U.statAverage(fighter.stats) + '</span>' +
+      '</div>';
+    }
+
+    return '<div class="modal-backdrop"><div class="modal club-profile-modal">' +
+      '<div class="modal-head"><h2>' + U.escapeHtml(club.name) + '</h2><div class="muted small">' + countryLabel(club.countryId) + ' · уровень ' + club.level + ' · OVR ' + club.minOvr + '–' + club.maxOvr + '</div></div>' +
+      '<div class="modal-body">' +
+        '<div class="grid two">' +
+          '<div class="stat-card"><div class="label">Тренер</div><div class="value" style="font-size:18px">' + coachButton + '</div><div class="muted small">' + (coach.countryId ? countryLabel(coach.countryId) + ' · ' : '') + coach.age + ' лет · ' + (coach.record.wins || 0) + '-' + (coach.record.losses || 0) + '-' + (coach.record.draws || 0) + '</div></div>' +
+          '<div class="stat-card"><div class="label">Сильнейший</div><div class="value" style="font-size:18px">' + (strongest ? U.escapeHtml(strongest.name) : '—') + '</div><div>' + (strongest ? '<button class="small-btn" data-fighter="' + U.escapeHtml(strongest.id) + '">Открыть бойца</button>' : '') + '</div></div>' +
+        '</div>' +
+        '<div class="content-card" style="margin-top:12px"><div class="split-row"><span>Ростер</span><strong>' + roster.length + '+</strong></div><div class="f1-roster-list">' + roster.map(rosterRow).join("") + '</div></div>' +
+      '</div>' +
+      '<div class="modal-actions"><button data-action="close-modal">Закрыть</button></div>' +
+    '</div></div>';
   }
 
   function renderFighterModal(state, fighter) {
     var weightText = fighter.trackId === "street" ? "без весовых категорий" : U.escapeHtml(U.findWeightClass(fighter.weightClassId).label);
     var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
     var stage = window.FS.Matchmaking && window.FS.Matchmaking.careerStage ? window.FS.Matchmaking.careerStage(fighter) : { label: "Боец" };
-    return '<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>' + U.escapeHtml(fighter.name) + '</h2><div class="muted small">' + fighterCountryLabel(fighter) + ' · ' + U.escapeHtml(U.findTrack(fighter.trackId).label) + ' · ' + weightText + (fighter.retired ? ' · завершил карьеру' : '') + '</div><div class="row" style="margin-top:10px">' + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : '') + '<button class="small-btn primary" data-path-rank-info="' + U.escapeHtml(fighter.trackId) + '">' + U.escapeHtml(stage.label) + '</button></div></div><div class="modal-body"><div class="grid two"><div class="stat-card"><div class="label">Рейтинг</div><div class="value">' + U.statAverage(fighter.stats) + '</div><div class="muted small">Возраст: ' + fighter.age + ' · ДР: ' + (fighter.birthMonth || '—') + '/' + (fighter.birthWeek || '—') + '</div></div><div class="stat-card"><div class="label">Рекорд</div><div class="value" style="font-size:18px">' + U.escapeHtml(U.recordText(fighter.record)) + '</div><div class="muted small">Баланс: $' + (fighter.money || 0) + '</div></div></div>' +
-      '<div class="content-card" style="margin-top:12px"><div class="label">Зал</div>' + (club ? '<button class="small-btn" data-club="' + U.escapeHtml(club.id) + '">' + U.escapeHtml(club.name) + '</button><div class="muted small">ур. ' + club.level + ' · тренер ' + U.escapeHtml(club.coach ? club.coach.name : '—') + (club.coach && club.coach.countryId ? ' · ' + countryLabel(club.coach.countryId) : '') + '</div>' : '<div class="muted small">Без клуба</div>') + '</div>' +
-      '<div class="skills" style="margin-top:12px"><div class="label">Навыки</div>' + renderSkillRow('Сила', fighter.stats.power) + renderSkillRow('Техника', fighter.stats.technique) + renderSkillRow('Скорость', fighter.stats.speed) + renderSkillRow('Выносливость', fighter.stats.stamina) + renderSkillRow('Защита / здоровье', fighter.stats.defense || fighter.stats.health) + '</div>' +
-      '<div class="content-card" style="margin-top:12px"><h3>Награды</h3>' + renderFighterAwards(state, fighter) + '</div>' +
-      '<div class="content-card" style="margin-top:12px"><h3>Титулы</h3>' + renderFighterTitles(state, fighter) + '</div>' +
-      '<div class="content-card" style="margin-top:12px"><h3>История карьеры</h3>' + renderCareerLog(state, fighter, 8) + '</div>' +
-      '</div><div class="modal-actions"><button class="primary" data-action="close-modal">Закрыть</button></div></div></div>';
+    var ovr = U.statAverage(fighter.stats);
+
+    return '<div class="modal-backdrop"><div class="modal fighter-profile-modal">' +
+      '<div class="modal-body">' +
+        '<div class="f1-profile-hero">' +
+          '<div class="f1-profile-top">' +
+            '<div class="f1-profile-title">' +
+              '<h2>' + U.escapeHtml(fighter.name) + '</h2>' +
+              '<div class="f1-profile-sub">' +
+                '<span class="pill flag-mini">' + fighterCountryLabel(fighter) + '</span>' +
+                '<span class="pill">' + U.escapeHtml(U.findTrack(fighter.trackId).label) + '</span>' +
+                '<span class="pill">' + weightText + '</span>' +
+                (fighter.retired ? '<span class="pill red">завершил</span>' : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="f1-profile-ovr"><strong>' + ovr + '</strong><span>OVR</span></div>' +
+          '</div>' +
+          '<div class="f1-profile-grid">' +
+            '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(fighter.record)) + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Возраст</span><strong>' + fighter.age + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Баланс</span><strong>$' + (fighter.money || 0) + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Статус</span><strong>' + U.escapeHtml(stage.label) + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Зал</span><strong>' + U.escapeHtml(club ? club.name : 'Без клуба') + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Вес</span><strong>' + weightText + '</strong></div>' +
+          '</div>' +
+          '<div class="row">' + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : '') + '<button class="small-btn" data-path-rank-info="' + U.escapeHtml(fighter.trackId) + '">Статусы</button></div>' +
+        '</div>' +
+        '<div class="skills" style="margin-top:12px"><div class="label">Навыки</div>' +
+          renderSkillRow('Сила', fighter.stats.power) +
+          renderSkillRow('Техника', fighter.stats.technique) +
+          renderSkillRow('Скорость', fighter.stats.speed) +
+          renderSkillRow('Выносливость', fighter.stats.stamina) +
+          renderSkillRow('Защита / здоровье', fighter.stats.defense || fighter.stats.health) +
+        '</div>' +
+        '<div class="content-card" style="margin-top:12px"><h3>Награды</h3>' + renderFighterAwards(state, fighter) + '</div>' +
+        '<div class="content-card" style="margin-top:12px"><h3>Титулы</h3>' + renderFighterTitles(state, fighter) + '</div>' +
+        '<div class="content-card" style="margin-top:12px"><h3>История карьеры</h3>' + renderCareerLog(state, fighter, 8) + '</div>' +
+      '</div>' +
+      '<div class="modal-actions"><button data-action="close-modal">Закрыть</button></div>' +
+    '</div></div>';
   }
 
   function renderProfileProcessModal(state, kind) {
