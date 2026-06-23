@@ -13,97 +13,28 @@
   }
 
   function flagEmoji(countryId) {
-    var country = U.findCountry ? U.findCountry(countryId) : null;
-    var keys = [
-      f1NormalizeKey(countryId),
-      f1NormalizeKey(country && country.label),
-      f1NormalizeKey(country && country.name),
-      f1NormalizeKey(country && country.shortLabel)
-    ];
+    var iso = f1CountryIso(countryId);
     var map = {
-      russia:"🇷🇺", rossiya:"🇷🇺", россия:"🇷🇺",
-      usa:"🇺🇸", us:"🇺🇸", united_states:"🇺🇸", soedinennye_shtaty:"🇺🇸", сша:"🇺🇸",
-      canada:"🇨🇦", канада:"🇨🇦",
-      mexico:"🇲🇽", мексика:"🇲🇽",
-      brazil:"🇧🇷", бразилия:"🇧🇷",
-      argentina:"🇦🇷", аргентина:"🇦🇷",
-      chile:"🇨🇱", чили:"🇨🇱",
-      colombia:"🇨🇴", колумбия:"🇨🇴",
-      peru:"🇵🇪", перу:"🇵🇪",
-      cuba:"🇨🇺", куба:"🇨🇺",
-      uk:"🇬🇧", britain:"🇬🇧", england:"🇬🇧", великобритания:"🇬🇧", англия:"🇬🇧",
-      ireland:"🇮🇪", ирландия:"🇮🇪",
-      germany:"🇩🇪", германия:"🇩🇪",
-      france:"🇫🇷", франция:"🇫🇷",
-      spain:"🇪🇸", испания:"🇪🇸",
-      italy:"🇮🇹", италия:"🇮🇹",
-      netherlands:"🇳🇱", нидерланды:"🇳🇱", holland:"🇳🇱",
-      belgium:"🇧🇪", бельгия:"🇧🇪",
-      sweden:"🇸🇪", швеция:"🇸🇪",
-      norway:"🇳🇴", норвегия:"🇳🇴",
-      denmark:"🇩🇰", дания:"🇩🇰",
-      finland:"🇫🇮", финляндия:"🇫🇮",
-      poland:"🇵🇱", польша:"🇵🇱",
-      ukraine:"🇺🇦", украина:"🇺🇦",
-      belarus:"🇧🇾", беларусь:"🇧🇾",
-      moldova:"🇲🇩", молдова:"🇲🇩",
-      romania:"🇷🇴", румыния:"🇷🇴",
-      bulgaria:"🇧🇬", болгария:"🇧🇬",
-      serbia:"🇷🇸", сербия:"🇷🇸",
-      croatia:"🇭🇷", хорватия:"🇭🇷",
-      greece:"🇬🇷", греция:"🇬🇷",
-      hungary:"🇭🇺", венгрия:"🇭🇺",
-      lithuania:"🇱🇹", литва:"🇱🇹",
-      latvia:"🇱🇻", латвия:"🇱🇻",
-      estonia:"🇪🇪", эстония:"🇪🇪",
-      czechia:"🇨🇿", czech_republic:"🇨🇿", чехия:"🇨🇿",
-      slovakia:"🇸🇰", словакия:"🇸🇰",
-      turkey:"🇹🇷", турция:"🇹🇷",
-      kazakhstan:"🇰🇿", казахстан:"🇰🇿",
-      uzbekistan:"🇺🇿", узбекистан:"🇺🇿",
-      kyrgyzstan:"🇰🇬", киргизия:"🇰🇬", кыргызстан:"🇰🇬",
-      tajikistan:"🇹🇯", таджикистан:"🇹🇯",
-      turkmenistan:"🇹🇲", туркменистан:"🇹🇲",
-      mongolia:"🇲🇳", монголия:"🇲🇳",
-      china:"🇨🇳", китай:"🇨🇳",
-      japan:"🇯🇵", япония:"🇯🇵",
-      south_korea:"🇰🇷", korea:"🇰🇷", южная_корея:"🇰🇷", корея:"🇰🇷",
-      north_korea:"🇰🇵", северная_корея:"🇰🇵",
-      india:"🇮🇳", индия:"🇮🇳",
-      pakistan:"🇵🇰", пакистан:"🇵🇰",
-      iran:"🇮🇷", иран:"🇮🇷",
-      iraq:"🇮🇶", ирак:"🇮🇶",
-      saudi_arabia:"🇸🇦", саудовская_аравия:"🇸🇦",
-      uae:"🇦🇪", оаэ:"🇦🇪",
-      qatar:"🇶🇦", катар:"🇶🇦",
-      syria:"🇸🇾", сирия:"🇸🇾",
-      jordan:"🇯🇴", иордания:"🇯🇴",
-      azerbaijan:"🇦🇿", азербайджан:"🇦🇿",
-      armenia:"🇦🇲", армения:"🇦🇲",
-      georgia:"🇬🇪", грузия:"🇬🇪",
-      australia:"🇦🇺", австралия:"🇦🇺",
-      new_zealand:"🇳🇿", новая_зеландия:"🇳🇿",
-      thailand:"🇹🇭", таиланд:"🇹🇭",
-      philippines:"🇵🇭", филиппины:"🇵🇭",
-      indonesia:"🇮🇩", индонезия:"🇮🇩",
-      vietnam:"🇻🇳", вьетнам:"🇻🇳",
-      egypt:"🇪🇬", египет:"🇪🇬",
-      morocco:"🇲🇦", марокко:"🇲🇦",
-      algeria:"🇩🇿", алжир:"🇩🇿",
-      tunisia:"🇹🇳", тунис:"🇹🇳",
-      nigeria:"🇳🇬", нигерия:"🇳🇬",
-      south_africa:"🇿🇦", юар:"🇿🇦", южная_африка:"🇿🇦",
-      kenya:"🇰🇪", кения:"🇰🇪",
-      ethiopia:"🇪🇹", эфиопия:"🇪🇹"
+      ru:"🇷🇺", jp:"🇯🇵", us:"🇺🇸", gb:"🇬🇧", de:"🇩🇪", fr:"🇫🇷", es:"🇪🇸", it:"🇮🇹",
+      nl:"🇳🇱", ca:"🇨🇦", mx:"🇲🇽", br:"🇧🇷", ar:"🇦🇷", cl:"🇨🇱", co:"🇨🇴", pe:"🇵🇪", cu:"🇨🇺",
+      ie:"🇮🇪", pl:"🇵🇱", ua:"🇺🇦", by:"🇧🇾", md:"🇲🇩", ro:"🇷🇴", bg:"🇧🇬", rs:"🇷🇸", hr:"🇭🇷",
+      gr:"🇬🇷", hu:"🇭🇺", lt:"🇱🇹", lv:"🇱🇻", ee:"🇪🇪", cz:"🇨🇿", sk:"🇸🇰", se:"🇸🇪", no:"🇳🇴",
+      dk:"🇩🇰", fi:"🇫🇮", tr:"🇹🇷", kz:"🇰🇿", uz:"🇺🇿", kg:"🇰🇬", tj:"🇹🇯", tm:"🇹🇲", mn:"🇲🇳",
+      cn:"🇨🇳", kr:"🇰🇷", kp:"🇰🇵", in:"🇮🇳", pk:"🇵🇰", ir:"🇮🇷", iq:"🇮🇶", sa:"🇸🇦", ae:"🇦🇪",
+      qa:"🇶🇦", sy:"🇸🇾", jo:"🇯🇴", az:"🇦🇿", am:"🇦🇲", ge:"🇬🇪", au:"🇦🇺", nz:"🇳🇿", th:"🇹🇭",
+      ph:"🇵🇭", id:"🇮🇩", vn:"🇻🇳", eg:"🇪🇬", ma:"🇲🇦", dz:"🇩🇿", tn:"🇹🇳", ng:"🇳🇬", za:"🇿🇦",
+      ke:"🇰🇪", et:"🇪🇹"
     };
-    for (var i = 0; i < keys.length; i += 1) {
-      if (map[keys[i]]) { return map[keys[i]]; }
-    }
-    return "🏳️";
+    return map[iso] || "🏳️";
   }
 
   function flagImg(countryId) {
-    return '<span class="flag-emoji">' + flagEmoji(countryId) + '</span>';
+    var iso = f1CountryIso(countryId);
+    var emoji = flagEmoji(countryId);
+    if (!iso || iso === "unknown") {
+      return '<span class="flag-wrap"><span class="flag-fallback" style="display:inline-flex">' + emoji + '</span></span>';
+    }
+    return '<span class="flag-wrap"><img class="flag-png" src="assets/flags/' + U.escapeHtml(iso) + '.png" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'inline-flex\';"><span class="flag-fallback">' + emoji + '</span></span>';
   }
 
   function countryLabel(countryId) {
@@ -470,7 +401,140 @@
   }
 
   function f1FlagOnly(countryId) {
-    return flagImg(f1PrimaryCountryId(countryId));
+    countryId = f1PrimaryCountryId(countryId);
+    return '<span class="country-label only-flag">' + flagImg(countryId) + '<span>' + U.escapeHtml(f1CountryName(countryId)) + '</span></span>';
+  }
+
+  function f1CountryIso(countryId) {
+    var country = U.findCountry ? U.findCountry(countryId) : null;
+    var keys = [
+      f1NormalizeKey(countryId),
+      f1NormalizeKey(country && country.label),
+      f1NormalizeKey(country && country.name),
+      f1NormalizeKey(country && country.shortLabel)
+    ];
+    var map = {
+      ru:"ru", russia:"ru", rossiya:"ru", россия:"ru",
+      jp:"jp", japan:"jp", япония:"jp",
+      us:"us", usa:"us", united_states:"us", сша:"us",
+      gb:"gb", uk:"gb", britain:"gb", england:"gb", великобритания:"gb", англия:"gb",
+      de:"de", germany:"de", германия:"de",
+      fr:"fr", france:"fr", франция:"fr",
+      es:"es", spain:"es", испания:"es",
+      it:"it", italy:"it", италия:"it",
+      nl:"nl", netherlands:"nl", нидерланды:"nl", holland:"nl",
+      ca:"ca", canada:"ca", канада:"ca",
+      mx:"mx", mexico:"mx", мексика:"mx",
+      br:"br", brazil:"br", бразилия:"br",
+      ar:"ar", argentina:"ar", аргентина:"ar",
+      cl:"cl", chile:"cl", чили:"cl",
+      co:"co", colombia:"co", колумбия:"co",
+      pe:"pe", peru:"pe", перу:"pe",
+      cu:"cu", cuba:"cu", куба:"cu",
+      ie:"ie", ireland:"ie", ирландия:"ie",
+      pl:"pl", poland:"pl", польша:"pl",
+      ua:"ua", ukraine:"ua", украина:"ua",
+      by:"by", belarus:"by", беларусь:"by",
+      md:"md", moldova:"md", молдова:"md",
+      ro:"ro", romania:"ro", румыния:"ro",
+      bg:"bg", bulgaria:"bg", болгария:"bg",
+      rs:"rs", serbia:"rs", сербия:"rs",
+      hr:"hr", croatia:"hr", хорватия:"hr",
+      gr:"gr", greece:"gr", греция:"gr",
+      hu:"hu", hungary:"hu", венгрия:"hu",
+      lt:"lt", lithuania:"lt", литва:"lt",
+      lv:"lv", latvia:"lv", латвия:"lv",
+      ee:"ee", estonia:"ee", эстония:"ee",
+      cz:"cz", czechia:"cz", czech_republic:"cz", чехия:"cz",
+      sk:"sk", slovakia:"sk", словакия:"sk",
+      se:"se", sweden:"se", швеция:"se",
+      no:"no", norway:"no", норвегия:"no",
+      dk:"dk", denmark:"dk", дания:"dk",
+      fi:"fi", finland:"fi", финляндия:"fi",
+      tr:"tr", turkey:"tr", турция:"tr",
+      kz:"kz", kazakhstan:"kz", казахстан:"kz",
+      uz:"uz", uzbekistan:"uz", узбекистан:"uz",
+      kg:"kg", kyrgyzstan:"kg", киргизия:"kg", кыргызстан:"kg",
+      tj:"tj", tajikistan:"tj", таджикистан:"tj",
+      tm:"tm", turkmenistan:"tm", туркменистан:"tm",
+      mn:"mn", mongolia:"mn", монголия:"mn",
+      cn:"cn", china:"cn", китай:"cn",
+      kr:"kr", korea:"kr", south_korea:"kr", южная_корея:"kr", корея:"kr",
+      kp:"kp", north_korea:"kp", северная_корея:"kp",
+      in:"in", india:"in", индия:"in",
+      pk:"pk", pakistan:"pk", пакистан:"pk",
+      ir:"ir", iran:"ir", иран:"ir",
+      iq:"iq", iraq:"iq", ирак:"iq",
+      sa:"sa", saudi_arabia:"sa", саудовская_аравия:"sa",
+      ae:"ae", uae:"ae", оаэ:"ae",
+      qa:"qa", qatar:"qa", катар:"qa",
+      sy:"sy", syria:"sy", сирия:"sy",
+      jo:"jo", jordan:"jo", иордания:"jo",
+      az:"az", azerbaijan:"az", азербайджан:"az",
+      am:"am", armenia:"am", армения:"am",
+      ge:"ge", georgia:"ge", грузия:"ge",
+      au:"au", australia:"au", австралия:"au",
+      nz:"nz", new_zealand:"nz", новая_зеландия:"nz",
+      th:"th", thailand:"th", таиланд:"th",
+      ph:"ph", philippines:"ph", филиппины:"ph",
+      id:"id", indonesia:"id", индонезия:"id",
+      vn:"vn", vietnam:"vn", вьетнам:"vn",
+      eg:"eg", egypt:"eg", египет:"eg",
+      ma:"ma", morocco:"ma", марокко:"ma",
+      dz:"dz", algeria:"dz", алжир:"dz",
+      tn:"tn", tunisia:"tn", тунис:"tn",
+      ng:"ng", nigeria:"ng", нигерия:"ng",
+      za:"za", south_africa:"za", юар:"za", южная_африка:"za",
+      ke:"ke", kenya:"ke", кения:"ke",
+      et:"et", ethiopia:"et", эфиопия:"et"
+    };
+    for (var i = 0; i < keys.length; i += 1) {
+      if (map[keys[i]]) { return map[keys[i]]; }
+    }
+    if (keys[0] && /^[a-z]{2}$/.test(keys[0])) { return keys[0]; }
+    return "unknown";
+  }
+
+  function f1EscapeRegExp(value) {
+    return String(value).replace(/[\^$.*+?()[]{}|]/g, "\\$&");
+  }
+
+  function f1AllFighters(state) {
+    var out = [];
+    var seen = {};
+    function add(fighter) {
+      if (!fighter || !fighter.id || seen[fighter.id]) { return; }
+      seen[fighter.id] = true;
+      out.push(fighter);
+    }
+    (state.fighters || []).forEach(add);
+    (state.retiredFighters || []).forEach(add);
+    if (state.world) {
+      (state.world.fighters || []).forEach(add);
+      if (state.world.fightersById) {
+        Object.keys(state.world.fightersById).forEach(function (id) { add(state.world.fightersById[id]); });
+      }
+    }
+    return out;
+  }
+
+  function f1NewsText(state, item) {
+    var text = String((item && item.text) || "");
+    var html = U.escapeHtml(text);
+    var fighters = f1AllFighters(state)
+      .filter(function (fighter) { return fighter.name && text.indexOf(fighter.name) !== -1; })
+      .sort(function (a, b) { return b.name.length - a.name.length; });
+    var usedNames = {};
+    fighters.forEach(function (fighter) {
+      var escapedName;
+      var rx;
+      if (usedNames[fighter.name]) { return; }
+      usedNames[fighter.name] = true;
+      escapedName = U.escapeHtml(fighter.name);
+      rx = new RegExp(f1EscapeRegExp(escapedName), "g");
+      html = html.replace(rx, '<button class="f1-news-link" data-fighter="' + U.escapeHtml(fighter.id) + '">' + escapedName + '</button>');
+    });
+    return html;
   }
 
   function renderFavoriteFighters(state) {
@@ -481,8 +545,7 @@
     }
     return "<div class=\"content-card favorites-card\"><div class=\"split-row\"><h3>Избранные</h3><strong>" + fighters.length + "</strong></div><div class=\"f1-row-list\">" +
       fighters.slice(0, 12).map(function (fighter) {
-        var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
-        return f1FighterRow(state, fighter, { extra: club ? U.escapeHtml(club.name) : "", showStatus: true, className: "favorite-row" });
+        return f1FighterRow(state, fighter, { showStatus: true, className: "favorite-row" });
       }).join("") +
     "</div></div>";
   }
@@ -615,8 +678,7 @@
       return '<div class="content-card"><h3>Избранные</h3><div class="muted small">Пусто.</div></div>';
     }
     return '<div class="content-card"><div class="split-row"><h3>Избранные</h3><strong>' + fighters.length + '</strong></div><div class="f1-row-list favorite-tab-list">' + fighters.map(function (fighter) {
-      var club = window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
-      return f1FighterRow(state, fighter, { extra: club ? U.escapeHtml(club.name) : "", showStatus: true, className: "favorite-tab-row" });
+      return f1FighterRow(state, fighter, { showStatus: true, className: "favorite-tab-row" });
     }).join('') + '</div></div>';
   }
 
@@ -863,15 +925,13 @@
     visible = contenders.slice(page * pageSize, page * pageSize + pageSize);
 
     function fighterSubline(fighter) {
-      var weightText = fighter.trackId === 'street' ? 'без весовой' : U.escapeHtml(U.findWeightClass(fighter.weightClassId).label);
-      var base = fighterCountryLabel(fighter) + ' · ' + U.escapeHtml(U.recordText(fighter.record)) + ' · ' + weightText;
-      if (fighter.trackId === 'amateur') {
-        return base + ' · ' + U.escapeHtml(State.rankForFighter ? State.rankForFighter(fighter).label : 'Любитель');
-      }
-      if (fighter.trackId === 'pro') {
-        return base + ' · мировой рейтинг';
-      }
-      return base;
+      var parts = [
+        f1CountryFull(fighter),
+        U.escapeHtml(U.recordText(fighter.record))
+      ];
+      if (f1HasWeight(fighter)) { parts.push(U.escapeHtml(f1FighterWeight(fighter))); }
+      if (fighter.trackId === 'amateur') { parts.push(U.escapeHtml(f1AmateurRank(fighter))); }
+      return parts.join(' · ');
     }
 
     function crowns(fighter) {
@@ -882,15 +942,18 @@
     }
 
     function rowHtml(fighter, label, isChampion) {
-      return '<div class="ranking-entry">' +
-        '<div class="ranking-top"><div class="ranking-name-wrap"><span class="ranking-pos">' + label + '</span><button class="small-btn fighter-name-btn" data-fighter="' + U.escapeHtml(fighter.id) + '">' + (isChampion && crowns(fighter) ? crowns(fighter) + ' ' : '') + U.escapeHtml(fighter.name) + '</button>' + (fighter.isPlayer ? ' <span class="pill green">ты</span>' : '') + '</div><span class="pill gold">' + (isChampion ? 'Чемпион ' : 'Рейтинг ') + U.statAverage(fighter.stats) + '</span></div>' +
-        '<div class="muted small ranking-sub">' + fighterSubline(fighter) + '</div>' +
+      return '<div class="f1-person-row ranking-row" data-row-fighter="' + U.escapeHtml(fighter.id) + '">' +
+        '<div class="f1-row-left">' +
+          '<div class="f1-row-name">' + (isChampion && crowns(fighter) ? crowns(fighter) + ' ' : '') + U.escapeHtml(fighter.name) + '</div>' +
+          '<div class="f1-row-sub">' + fighterSubline(fighter) + '</div>' +
+        '</div>' +
+        '<div class="f1-row-right"><span class="f1-metric">' + U.escapeHtml(label) + '</span>' + (fighter.isPlayer ? '<span class="f1-metric green">Ты</span>' : '') + '<span class="f1-metric ovr">OVR ' + U.statAverage(fighter.stats) + '</span></div>' +
       '</div>';
     }
 
     return '<div class="content-card"><h3>Рейтинг' + (state.rankingTrackId === 'pro' ? ' · мир' : '') + '</h3>' + renderRankingFilters(state) +
       '<div class="split-row"><span>Страница ' + (page + 1) + ' / ' + totalPages + ' · бойцов: ' + contenders.length + '</span><span><button class="small-btn" data-ranking-page="' + Math.max(0, page - 1) + '"' + (page <= 0 ? ' disabled' : '') + '>Назад</button> <button class="small-btn" data-ranking-page="' + Math.min(totalPages - 1, page + 1) + '"' + (page >= totalPages - 1 ? ' disabled' : '') + '>Вперёд</button></span></div>' +
-      '<div class="ranking-list">' +
+      '<div class="ranking-list f1-row-list">' +
       champions.map(function (fighter) { return rowHtml(fighter, '👑', true); }).join('') +
       visible.map(function (fighter, index) { return rowHtml(fighter, '#' + (page * pageSize + index + 1), false); }).join('') + '</div></div>';
   }
@@ -1022,7 +1085,7 @@
       return '<div class="content-card"><h3>Новости</h3><div class="muted small">Пусто.</div></div>';
     }
     return '<div class="content-card"><h3>Новости</h3><div class="news-list">' + news.slice(0, 80).map(function (item) {
-      return '<div class="f1-news-row"><div class="f1-news-week">Неделя ' + U.escapeHtml(item.week) + '</div><div class="f1-news-text">' + U.escapeHtml(item.text || '') + '</div>' + (item.tone ? '<div class="f1-news-tag">' + U.escapeHtml(item.tone) + '</div>' : '') + '</div>';
+      return '<div class="f1-news-row"><div class="f1-news-week">Неделя ' + U.escapeHtml(item.week) + '</div><div class="f1-news-text">' + f1NewsText(state, item) + '</div>' + (item.tone ? '<div class="f1-news-tag">' + U.escapeHtml(item.tone) + '</div>' : '') + '</div>';
     }).join('') + '</div></div>';
   }
 
@@ -1169,7 +1232,6 @@
             '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(fighter.record)) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Возраст</span><strong>' + fighter.age + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryBright(fighter) + '</strong></div>' +
-            '<div class="f1-profile-stat"><span>Баланс</span><strong>$' + (fighter.money || 0) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>' + f1StatusLabel(fighter) + '</span><strong>' + f1StatusHtml(state, fighter) + '</strong></div>' +
           '</div>' +
           '<div class="row">' + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : '') + '</div>' +
