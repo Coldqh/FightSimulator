@@ -1,7 +1,7 @@
 {
-  "version": "career-start-clubs-fix-2.6.4",
-  "mode": "career-start-clubs-fix",
-  "cacheVersion": "fight-simulator-career-start-clubs-fix-2.6.4",
+  "version": "roster-names-clubs-restore-2.6.6",
+  "mode": "roster-names-clubs-restore",
+  "cacheVersion": "fight-simulator-roster-names-clubs-restore-2.6.6",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

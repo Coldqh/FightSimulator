@@ -102,6 +102,7 @@
     var cities;
     var city;
     var countryTotal;
+    var clubIndex;
 
     if (!(state.clubs instanceof Array)) { state.clubs = []; }
 
@@ -121,7 +122,6 @@
       country = Data.countries[i];
       countryTotal = actualFightersByCountry[country.id] || 0;
       targetClubs = Math.max(2, Math.ceil(Math.max(1, countryTotal) / 28));
-      targetClubs = Math.min(targetClubs, 18);
       usedNamesByCountry[country.id] = usedNamesByCountry[country.id] || {};
 
       for (j = 0; j < targetClubs; j += 1) {
@@ -131,7 +131,7 @@
         name = clubLabel(country, j);
         attempt = 0;
 
-        while (usedNamesByCountry[country.id][name] && attempt < 80) {
+        while (usedNamesByCountry[country.id][name] && attempt < 120) {
           attempt += 1;
           name = clubLabel(country, j + attempt * targetClubs + 7);
         }
@@ -139,7 +139,7 @@
         if (usedNamesByCountry[country.id][name]) {
           cities = country.cities || citiesByCountry[country.id] || [country.city || country.label];
           city = cities[j % cities.length] || country.label;
-          name = city + " " + fallbackDistricts[(j + level) % fallbackDistricts.length] + " " + fallbackSuffixes[(j + attempt + level) % fallbackSuffixes.length];
+          name = city + " " + fallbackDistricts[(j + level + attempt) % fallbackDistricts.length] + " " + fallbackSuffixes[(j + attempt + level) % fallbackSuffixes.length];
         }
 
         usedNamesByCountry[country.id][name] = true;
@@ -162,13 +162,12 @@
 
     state.clubs = state.clubs.filter(function (club) {
       var country = Data.countries.find(function (item) { return item.id === club.countryId; });
-      var clubIndex;
       var countryTotal;
       var maxClubs;
       if (!country || !club || !club.id) { return false; }
       clubIndex = Number(String(club.id).split("_").pop());
       countryTotal = actualFightersByCountry[country.id] || 0;
-      maxClubs = Math.min(18, Math.max(2, Math.ceil(Math.max(1, countryTotal) / 28)));
+      maxClubs = Math.max(2, Math.ceil(Math.max(1, countryTotal) / 28));
       return clubIndex >= 0 && clubIndex < maxClubs;
     });
 

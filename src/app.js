@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.5&target=2.6.5&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.6&target=2.6.6&t=" + Date.now());
     }
 
     function clearFightCaches() {
