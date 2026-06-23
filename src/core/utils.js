@@ -126,11 +126,15 @@
   }
 
   function createName(country, seed) {
-    var firstIndex = Math.abs(seed * 3 + randomInt(0, country.firstNames.length - 1)) % country.firstNames.length;
-    var lastIndex = Math.abs(seed * 5 + randomInt(0, country.lastNames.length - 1)) % country.lastNames.length;
-    var first = String(country.firstNames[firstIndex] || "Alex").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
-    var last = String(country.lastNames[lastIndex] || "Smith").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
-    /* В основной генерации всегда простая форма: имя + фамилия. */
+    var localFirst = country && country.firstNames instanceof Array ? country.firstNames : [];
+    var localLast = country && country.lastNames instanceof Array ? country.lastNames : [];
+    var fallbackFirst = ["Alex","Victor","Daniel","Roman","Niko","Leo","Max","David","Ivan","Sam","Adam","Milan","Tomas","Lucas","Mark","Andrei","Rafael","Miguel","Arman","Karim","Omar","Kenji","Riku","Musa","Elias","Noah","Liam","Yuri","Pavel","Sergio"];
+    var fallbackLast = ["Smith","Johnson","Brown","Miller","Martin","Garcia","Lopez","Silva","Ivanov","Sokolov","Sato","Kim","Khan","Ali","Mensah","Diallo","Novak","Petrov","Orlov","Wang","Lee","Morris","Taylor","Ward","King","Cross","Vega","Campos","Nakamura","Okafor"];
+    var firstPool = localFirst.concat(fallbackFirst);
+    var lastPool = localLast.concat(fallbackLast);
+    var safeSeed = Math.abs(Number(seed) || randomInt(1, 999999));
+    var first = String(firstPool[safeSeed % firstPool.length] || "Alex").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
+    var last = String(lastPool[Math.abs(safeSeed * 17 + 29) % lastPool.length] || "Smith").replace(/\s+[A-ZА-Я]\.$/, "").split(" / ")[0].trim();
     return first + " " + last;
   }
 

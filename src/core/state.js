@@ -9,20 +9,107 @@
 
   var COUNTRY_NAME_OVERRIDES = {"ukraine": [["Oleksandr", "Andrii", "Dmytro", "Mykola", "Vladyslav", "Bohdan", "Serhii", "Artem"], ["Shevchenko", "Kovalenko", "Bondarenko", "Tkachenko", "Melnyk", "Kravchenko", "Boyko", "Lysenko"]], "czechia": [["Jan", "Petr", "Tomas", "Lukas", "Martin", "Jakub", "Ondrej", "Marek"], ["Novak", "Svoboda", "Dvorak", "Prochazka", "Cerny", "Kucera", "Vesely", "Horak"]], "slovakia": [["Marek", "Milan", "Tomas", "Lukas", "Peter", "Jan", "Martin", "Juraj"], ["Horvath", "Kovac", "Varga", "Toth", "Nagy", "Balaz", "Molnar", "Kral"]], "poland": [["Jan", "Piotr", "Kamil", "Mateusz", "Adam", "Pawel", "Tomasz", "Marek"], ["Nowak", "Kowalski", "Wisniewski", "Wojcik", "Kowalczyk", "Kaminski", "Lewandowski", "Zielinski"]], "russia": [["Aleksandr", "Dmitry", "Ivan", "Mikhail", "Sergey", "Nikita", "Artem", "Kirill"], ["Ivanov", "Smirnov", "Kuznetsov", "Popov", "Volkov", "Sokolov", "Morozov", "Orlov"]], "belarus": [["Aliaksandr", "Maksim", "Dmitry", "Pavel", "Kiryl", "Mikalai", "Anton", "Ihar"], ["Ivanou", "Kavalchuk", "Novik", "Kuzmich", "Sokolau", "Marozau", "Kravets", "Mikhalchuk"]], "moldova": [["Ion", "Andrei", "Mihai", "Sergiu", "Vasile", "Alexandru", "Dumitru", "Victor"], ["Rusu", "Ceban", "Munteanu", "Grosu", "Ciobanu", "Popescu", "Moraru", "Lungu"]], "romania": [["Andrei", "Mihai", "Alexandru", "Stefan", "Vlad", "Ionut", "Cristian", "Florin"], ["Popescu", "Ionescu", "Dumitrescu", "Stan", "Stoica", "Radu", "Gheorghe", "Marin"]], "bulgaria": [["Georgi", "Ivan", "Dimitar", "Nikolay", "Petar", "Stoyan", "Hristo", "Vasil"], ["Ivanov", "Georgiev", "Dimitrov", "Petrov", "Nikolov", "Stoyanov", "Todorov", "Angelov"]], "serbia": [["Nikola", "Marko", "Stefan", "Luka", "Milos", "Aleksandar", "Dusan", "Nemanja"], ["Jovanovic", "Petrovic", "Nikolic", "Markovic", "Djordjevic", "Stojanovic", "Ilic", "Pavlovic"]], "croatia": [["Ivan", "Marko", "Luka", "Matej", "Josip", "Ante", "Stjepan", "Domagoj"], ["Horvat", "Kovac", "Babic", "Maric", "Novak", "Jukic", "Tomic", "Vidovic"]], "greece": [["Giorgos", "Dimitris", "Nikos", "Kostas", "Panagiotis", "Vasilis", "Stavros", "Alexis"], ["Papadopoulos", "Nikolaou", "Georgiou", "Dimitriou", "Ioannou", "Pappas", "Vasileiou", "Kostas"]], "hungary": [["Bence", "Máté", "Levente", "Dávid", "Ádám", "Gergő", "Tamás", "Zoltán"], ["Nagy", "Kovács", "Tóth", "Szabó", "Horváth", "Varga", "Kiss", "Molnár"]], "lithuania": [["Mantas", "Jonas", "Tomas", "Lukas", "Domas", "Mindaugas", "Arnas", "Vytautas"], ["Kazlauskas", "Petrauskas", "Jankauskas", "Stankevicius", "Butkus", "Paulauskas", "Zukauskas", "Vaitkus"]], "latvia": [["Janis", "Arturs", "Kristaps", "Rihards", "Martins", "Andris", "Edgars", "Gints"], ["Berzins", "Kalnins", "Ozols", "Jansons", "Liepa", "Krumins", "Balodis", "Petersons"]], "estonia": [["Jaan", "Martin", "Kristjan", "Rasmus", "Markus", "Siim", "Andres", "Mihkel"], ["Tamm", "Saar", "Sepp", "Kask", "Kukk", "Rebane", "Vaher", "Lepp"]], "germany": [["Maximilian", "Lukas", "Leon", "Felix", "Jonas", "Paul", "Tobias", "Florian"], ["Muller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker"]], "france": [["Lucas", "Hugo", "Jules", "Louis", "Antoine", "Mathieu", "Maxime", "Nicolas"], ["Martin", "Bernard", "Dubois", "Thomas", "Robert", "Petit", "Durand", "Moreau"]], "italy": [["Luca", "Marco", "Matteo", "Alessandro", "Francesco", "Giovanni", "Andrea", "Davide"], ["Rossi", "Russo", "Ferrari", "Esposito", "Bianchi", "Romano", "Colombo", "Ricci"]], "spain": [["Alejandro", "Carlos", "Javier", "Daniel", "Pablo", "Sergio", "Miguel", "David"], ["Garcia", "Rodriguez", "Gonzalez", "Fernandez", "Lopez", "Martinez", "Sanchez", "Perez"]], "uk": [["Oliver", "Jack", "Harry", "George", "Thomas", "James", "William", "Daniel"], ["Smith", "Jones", "Taylor", "Brown", "Williams", "Wilson", "Johnson", "Davies"]], "ireland": [["Sean", "Conor", "Liam", "Cian", "Patrick", "Darragh", "Eoin", "Niall"], ["Murphy", "Kelly", "Byrne", "Ryan", "Walsh", "OBrien", "Doyle", "McCarthy"]], "netherlands": [["Daan", "Sem", "Luuk", "Bram", "Milan", "Jesse", "Finn", "Lars"], ["De Jong", "Jansen", "De Vries", "Van den Berg", "Bakker", "Visser", "Smit", "Meijer"]], "belgium": [["Lucas", "Noah", "Arthur", "Louis", "Liam", "Jules", "Victor", "Milan"], ["Peeters", "Janssens", "Maes", "Jacobs", "Mertens", "Willems", "Claes", "Goossens"]], "sweden": [["Erik", "Lars", "Karl", "Oskar", "Nils", "Viktor", "Gustav", "Axel"], ["Andersson", "Johansson", "Karlsson", "Nilsson", "Eriksson", "Larsson", "Olsson", "Persson"]], "norway": [["Ole", "Lars", "Magnus", "Sander", "Mikkel", "Jonas", "Erik", "Kasper"], ["Hansen", "Johansen", "Olsen", "Larsen", "Andersen", "Nilsen", "Pedersen", "Berg"]], "denmark": [["Mads", "Mathias", "Frederik", "Christian", "Emil", "Jonas", "Rasmus", "Kasper"], ["Jensen", "Nielsen", "Hansen", "Pedersen", "Andersen", "Christensen", "Larsen", "Sorensen"]], "finland": [["Elias", "Onni", "Eino", "Leo", "Mikael", "Aleksi", "Juho", "Jere"], ["Korhonen", "Virtanen", "Makinen", "Nieminen", "Hamalainen", "Laine", "Heikkinen", "Koskinen"]], "turkey": [["Mehmet", "Mustafa", "Ahmet", "Ali", "Emre", "Yusuf", "Murat", "Hakan"], ["Yilmaz", "Kaya", "Demir", "Celik", "Sahin", "Yildiz", "Aydin", "Ozturk"]], "kazakhstan": [["Alikhan", "Nursultan", "Daniyar", "Aidos", "Bekzat", "Timur", "Askar", "Yerlan"], ["Nurmagambetov", "Sarsenov", "Akhmetov", "Kozhabekov", "Tulegenov", "Iskakov", "Orazov", "Karimov"]], "uzbekistan": [["Sardor", "Bekzod", "Jasur", "Aziz", "Doston", "Shakhzod", "Oybek", "Alisher"], ["Karimov", "Tursunov", "Rakhimov", "Yusupov", "Ismailov", "Khalilov", "Nazarov", "Saidov"]], "china": [["Wei", "Jun", "Lei", "Ming", "Hao", "Jian", "Tao", "Qiang"], ["Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Huang", "Zhao"]], "japan": [["Haruto", "Yuto", "Sota", "Ren", "Daiki", "Kaito", "Riku", "Takumi"], ["Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura"]], "south_korea": [["Minjun", "Seojun", "Jihoon", "Hyunwoo", "Jisung", "Taeyang", "Donghyun", "Joon"], ["Kim", "Lee", "Park", "Choi", "Jung", "Kang", "Cho", "Yoon"]], "india": [["Arjun", "Rohan", "Amit", "Vikram", "Rahul", "Karan", "Sanjay", "Deepak"], ["Sharma", "Patel", "Singh", "Kumar", "Gupta", "Mehta", "Verma", "Reddy"]], "pakistan": [["Ali", "Ahmed", "Hassan", "Usman", "Bilal", "Hamza", "Imran", "Farhan"], ["Khan", "Ahmed", "Hussain", "Malik", "Butt", "Sheikh", "Raza", "Iqbal"]], "iran": [["Amir", "Reza", "Ali", "Hossein", "Mehdi", "Mohammad", "Saeed", "Farhad"], ["Hosseini", "Ahmadi", "Karimi", "Mohammadi", "Rezaei", "Ebrahimi", "Moradi", "Jafari"]], "iraq": [["Ali", "Hussein", "Omar", "Mohammed", "Ahmed", "Mustafa", "Karrar", "Yasir"], ["Al-Hassan", "Al-Ali", "Al-Saadi", "Al-Tamimi", "Al-Jabari", "Mahdi", "Karim", "Salim"]], "saudi_arabia": [["Fahad", "Saud", "Khalid", "Abdullah", "Mohammed", "Nasser", "Yousef", "Turki"], ["Al-Qahtani", "Al-Otaibi", "Al-Harbi", "Al-Dosari", "Al-Ghamdi", "Al-Shehri", "Al-Mutairi", "Al-Rashid"]], "uae": [["Rashid", "Saeed", "Khalifa", "Mansour", "Hamad", "Sultan", "Nasser", "Majid"], ["Al-Mansouri", "Al-Ali", "Al-Hammadi", "Al-Nuaimi", "Al-Suwaidi", "Al-Kaabi", "Al-Dhaheri", "Al-Mazrouei"]], "qatar": [["Khalid", "Hamad", "Jassim", "Nasser", "Fahad", "Ali", "Mohammed", "Saad"], ["Al-Thani", "Al-Kuwari", "Al-Mannai", "Al-Ansari", "Al-Marri", "Al-Hajri", "Al-Naimi", "Al-Sulaiti"]], "syria": [["Omar", "Fadi", "Mahmoud", "Khaled", "Hassan", "Youssef", "Tarek", "Nabil"], ["Al-Hassan", "Al-Ahmad", "Darwish", "Khalil", "Nasser", "Saleh", "Haddad", "Mansour"]], "jordan": [["Omar", "Ahmad", "Mohammad", "Yazan", "Laith", "Anas", "Zaid", "Khaled"], ["Al-Masri", "Al-Khatib", "Al-Haddad", "Naser", "Salameh", "Mansour", "Awad", "Taha"]], "mongolia": [["Baatar", "Temuulen", "Bat-Erdene", "Enkhbayar", "Munkh", "Tugsbayar", "Ganbold", "Altan"], ["Batbold", "Ganbaatar", "Enkhbold", "Munkhbat", "Erdenebat", "Boldbaatar", "Davaajav", "Tserendorj"]], "azerbaijan": [["Ali", "Rashad", "Elvin", "Tural", "Nicat", "Orkhan", "Farid", "Elnur"], ["Mammadov", "Aliyev", "Huseynov", "Hasanov", "Karimov", "Ismayilov", "Guliyev", "Abbasov"]], "armenia": [["Aram", "Tigran", "Narek", "Gevorg", "Hayk", "Artur", "Vardan", "Karen"], ["Grigoryan", "Sargsyan", "Harutyunyan", "Hovhannisyan", "Khachatryan", "Petrosyan", "Manukyan", "Hakobyan"]], "georgia": [["Giorgi", "Luka", "Nika", "Davit", "Irakli", "Levan", "Zurab", "Tornike"], ["Beridze", "Kapanadze", "Gelashvili", "Maisuradze", "Giorgadze", "Lomidze", "Kvaratskhelia", "Tsiklauri"]], "usa": [["James", "Michael", "Robert", "John", "David", "William", "Anthony", "Daniel"], ["Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Wilson"]], "canada": [["Liam", "Noah", "Ethan", "Lucas", "Logan", "Mason", "Owen", "Jack"], ["Smith", "Brown", "Tremblay", "Martin", "Roy", "Wilson", "MacDonald", "Taylor"]], "mexico": [["Jose", "Juan", "Luis", "Carlos", "Miguel", "Jorge", "Ricardo", "Fernando"], ["Hernandez", "Garcia", "Martinez", "Lopez", "Gonzalez", "Perez", "Rodriguez", "Sanchez"]], "cuba": [["Yosvany", "Yordan", "Erislandy", "Julio", "Roberto", "Yunier", "Lazaro", "Osniel"], ["Garcia", "Rodriguez", "Hernandez", "Perez", "Gonzalez", "Martinez", "Sanchez", "Diaz"]], "brazil": [["Joao", "Lucas", "Gabriel", "Pedro", "Matheus", "Rafael", "Bruno", "Felipe"], ["Silva", "Santos", "Oliveira", "Souza", "Pereira", "Costa", "Ferreira", "Rodrigues"]], "argentina": [["Mateo", "Santiago", "Tomas", "Nicolas", "Facundo", "Juan", "Agustin", "Luciano"], ["Gonzalez", "Rodriguez", "Gomez", "Fernandez", "Lopez", "Diaz", "Martinez", "Perez"]], "colombia": [["Santiago", "Sebastian", "Juan", "Andres", "Daniel", "Nicolas", "Carlos", "Mateo"], ["Rodriguez", "Martinez", "Garcia", "Gomez", "Lopez", "Hernandez", "Perez", "Sanchez"]], "venezuela": [["Jose", "Luis", "Carlos", "Miguel", "Juan", "Jesus", "Daniel", "Andres"], ["Gonzalez", "Rodriguez", "Perez", "Hernandez", "Garcia", "Martinez", "Lopez", "Diaz"]], "peru": [["Luis", "Carlos", "Jose", "Juan", "Miguel", "Jorge", "Diego", "Cesar"], ["Quispe", "Flores", "Sanchez", "Garcia", "Rojas", "Torres", "Diaz", "Chavez"]], "chile": [["Benjamin", "Vicente", "Matias", "Joaquin", "Diego", "Tomas", "Felipe", "Nicolas"], ["Gonzalez", "Munoz", "Rojas", "Diaz", "Perez", "Soto", "Contreras", "Silva"]], "ecuador": [["Jose", "Luis", "Carlos", "Juan", "Miguel", "Andres", "Diego", "Javier"], ["Garcia", "Rodriguez", "Zambrano", "Sanchez", "Lopez", "Vera", "Mendoza", "Castillo"]], "uruguay": [["Mateo", "Santiago", "Juan", "Nicolas", "Facundo", "Agustin", "Diego", "Sebastian"], ["Rodriguez", "Gonzalez", "Martinez", "Fernandez", "Perez", "Garcia", "Silva", "Lopez"]], "paraguay": [["Juan", "Carlos", "Miguel", "Luis", "Diego", "Jorge", "Hugo", "Oscar"], ["Gonzalez", "Benitez", "Martinez", "Lopez", "Gimenez", "Vera", "Fernandez", "Acosta"]], "bolivia": [["Juan", "Luis", "Carlos", "Miguel", "Diego", "Jorge", "Edwin", "Victor"], ["Mamani", "Quispe", "Flores", "Condori", "Choque", "Vargas", "Rojas", "Gutierrez"]], "dominican_republic": [["Jose", "Luis", "Carlos", "Juan", "Miguel", "Rafael", "Angel", "Pedro"], ["Rodriguez", "Garcia", "Martinez", "Hernandez", "Perez", "Sanchez", "Diaz", "Reyes"]], "puerto_rico": [["Jose", "Luis", "Carlos", "Miguel", "Juan", "Angel", "Javier", "Edwin"], ["Rivera", "Rodriguez", "Santiago", "Torres", "Ortiz", "Vazquez", "Ramos", "Morales"]], "costa_rica": [["Jose", "Carlos", "Luis", "Juan", "Andres", "Diego", "Esteban", "Marco"], ["Rodriguez", "Vargas", "Jimenez", "Mora", "Rojas", "Gonzalez", "Soto", "Hernandez"]], "panama": [["Jose", "Luis", "Carlos", "Juan", "Miguel", "Javier", "Edgar", "Roberto"], ["Rodriguez", "Gonzalez", "Martinez", "Castillo", "Perez", "Sanchez", "Morales", "Diaz"]], "nicaragua": [["Jose", "Carlos", "Luis", "Juan", "Miguel", "Oscar", "Javier", "Manuel"], ["Lopez", "Garcia", "Martinez", "Rodriguez", "Perez", "Gonzalez", "Hernandez", "Sanchez"]], "honduras": [["Jose", "Carlos", "Luis", "Juan", "Miguel", "Edwin", "Oscar", "Bryan"], ["Hernandez", "Lopez", "Martinez", "Garcia", "Rodriguez", "Sanchez", "Mejia", "Flores"]], "guatemala": [["Jose", "Carlos", "Luis", "Juan", "Miguel", "Edwin", "Mario", "Jorge"], ["Garcia", "Lopez", "Perez", "Hernandez", "Martinez", "Gonzalez", "Rodriguez", "Ramirez"]], "el_salvador": [["Jose", "Carlos", "Luis", "Juan", "Miguel", "Oscar", "Edwin", "Rafael"], ["Hernandez", "Martinez", "Lopez", "Garcia", "Rodriguez", "Perez", "Ramirez", "Flores"]], "haiti": [["Jean", "Pierre", "Jacques", "Emmanuel", "Wilner", "Frantz", "Mackenson", "Stevenson"], ["Jean-Baptiste", "Pierre", "Joseph", "Louis", "Charles", "Michel", "Etienne", "Augustin"]], "jamaica": [["Andre", "Michael", "Ricardo", "Dwayne", "Omar", "Tyrone", "Jermaine", "Devon"], ["Brown", "Williams", "Smith", "Campbell", "Johnson", "Clarke", "Thompson", "Davis"]], "trinidad_tobago": [["Jelani", "Andre", "Keon", "Akeem", "Darren", "Kareem", "Rondell", "Shane"], ["Mohammed", "Williams", "Joseph", "Charles", "Singh", "Rambharat", "Baptiste", "Thomas"]], "australia": [["Jack", "Noah", "William", "Oliver", "Thomas", "Lachlan", "Cooper", "James"], ["Smith", "Jones", "Williams", "Brown", "Wilson", "Taylor", "Martin", "Anderson"]], "new_zealand": [["Jack", "Liam", "Oliver", "Noah", "James", "Lucas", "Arlo", "Mason"], ["Smith", "Wilson", "Williams", "Brown", "Taylor", "Anderson", "Thompson", "Walker"]], "philippines": [["Juan", "Jose", "Mark", "Angelo", "Carlo", "Rafael", "Miguel", "Jayson"], ["Santos", "Reyes", "Cruz", "Bautista", "Garcia", "Mendoza", "Torres", "Ramos"]], "thailand": [["Somchai", "Sakda", "Anan", "Niran", "Prasert", "Kiet", "Somsak", "Chai"], ["Srisai", "Boonmee", "Thongchai", "Suwan", "Wongsa", "Phanich", "Chaiyaporn", "Kittisak"]], "indonesia": [["Budi", "Agus", "Dedi", "Rizky", "Andi", "Fajar", "Hendra", "Ari"], ["Santoso", "Wijaya", "Saputra", "Pratama", "Hidayat", "Setiawan", "Nugroho", "Susanto"]], "malaysia": [["Muhammad", "Ahmad", "Amir", "Hafiz", "Faiz", "Aiman", "Hakim", "Syafiq"], ["Rahman", "Ismail", "Ibrahim", "Hassan", "Yusof", "Abdullah", "Omar", "Aziz"]], "vietnam": [["Minh", "Huy", "Nam", "Duc", "Tuan", "Quang", "Long", "Khai"], ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Phan", "Vu", "Dang"]], "morocco": [["Youssef", "Mohamed", "Omar", "Hamza", "Ayoub", "Mehdi", "Rachid", "Said"], ["El Amrani", "Bennani", "Alaoui", "Fassi", "Bouzid", "Haddad", "Idrissi", "Tazi"]], "algeria": [["Mohamed", "Yacine", "Sofiane", "Karim", "Bilal", "Nabil", "Rachid", "Amine"], ["Bouzid", "Benali", "Bensalem", "Mansouri", "Saidi", "Haddad", "Cherif", "Belkacem"]], "egypt": [["Mohamed", "Ahmed", "Mahmoud", "Mostafa", "Omar", "Hassan", "Youssef", "Ibrahim"], ["Hassan", "Ahmed", "Ali", "Ibrahim", "Mahmoud", "Sayed", "Gamal", "Fathy"]], "tunisia": [["Mohamed", "Yassine", "Walid", "Anis", "Karim", "Sami", "Aymen", "Nizar"], ["Trabelsi", "Ben Ali", "Mansouri", "Jebali", "Ghannouchi", "Khelifi", "Saidi", "Mejri"]], "libya": [["Mohamed", "Ahmed", "Ali", "Omar", "Hassan", "Youssef", "Khaled", "Tariq"], ["Al-Fitouri", "Al-Misrati", "Al-Trabelsi", "Al-Zawi", "Al-Senussi", "Fathi", "Mansour", "Salem"]], "south_africa": [["Sipho", "Thabo", "Sizwe", "Mandla", "Lunga", "Themba", "Kabelo", "Jabu"], ["Dlamini", "Mokoena", "Ndlovu", "Khumalo", "Mabena", "Mthembu", "Nkosi", "Naidoo"]], "nigeria": [["Chinedu", "Emeka", "Ibrahim", "Musa", "Tunde", "Adebayo", "Kelechi", "Uche"], ["Okafor", "Adeyemi", "Ibrahim", "Okoro", "Eze", "Balogun", "Musa", "Nwosu"]], "ghana": [["Kwame", "Kofi", "Yaw", "Kojo", "Mensah", "Nana", "Akwasi", "Emmanuel"], ["Mensah", "Owusu", "Boateng", "Osei", "Asante", "Addo", "Darko", "Agyeman"]], "kenya": [["John", "Mwangi", "Kipchoge", "David", "Otieno", "Kamau", "Mutua", "Njoroge"], ["Mwangi", "Kiptoo", "Otieno", "Kamau", "Mutiso", "Njoroge", "Ochieng", "Kimani"]], "uganda": [["Moses", "Joseph", "Kato", "Okello", "Ssemakula", "Isaac", "Peter", "Kizza"], ["Okello", "Kato", "Mugisha", "Sserwadda", "Nsubuga", "Kiggundu", "Ouma", "Wasswa"]], "tanzania": [["Juma", "Hassan", "Yusuf", "Musa", "Selemani", "Baraka", "Omari", "Said"], ["Mwinyi", "Mushi", "Juma", "Hassan", "Komba", "Msuya", "Sanga", "Massawe"]], "cameroon": [["Jean", "Paul", "Patrick", "Samuel", "Andre", "Eric", "Didier", "Alain"], ["Ngono", "Mbarga", "Tchoumi", "Njoya", "Biya", "Manga", "Etame", "Abanda"]], "senegal": [["Mamadou", "Cheikh", "Ousmane", "Ibrahima", "Moussa", "Abdou", "Aliou", "Pape"], ["Diop", "Ndiaye", "Sow", "Fall", "Ba", "Gueye", "Sarr", "Faye"]], "ethiopia": [["Dawit", "Abebe", "Bekele", "Tesfaye", "Haile", "Mulugeta", "Tadesse", "Kebede"], ["Bekele", "Tesfaye", "Tadesse", "Kebede", "Alemu", "Girma", "Haile", "Mekonnen"]], "angola": [["Joao", "Manuel", "Jose", "Antonio", "Paulo", "Miguel", "Carlos", "Luis"], ["Silva", "Santos", "Manuel", "Fernandes", "Costa", "Pereira", "Domingos", "Mateus"]], "mozambique": [["Joao", "Manuel", "Antonio", "Carlos", "Luis", "Paulo", "Fernando", "Mateus"], ["Mabunda", "Nhantumbo", "Sitoe", "Macamo", "Machel", "Chissano", "Mondlane", "Nkomo"]], "zimbabwe": [["Tendai", "Tinashe", "Kudakwashe", "Farai", "Blessing", "Tatenda", "Simbarashe", "Tawanda"], ["Moyo", "Ndlovu", "Sibanda", "Dube", "Chikore", "Mujuru", "Nyathi", "Chirau"]], "zambia": [["Chanda", "Mwamba", "Bwalya", "Mutale", "Kennedy", "Moses", "Gift", "Brian"], ["Banda", "Phiri", "Mbewe", "Tembo", "Zulu", "Mwansa", "Chanda", "Sakala"]], "drc": [["Jean", "Patrick", "Dieudonne", "Fabrice", "Cedric", "Mwamba", "Blaise", "Christian"], ["Kabila", "Ilunga", "Mwamba", "Kasongo", "Tshibanda", "Mutombo", "Kabongo", "Mulumba"]], "ivory_coast": [["Kouadio", "Yao", "Koffi", "Serge", "Didier", "Bakary", "Mamadou", "Jean"], ["Kone", "Traore", "Kouassi", "Yao", "Bamba", "Koffi", "Coulibaly", "Diomande"]], "mali": [["Moussa", "Ibrahim", "Amadou", "Oumar", "Seydou", "Modibo", "Boubacar", "Mamadou"], ["Traore", "Coulibaly", "Diallo", "Diarra", "Keita", "Sissoko", "Toure", "Dembele"]], "burkina_faso": [["Moussa", "Issa", "Ousmane", "Adama", "Ibrahim", "Blaise", "Souleymane", "Abdoulaye"], ["Ouedraogo", "Sawadogo", "Kaboré", "Traore", "Zongo", "Compaore", "Ilboudo", "Sankara"]]};
 
+  var NAME_SCHEMA_VERSION = "names-v3-large-pools";
+
+  function uniqueList(list) {
+    var seen = {};
+    var out = [];
+    (list || []).forEach(function (item) {
+      item = String(item || "").trim();
+      if (!item || seen[item.toLowerCase()]) { return; }
+      seen[item.toLowerCase()] = true;
+      out.push(item);
+    });
+    return out;
+  }
+
+  function localNamePack(country) {
+    var id = country && country.id ? country.id : "";
+    var group = country && (country.localPoolId || country.continentId) ? (country.localPoolId || country.continentId) : "";
+    var packs = {
+      slavic: {
+        first: ["Aleksandr","Dmitry","Ivan","Mikhail","Sergey","Nikita","Artem","Kirill","Pavel","Roman","Andrei","Viktor","Yuri","Maxim","Ilya","Danil","Egor","Oleg","Lev","Ruslan","Vladislav","Timur","Anton","Denis","Gleb","Nikolai","Matvey","Fedor","Stepan","Konstantin"],
+        last: ["Ivanov","Smirnov","Kuznetsov","Popov","Volkov","Sokolov","Morozov","Orlov","Pavlov","Fedorov","Mikhailov","Novikov","Egorov","Lebedev","Kozlov","Zaitsev","Karpov","Belyaev","Tarasov","Komarov","Gusev","Romanov","Nikiforov","Sobolev","Chernov","Krylov","Baranov","Savin","Makarov","Grachev"]
+      },
+      latin: {
+        first: ["Jose","Juan","Luis","Carlos","Miguel","Jorge","Ricardo","Fernando","Diego","Santiago","Emiliano","Mateo","Nicolas","Andres","Rafael","Gabriel","Hector","Mario","Francisco","Manuel","Eduardo","Pablo","Tomas","Ignacio","Sebastian","Adrian","Julian","Raul","Oscar","Victor"],
+        last: ["Hernandez","Garcia","Martinez","Lopez","Gonzalez","Rodriguez","Perez","Sanchez","Ramirez","Torres","Flores","Rivera","Gomez","Diaz","Cruz","Morales","Ortiz","Vargas","Castillo","Romero","Rojas","Mendoza","Aguilar","Navarro","Silva","Molina","Vega","Campos","Paredes","Valdez"]
+      },
+      anglo: {
+        first: ["James","Michael","Robert","John","David","William","Anthony","Daniel","Thomas","Ryan","Jason","Marcus","Ethan","Lucas","Mason","Logan","Owen","Noah","Liam","Jack","Connor","Dylan","Tyler","Aaron","Brandon","Caleb","Isaac","Nathan","Austin","Jordan"],
+        last: ["Smith","Johnson","Williams","Brown","Jones","Miller","Davis","Wilson","Anderson","Taylor","Thomas","Moore","Martin","Jackson","Thompson","White","Harris","Clark","Lewis","Robinson","Walker","Young","Allen","King","Wright","Scott","Green","Baker","Adams","Nelson"]
+      },
+      germanic: {
+        first: ["Maximilian","Lukas","Leon","Felix","Jonas","Paul","Tobias","Florian","Jan","Noah","Finn","Elias","Oskar","Nils","Erik","Mats","Daan","Bram","Luuk","Jesse","Milan","Lars","Viktor","Gustav","Axel","Emil","Frederik","Rasmus","Kasper","Sander"],
+        last: ["Muller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Becker","Hoffmann","Schulz","Bauer","Klein","Richter","Wolf","Neumann","Zimmermann","Jansen","De Vries","Bakker","Visser","Smit","Andersson","Johansson","Karlsson","Nielsen","Hansen","Pedersen","Larsen","Berg","Olsen"]
+      },
+      east_asia: {
+        first: ["Haruto","Yuto","Sota","Ren","Daiki","Kaito","Riku","Takumi","Minjun","Seojun","Jihoon","Hyunwoo","Jisung","Taeyang","Donghyun","Wei","Jun","Lei","Ming","Hao","Jian","Tao","Qiang","Yuki","Kenta","Sho","Tatsuya","Hiroki","Kenji","Ryota"],
+        last: ["Sato","Suzuki","Takahashi","Tanaka","Watanabe","Ito","Yamamoto","Nakamura","Kobayashi","Kato","Kim","Lee","Park","Choi","Jung","Kang","Cho","Yoon","Wang","Li","Zhang","Liu","Chen","Yang","Huang","Zhao","Zhou","Wu","Xu","Sun"]
+      },
+      central_asia: {
+        first: ["Alikhan","Daniyar","Aidos","Bekzat","Timur","Askar","Yerlan","Sardor","Bekzod","Jasur","Aziz","Doston","Shakhzod","Oybek","Alisher","Baatar","Temuulen","Enkhbayar","Munkh","Tugsbayar","Ganbold","Altan","Ruslan","Nurlan","Dias","Arman","Marat","Eldar","Sanjar","Iskander"],
+        last: ["Nurmagambetov","Sarsenov","Akhmetov","Tulegenov","Iskakov","Orazov","Karimov","Tursunov","Rakhimov","Yusupov","Ismailov","Khalilov","Nazarov","Saidov","Batbold","Ganbaatar","Enkhbold","Munkhbat","Erdenebat","Davaajav","Ospanov","Abdullayev","Kadyrov","Suleimenov","Muratov","Kasimov","Beketov","Aitmatov","Sharipov","Usmanov"]
+      },
+      arabic: {
+        first: ["Ali","Ahmed","Hassan","Omar","Mohammed","Mustafa","Yasir","Khalid","Fahad","Abdullah","Nasser","Yousef","Turki","Rashid","Saeed","Mansour","Hamad","Sultan","Jassim","Saad","Fadi","Mahmoud","Tarek","Nabil","Yazan","Laith","Anas","Zaid","Bilal","Hamza"],
+        last: ["Khan","Ahmed","Hussain","Malik","Raza","Iqbal","Al-Hassan","Al-Ali","Al-Saadi","Al-Tamimi","Karim","Salim","Al-Qahtani","Al-Otaibi","Al-Harbi","Al-Dosari","Al-Ghamdi","Al-Mansouri","Al-Hammadi","Al-Nuaimi","Al-Kuwari","Al-Marri","Al-Hajri","Darwish","Khalil","Nasser","Saleh","Haddad","Mansour","Awad"]
+      },
+      african: {
+        first: ["Kwame","Kofi","Yaw","Kojo","Musa","Amadou","Ibrahim","Ousmane","Mamadou","Cheikh","Lamine","Joseph","Emmanuel","Samuel","Daniel","Peter","Abel","Isaac","David","Patrick","Jean","Cedric","Amani","Tariq","Malik","Hassan","Kelvin","Brian","Victor","Francis"],
+        last: ["Mensah","Owusu","Boateng","Appiah","Diallo","Traore","Keita","Diop","Ndiaye","Sow","Camara","Nwosu","Okafor","Okoro","Adebayo","Abebe","Bekele","Moyo","Dlamini","Ndlovu","Kabila","Mwamba","Ilunga","Kouassi","Kone","Toure","Bamba","Kamara","Sarr","Mbaye"]
+      },
+      default: {
+        first: ["Alex","Victor","Daniel","Roman","Niko","Leo","Max","David","Ivan","Sam","Adam","Milan","Tomas","Lucas","Mark","Andrei","Rafael","Miguel","Arman","Karim","Omar","Kenji","Riku","Musa","Elias","Noah","Liam","Yuri","Pavel","Sergio"],
+        last: ["Fighter","Stone","Cross","Vale","King","Ward","Black","Reed","Morris","Cole","Santos","Silva","Garcia","Ivanov","Sato","Kim","Khan","Ali","Mensah","Diallo","Novak","Brown","Martin","Lopez","Petrov","Orlov","Wang","Lee","Miller","Sokolov"]
+      }
+    };
+    if (["russia","ukraine","belarus","poland","czechia","slovakia","serbia","croatia","bulgaria"].indexOf(id) !== -1 || group === "slavic") { return packs.slavic; }
+    if (["mexico","argentina","brazil","cuba","spain","colombia","peru","chile","ecuador","uruguay","paraguay","bolivia","dominican_republic","puerto_rico","costa_rica","panama","nicaragua","honduras","guatemala","el_salvador","haiti"].indexOf(id) !== -1 || group === "latin") { return packs.latin; }
+    if (["usa","canada","uk","ireland","australia","new_zealand","jamaica","trinidad_and_tobago"].indexOf(id) !== -1 || group === "anglo") { return packs.anglo; }
+    if (["germany","netherlands","belgium","sweden","norway","denmark","finland"].indexOf(id) !== -1 || group === "germanic") { return packs.germanic; }
+    if (["japan","south_korea","china","north_korea"].indexOf(id) !== -1 || group === "east_asia") { return packs.east_asia; }
+    if (["kazakhstan","uzbekistan","kyrgyzstan","tajikistan","turkmenistan","mongolia"].indexOf(id) !== -1 || group === "central_asia") { return packs.central_asia; }
+    if (["iran","iraq","saudi_arabia","uae","qatar","syria","jordan","egypt","morocco","algeria","tunisia","israel","libya"].indexOf(id) !== -1 || group === "arabic") { return packs.arabic; }
+    if (["ghana","uganda","tanzania","cameroon","senegal","angola","mozambique","zimbabwe","zambia","dr_congo","cote_d_ivoire","mali","burkina_faso","nigeria","south_africa","kenya","ethiopia"].indexOf(id) !== -1 || group === "african") { return packs.african; }
+    return packs.default;
+  }
+
+
   function countryNamePool(country) {
     var override = COUNTRY_NAME_OVERRIDES[country.id];
-    if (override) { return { firstNames: override[0], lastNames: override[1] }; }
-    return {
-      firstNames: country.firstNames && country.firstNames.length ? country.firstNames : ["Alex"],
-      lastNames: country.lastNames && country.lastNames.length ? country.lastNames : ["Fighter"]
-    };
+    var local = localNamePack(country);
+    var first = [];
+    var last = [];
+    if (override) {
+      first = first.concat(override[0] || []);
+      last = last.concat(override[1] || []);
+    }
+    first = first.concat(country.firstNames || [], local.first || []);
+    last = last.concat(country.lastNames || [], local.last || []);
+    first = uniqueList(first);
+    last = uniqueList(last);
+    while (first.length < 20) { first.push((local.first || ["Alex"])[first.length % local.first.length] + String.fromCharCode(65 + (first.length % 26))); }
+    while (last.length < 20) { last.push((local.last || ["Fighter"])[last.length % local.last.length] + String.fromCharCode(65 + (last.length % 26))); }
+    return { firstNames: first, lastNames: last };
   }
+
 
   function countrySpecificName(country, seed) {
     var pool = countryNamePool(country);
-    var first = pool.firstNames[Math.abs(seed) % pool.firstNames.length];
-    var last = pool.lastNames[Math.abs(seed * 7 + 13) % pool.lastNames.length];
+    var safeSeed = Math.abs(Number(seed) || 1);
+    var first = pool.firstNames[safeSeed % pool.firstNames.length];
+    var last = pool.lastNames[Math.abs(safeSeed * 17 + 29) % pool.lastNames.length];
+    var secondLast = pool.lastNames[Math.abs(safeSeed * 31 + 7) % pool.lastNames.length];
+    if (secondLast !== last && safeSeed % 7 === 0) {
+      return first + " " + last + "-" + secondLast;
+    }
     return first + " " + last;
+  }
+
+
+  function suggestNameForCountry(countryId, seed) {
+    return countrySpecificName(U.findCountry(countryId), seed || U.randomInt(1, 999999));
   }
 
   function emptyRecord() {
@@ -383,7 +470,7 @@
     var startingStats = flatStats(archetype.baseOvr);
     var player = createFighter(countryId, trackId, 777, archetype.baseOvr, {
       id: "player",
-      name: payload.name || "Новый боксёр",
+      name: payload.name || suggestNameForCountry(countryId, Date.now()),
       isPlayer: true,
       known: true,
       homeCountryId: countryId,
@@ -611,10 +698,10 @@
       state.roster[i].nameCountryId = state.roster[i].nameCountryId || state.roster[i].originCountryId || state.roster[i].homeCountryId || state.roster[i].countryId;
       if (!state.roster[i].isPlayer) {
         var nameCountryId = state.roster[i].originCountryId || state.roster[i].homeCountryId || state.roster[i].countryId;
-        if (state.roster[i].nameCountryId !== nameCountryId || state.roster[i].versionNameFixed !== Data.appVersion) {
+        if (state.roster[i].nameCountryId !== nameCountryId || state.roster[i].namesSchemaVersion !== NAME_SCHEMA_VERSION) {
           state.roster[i].name = countrySpecificName(U.findCountry(nameCountryId), state.roster[i].seed || i + 1);
           state.roster[i].nameCountryId = nameCountryId;
-          state.roster[i].versionNameFixed = Data.appVersion;
+          state.roster[i].namesSchemaVersion = NAME_SCHEMA_VERSION;
         }
       }
       updateDerivedFighterFields(state.roster[i]);
@@ -1002,6 +1089,74 @@
     return result;
   }
 
+  function inferStableAge(fighter, index, week) {
+    var seed = Math.abs(Number(fighter.seed) || index + 1);
+    var rating = U.statAverage(fighter.stats || {});
+    if (fighter.isPlayer) {
+      if (Number(fighter.age) > 15) { return Number(fighter.age); }
+      if (fighter.trackId === "pro") { return 20; }
+      if (fighter.trackId === "street") { return 18; }
+      return 18;
+    }
+    if (Number(fighter.age) > 15 && Number(fighter.age) < 60 && !fighter.__ageBugRepaired260) {
+      return Number(fighter.age);
+    }
+    if (fighter.trackId === "pro") {
+      return U.clamp(20 + (seed % 19) + (rating >= 170 ? 3 : 0), 20, 41);
+    }
+    if (fighter.trackId === "street") {
+      return U.clamp(18 + (seed % 24), 18, 45);
+    }
+    return U.clamp(16 + (seed % 15), 16, 31);
+  }
+
+  function repairAgeAndNameSchema(state) {
+    var usedNames = {};
+    var i;
+    var fighter;
+    var originCountryId;
+    var repairedAge;
+    var baseAge;
+    var elapsedYears;
+    if (!state || !(state.roster instanceof Array)) { return; }
+    for (i = 0; i < state.roster.length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter) { continue; }
+
+      if (!fighter.ageBaseWeek || Number(fighter.age) <= 15 || fighter.__ageSchemaVersion !== "age-v2") {
+        repairedAge = inferStableAge(fighter, i, state.week);
+        fighter.baseAge = repairedAge;
+        fighter.ageBaseWeek = Math.max(1, Number(state.week) || 1);
+        fighter.__ageBugRepaired260 = true;
+        fighter.__ageSchemaVersion = "age-v2";
+      }
+
+      baseAge = Number(fighter.baseAge) || inferStableAge(fighter, i, state.week);
+      elapsedYears = Math.max(0, Math.floor(((Number(state.week) || 1) - (Number(fighter.ageBaseWeek) || 1)) / 48));
+      fighter.age = U.clamp(baseAge + elapsedYears, 14, 60);
+      fighter.birthMonth = Number(fighter.birthMonth) || U.randomInt(1, 12);
+      fighter.birthWeek = Number(fighter.birthWeek) || U.randomInt(1, 4);
+      fighter.birthdayLabel = "месяц " + fighter.birthMonth + ", " + fighter.birthWeek + " неделя";
+
+      originCountryId = fighter.originCountryId || fighter.homeCountryId || fighter.nameCountryId || fighter.countryId;
+      if (!fighter.isPlayer && fighter.namesSchemaVersion !== NAME_SCHEMA_VERSION) {
+        fighter.name = countrySpecificName(U.findCountry(originCountryId), (Number(fighter.seed) || i + 1) + i * 97);
+        fighter.nameCountryId = originCountryId;
+        fighter.namesSchemaVersion = NAME_SCHEMA_VERSION;
+      }
+
+      if (!fighter.isPlayer) {
+        while (usedNames[fighter.name]) {
+          fighter.name = countrySpecificName(U.findCountry(originCountryId), (Number(fighter.seed) || i + 1) + i * 997 + Object.keys(usedNames).length * 13);
+          fighter.namesSchemaVersion = NAME_SCHEMA_VERSION;
+          if (!usedNames[fighter.name]) { break; }
+          fighter.name = fighter.name + " " + String.fromCharCode(65 + (i % 26));
+        }
+      }
+      usedNames[fighter.name] = true;
+    }
+  }
+
   function repairState(state) {
     var i;
     var p;
@@ -1079,6 +1234,8 @@
       ensureTrackRecords(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }
+
+    repairAgeAndNameSchema(state);
 
     p = player(state);
     if (p) {
@@ -1200,6 +1357,7 @@
     cloneRecord: cloneRecord,
     dateParts: dateParts,
     dateText: dateText,
+    suggestNameForCountry: suggestNameForCountry,
     ensurePlayerSystems: ensurePlayerSystems,
     addMoney: addMoney,
     spendMoney: spendMoney,

@@ -4,9 +4,9 @@
   window.FS = window.FS || {};
 
   window.FS.Data = {
-    appVersion: "ui-stability-flags-2.5.9",
+    appVersion: "core-logic-rebuild-2.6.0",
     saveKey: "fight_simulator_vertical_slice_v10",
-    saveSchemaVersion: 259,
+    saveSchemaVersion: 260,
 
     tracks: {
       amateur: {

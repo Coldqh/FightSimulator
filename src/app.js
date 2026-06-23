@@ -12,6 +12,7 @@
   var bootSplash = document.getElementById("bootSplash");
   var state = null;
   var bootReady = false;
+  var renderQueued = false;
   var flagPreloadDone = false;
 
   function preloadFlagAssets() {
@@ -95,7 +96,12 @@
 
   function saveAndRender() {
     persistNow();
-    render();
+    if (renderQueued) { return; }
+    renderQueued = true;
+    (window.requestAnimationFrame || window.setTimeout)(function () {
+      renderQueued = false;
+      render();
+    }, 0);
   }
 
   function rebuildWorld(message) {
@@ -209,7 +215,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.9&target=2.5.9&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.0&target=2.6.0&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -382,18 +388,38 @@
     function ensureAges() {
       if (!targetState || !targetState.roster) { return; }
       var week = Number(targetState.week) || 1;
-      targetState.roster.forEach(function (fighter) {
-        var age;
+      targetState.roster.forEach(function (fighter, index) {
+        var seed;
+        var rating;
+        var baseAge;
+        var elapsedYears;
         if (!fighter) { return; }
-        age = Math.max(14, Number(fighter.age) || (fighter.isPlayer ? 18 : 20));
-        if (!fighter.birthWeek) {
-          fighter.birthWeek = Math.max(1, week - age * 48);
-          fighter.birthYear = Math.floor((fighter.birthWeek - 1) / 48) + 1;
-          fighter.birthMonth = Math.floor(((fighter.birthWeek - 1) % 48) / 4) + 1;
-          fighter.birthWeekOfMonth = ((fighter.birthWeek - 1) % 4) + 1;
+        seed = Math.abs(Number(fighter.seed) || index + 1);
+        rating = ovr(fighter);
+
+        if (!fighter.ageBaseWeek || Number(fighter.age) <= 15 || fighter.__ageSchemaVersion !== "age-v2") {
+          if (fighter.isPlayer) {
+            if (Number(fighter.age) > 15) { baseAge = Number(fighter.age); }
+            else if (fighter.trackId === "pro") { baseAge = 20; }
+            else { baseAge = 18; }
+          } else if (fighter.trackId === "pro") {
+            baseAge = Math.max(20, Math.min(41, 20 + (seed % 19) + (rating >= 170 ? 3 : 0)));
+          } else if (fighter.trackId === "street") {
+            baseAge = Math.max(18, Math.min(45, 18 + (seed % 24)));
+          } else {
+            baseAge = Math.max(16, Math.min(31, 16 + (seed % 15)));
+          }
+          fighter.baseAge = baseAge;
+          fighter.ageBaseWeek = week;
+          fighter.__ageSchemaVersion = "age-v2";
+          fighter.__ageBugRepaired260 = true;
         }
-        fighter.age = Math.max(14, Math.floor((week - fighter.birthWeek) / 48));
-        fighter.birthdayLabel = "год " + fighter.birthYear + ", месяц " + fighter.birthMonth + ", " + fighter.birthWeekOfMonth + " неделя";
+
+        elapsedYears = Math.max(0, Math.floor((week - (Number(fighter.ageBaseWeek) || week)) / 48));
+        fighter.age = Math.max(14, Math.min(60, (Number(fighter.baseAge) || Number(fighter.age) || 18) + elapsedYears));
+        fighter.birthMonth = Number(fighter.birthMonth) || U.randomInt(1, 12);
+        fighter.birthWeek = Number(fighter.birthWeek) || U.randomInt(1, 4);
+        fighter.birthdayLabel = "месяц " + fighter.birthMonth + ", " + fighter.birthWeek + " неделя";
       });
     }
 
@@ -435,32 +461,26 @@
     }
 
     function repairProTitles() {
-      if (!targetState || !targetState.roster || !D.weightClasses) { return; }
-      targetState.titles = targetState.titles || {};
-      ["wbc", "wba", "wbo", "ibf"].forEach(function (bodyId) {
-        D.weightClasses.forEach(function (weight) {
-          var id = "pro_" + bodyId + "_" + weight.id;
-          var title = targetState.titles[id];
-          var champion = title && byId(title.championId);
-          var pool;
-          if (champion && !champion.retired) { return; }
-          pool = targetState.roster.filter(function (fighter) {
-            return fighter && fighter.trackId === "pro" && fighter.weightClassId === weight.id && !fighter.retired;
-          }).sort(function (a, b) { return ovr(b) - ovr(a); });
-          if (pool[0]) {
-            targetState.titles[id] = Object.assign(title || {}, {
-              id: id,
-              trackId: "pro",
-              countryId: "world",
-              weightClassId: weight.id,
-              bodyId: bodyId,
-              label: bodyId.toUpperCase(),
-              championId: pool[0].id,
-              active: true
-            });
-          }
-        });
+      if (!targetState || !targetState.roster) { return; }
+      if (!targetState.titles || typeof targetState.titles !== "object") { targetState.titles = {}; }
+      Object.keys(targetState.titles).forEach(function (key) {
+        var title = targetState.titles[key];
+        if (!title) { delete targetState.titles[key]; return; }
+        if (title.trackId === "pro" && key.indexOf("|") === -1) { delete targetState.titles[key]; }
+        if (title.trackId === "amateur") { delete targetState.titles[key]; }
       });
+      targetState.roster.forEach(function (fighter) {
+        if (!fighter) { return; }
+        fighter.titles = fighter.titles instanceof Array ? fighter.titles.filter(function (titleId, index, list) {
+          return titleId && list.indexOf(titleId) === index && targetState.titles[titleId] && targetState.titles[titleId].championId === fighter.id;
+        }) : [];
+      });
+      if (window.FS.Titles && window.FS.Titles.ensureTitles) {
+        window.FS.Titles.ensureTitles(targetState);
+      }
+      if (window.FS.Titles && window.FS.Titles.normalizeFighterTitles) {
+        window.FS.Titles.normalizeFighterTitles(targetState);
+      }
     }
 
     function addForeignAmateurOffers() {
@@ -600,6 +620,12 @@
       var countryInput = document.getElementById("careerCountry");
       var countryDropdown = document.getElementById("careerCountryDropdown");
       if (countryInput) { countryInput.value = button.dataset.startCountry; }
+      var nameInput = document.getElementById("careerName");
+      if (nameInput && (!nameInput.value || nameInput.value === "Влад" || nameInput.dataset.autoName === "1")) {
+        nameInput.value = (State.suggestNameForCountry ? State.suggestNameForCountry(button.dataset.startCountry, Date.now()) : nameInput.value);
+        nameInput.dataset.autoName = "1";
+      }
+      var careerNameAutoSeed = true;
       if (countryDropdown && Render.startCountryDropdown) {
         countryDropdown.innerHTML = Render.startCountryDropdown(button.dataset.startCountry);
       }

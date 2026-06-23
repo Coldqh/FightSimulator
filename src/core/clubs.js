@@ -41,28 +41,28 @@
   function clubLabel(country, index) {
     var cities = country.cities || citiesByCountry[country.id] || [country.city || country.label];
     var names = country.gymNames || namesByCountry[country.id] || namesByCountry.usa;
+    var suffixes = ["Academy","Club","Gym","Boxing","Ring","Fight House","Boxing Hall","Training Center","Combat Club","Glove School","Corner Club","Punch Lab","Athletic Club","Fight Camp","Boxing Works","Ring School","Champions Room","Boxing Society","Fight Studio","Boxing Yard","Boxing House","Boxing Project","Ring Lab","Boxing Union","Boxing Base","Sports Club","Fight Center","Boxing Studio","Boxing Circle","Boxing League"];
+    var districts = ["North","South","East","West","Central","Old Town","Harbor","Market","Station","River","Hill","Park","Garden","Industrial","University","Downtown","Uptown","Lakeside","Seaside","Valley","Capital","Metro","Olympic","Victory","Liberty","Union","Crown","Lion","Eagle","Falcon"];
     var city = String(cities[index % cities.length] || country.label).trim();
-    var name = String(names[index % names.length] || "Boxing Club").trim();
-    var district = Math.floor(index / names.length);
+    var base = String(names[(index * 7 + Math.floor(index / Math.max(1, cities.length))) % names.length] || "Boxing Club").trim();
+    var suffix = suffixes[Math.floor(index / Math.max(1, names.length)) % suffixes.length];
+    var district = districts[(index * 5 + Math.floor(index / Math.max(1, names.length))) % districts.length];
     var lowerCity = city.toLowerCase();
-    var lowerName;
     var output;
 
-    while (name.toLowerCase().indexOf(lowerCity + " " + lowerCity + " ") === 0) {
-      name = name.slice(city.length + 1);
-    }
+    base = base.replace(/\s+\d+$/g, "").trim();
 
-    lowerName = name.toLowerCase();
-    if (lowerName.indexOf(lowerCity) === 0 || lowerName.indexOf(country.label.toLowerCase()) === 0) {
-      output = district ? (name + " " + (district + 1)) : name;
+    if (base.toLowerCase().indexOf(lowerCity) === 0 || base.toLowerCase().indexOf(String(country.label || "").toLowerCase()) === 0) {
+      output = base;
+    } else if (index % 3 === 0) {
+      output = city + " " + base;
+    } else if (index % 3 === 1) {
+      output = district + " " + base;
     } else {
-      output = district ? (city + " " + name + " " + (district + 1)) : (city + " " + name);
+      output = city + " " + district + " " + suffix;
     }
 
-    while (output.toLowerCase().indexOf(lowerCity + " " + lowerCity + " ") === 0) {
-      output = output.slice(city.length + 1);
-    }
-
+    output = output.replace(/\s+\d+$/g, "").replace(/\s+/g, " ").trim();
     return output;
   }
 
@@ -98,7 +98,7 @@
         band = levelBand(level);
         club = existingById["club_" + country.id + "_" + j] || { id: "club_" + country.id + "_" + j };
         name = clubLabel(country, j);
-        while (usedNames[name]) { name = clubLabel(country, j + Object.keys(usedNames).length + 1); }
+        while (usedNames[name]) { name = clubLabel(country, j + Object.keys(usedNames).length + 7); }
         usedNames[name] = true;
         club.name = name;
         club.countryId = country.id;

@@ -81,9 +81,20 @@
     var country;
     var weightClass;
     var proOffsetByWeight = {};
+    var key;
 
     if (!state.titles || typeof state.titles !== "object") {
       state.titles = {};
+    }
+
+    for (key in state.titles) {
+      if (Object.prototype.hasOwnProperty.call(state.titles, key)) {
+        if (!state.titles[key] || state.titles[key].trackId === "amateur") {
+          delete state.titles[key];
+        } else if (state.titles[key].trackId === "pro" && key.indexOf("|") === -1) {
+          delete state.titles[key];
+        }
+      }
     }
 
     removeAmateurTitles(state);

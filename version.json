@@ -1,7 +1,7 @@
 {
-  "version": "ui-stability-flags-2.5.9",
-  "mode": "ui-stability-flags",
-  "cacheVersion": "fight-simulator-ui-stability-flags-2.5.9",
+  "version": "core-logic-rebuild-2.6.0",
+  "mode": "core-logic-rebuild",
+  "cacheVersion": "fight-simulator-core-logic-rebuild-2.6.0",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

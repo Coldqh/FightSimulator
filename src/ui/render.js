@@ -132,7 +132,7 @@
         '<div class="start-body">' +
           summaryHtml() +
           '<div class="grid two start-form-grid">' +
-            '<label><div class="label">Имя бойца</div><input id="careerName" value="Влад" maxlength="32"></label>' +
+            '<label><div class="label">Имя бойца</div><input id="careerName" value="' + U.escapeHtml(State.suggestNameForCountry ? State.suggestNameForCountry(\'russia\', Date.now()) : U.createName(U.findCountry(\'russia\'), Date.now())) + '" data-auto-name="1" maxlength="32"></label>' +
             '<label><div class="label">Страна</div><input id="careerCountry" type="hidden" value="russia"><div id="careerCountryDropdown">' + countryDropdown('russia', 'data-start-country', 'start-country-dropdown') + '</div></label>' +
             '<label><div class="label">Весовая категория</div><select id="careerWeightClass">' + weightOptions + '</select></label>' +
           '</div>' +
