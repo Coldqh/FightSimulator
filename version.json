@@ -1,7 +1,7 @@
 {
-  "version": "final-version-fix-2.3.9",
-  "mode": "final-version-fix",
-  "cacheVersion": "fight-simulator-final-version-fix-2.3.9",
+  "version": "ui-remake-2.4.0",
+  "mode": "ui-remake",
+  "cacheVersion": "fight-simulator-ui-remake-2.4.0",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
