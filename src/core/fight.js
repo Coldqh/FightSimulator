@@ -623,8 +623,6 @@
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
     opponent.careerLog = opponent.careerLog instanceof Array ? opponent.careerLog : [];
-    opponent.careerLog.unshift({ week: state.week, text: oppLine, meta: { fighterId: p.id } });
-    if (opponent.careerLog.length > 8) { opponent.careerLog.length = 8; }
     p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
     opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
     p.recentOpponentIds.unshift(opponent.id); opponent.recentOpponentIds.unshift(p.id);
@@ -710,8 +708,8 @@
     }
     p.lastFightWeek = state.week;
     opponent.lastFightWeek = state.week;
-    p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method, meta: { fighterId: opponent.id } });
-    opponent.careerLog.unshift({ week: state.week, text: "Бой против " + p.name + ": " + result, meta: { fighterId: p.id } });
+    p.careerLog.unshift({ week: state.week, text: result + " против " + opponent.name + ", " + method, meta: { fighterId: opponent.id, opponentId: opponent.id, result: result, method: method } });
+    opponent.careerLog.unshift({ week: state.week, text: (result === "Победа" ? "Поражение от " : (result === "Поражение" ? "Победа над " : "Ничья с ")) + p.name + ", " + method, meta: { fighterId: p.id, opponentId: p.id, result: result === "Победа" ? "Поражение" : (result === "Поражение" ? "Победа" : "Ничья"), method: method } });
 
     if (offer) {
       state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });

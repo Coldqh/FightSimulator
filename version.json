@@ -1,7 +1,7 @@
 {
-  "version": "core-mobile-rows-2.5.4",
-  "mode": "core-mobile-rows",
-  "cacheVersion": "fight-simulator-core-mobile-rows-2.5.4",
+  "version": "core-profile-system-2.5.5",
+  "mode": "core-profile-system",
+  "cacheVersion": "fight-simulator-core-profile-system-2.5.5",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
