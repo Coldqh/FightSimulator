@@ -761,9 +761,57 @@
     else if (tab === "settings") { content = renderSettingsTab(state); }
     else { content = renderPeopleTab(state); }
 
-    var sideTabs = renderTabs(state).replace('class="tabs"', 'class="tabs side-tabs"');
+    function desktopTabs() {
+      return renderTabs(state).replace('class="tabs"', 'class="tabs side-tabs"');
+    }
+
+    function tabButton(id, icon, label) {
+      return '<button class="f1-nav-btn ' + (tab === id ? 'active' : '') + '" data-tab="' + id + '"><span>' + icon + '</span>' + label + '</button>';
+    }
+
+    function moreItem(id, icon, label) {
+      return '<button data-tab="' + id + '">' + icon + ' ' + label + '</button>';
+    }
+
+    function mobileNav() {
+      return '<nav class="f1-mobile-nav">' +
+        tabButton('dashboard', '🏠', 'Обзор') +
+        tabButton('profile', '🥊', 'Профиль') +
+        '<button class="f1-nav-btn week" data-action="next-week"><span>⏭</span>Неделя</button>' +
+        (p.trackId !== 'pro' ? tabButton('fights', '🔥', 'Бои') : tabButton('pro', '💼', 'Профи')) +
+        '<button class="f1-nav-btn ' + (state.mobileMoreOpen ? 'more-active' : '') + '" data-mobile-more="toggle"><span>☰</span>Ещё</button>' +
+      '</nav>';
+    }
+
+    function moreSheet() {
+      if (!state.mobileMoreOpen) { return ''; }
+      return '<div class="f1-more-backdrop" data-mobile-more-close="1"></div>' +
+        '<section class="f1-more-sheet">' +
+          '<div class="f1-more-head"><div class="f1-more-title"><strong>Ещё</strong><span>Остальные окна карьеры</span></div><button class="small-btn" data-mobile-more-close="1">Закрыть</button></div>' +
+          '<div class="f1-more-grid">' +
+            (p.trackId === 'amateur' ? moreItem('world', '🌍', 'Люб. путь') : '') +
+            (p.trackId === 'pro' ? moreItem('pro', '💼', 'Профи') : '') +
+            moreItem('training', '📈', 'Статы') +
+            moreItem('ranking', '🏆', 'Рейтинг') +
+            moreItem('myclub', '🏟️', 'Мой клуб') +
+            moreItem('clubs', '🏛️', 'Клубы') +
+            moreItem('favorites', '⭐', 'Избранные') +
+            moreItem('news', '📰', 'Новости') +
+            moreItem('people', '👥', 'Люди') +
+            moreItem('settings', '⚙️', 'Настройки') +
+          '</div>' +
+        '</section>';
+    }
+
     var trackLabel = p && p.trackId ? U.findTrack(p.trackId).label : "Карьера";
-    return "<div class=\"ui-remake-layout\"><aside class=\"ui-side-nav\"><div class=\"side-title\"><span>🥊 Fight World</span><small>" + U.escapeHtml(trackLabel) + "</small></div>" + sideTabs + "</aside><section class=\"panel main-panel ui-remake-main\"><div class=\"tab-scroll-area\"><div class=\"feed\">" + U.escapeHtml(state.feed || "Готово.") + "</div>" + content + "</div></section></div>";
+
+    return '<div class="f1-layout">' +
+      '<aside class="f1-side-nav"><div class="f1-side-title"><span>🏁 Fight World</span><small>' + U.escapeHtml(trackLabel) + '</small></div>' + desktopTabs() + '</aside>' +
+      '<section class="panel main-panel f1-main"><div class="tab-scroll-area"><div class="feed">' + U.escapeHtml(state.feed || "Готово.") + '</div>' + content + '</div></section>' +
+      '</div>' +
+      '<div class="f1-bottom-spacer"></div>' +
+      mobileNav() +
+      moreSheet();
   }
 
   function renderClubModal(state, club) {

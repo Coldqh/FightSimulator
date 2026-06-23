@@ -194,7 +194,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.4.1&target=2.4.1&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.0&target=2.5.0&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -589,6 +589,18 @@
       return;
     }
 
+    if (button.dataset.mobileMore) {
+      state.mobileMoreOpen = !state.mobileMoreOpen;
+      saveAndRender();
+      return;
+    }
+
+    if (button.dataset.mobileMoreClose) {
+      state.mobileMoreOpen = false;
+      saveAndRender();
+      return;
+    }
+
     if (state.gameOver && button.dataset.action !== "reset-career" && button.dataset.action !== "export-save" && button.dataset.action !== "close-modal") {
       state.modal = state.modal || { type: "gameOver", title: "Игра окончена", text: "Карьера завершена.", money: State.player(state) ? State.player(state).money : 0 };
       saveAndRender();
@@ -618,6 +630,7 @@
     } else if (button.dataset.action === "reset-career") {
       resetCareer();
     } else if (button.dataset.action === "next-week") {
+      state.mobileMoreOpen = false;
       state.feed = "Неделя " + (state.week + 1) + ". Мир сделал недельный ход.";
       World.advanceWeek(state, "skip");
       saveAndRender();
@@ -661,6 +674,7 @@
       saveAndRender();
     } else if (button.dataset.tab) {
       state.selectedTab = button.dataset.tab;
+      state.mobileMoreOpen = false;
       saveAndRender();
     } else if (button.dataset.teamList) {
       state.modal = {

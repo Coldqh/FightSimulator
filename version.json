@@ -1,7 +1,7 @@
 {
-  "version": "clean-ui-2.4.1",
-  "mode": "clean-main-files",
-  "cacheVersion": "fight-simulator-clean-ui-2.4.1",
+  "version": "f1-mobile-ui-2.5.0",
+  "mode": "f1-mobile-ui",
+  "cacheVersion": "fight-simulator-f1-mobile-ui-2.5.0",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
