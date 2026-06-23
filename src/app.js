@@ -194,7 +194,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.3&target=2.5.3&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.5.4&target=2.5.4&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -542,6 +542,14 @@
   }
 
   document.addEventListener("click", function (event) {
+    var rowFighterTarget = event.target && event.target.closest ? event.target.closest("[data-row-fighter]") : null;
+    if (rowFighterTarget && state && !(event.target.closest && event.target.closest("button[data-preview-fight],button[data-join-club],button[data-club]"))) {
+      state.modal = { type: "fighter", fighterId: rowFighterTarget.getAttribute("data-row-fighter") };
+      state.mobileMoreOpen = false;
+      saveAndRender();
+      return;
+    }
+
     var mobileMoreCloseTarget = event.target && event.target.closest ? event.target.closest("[data-mobile-more-close]") : null;
     if (mobileMoreCloseTarget && state) {
       state.mobileMoreOpen = false;
