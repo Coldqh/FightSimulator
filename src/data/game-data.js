@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "news-links-audit-2.7.4",
-  "saveSchemaVersion": 274,
+  "appVersion": "emergency-render-coach-fix-2.7.5",
+  "saveSchemaVersion": 275,
   "tracks": {
     "amateur": {
       "id": "amateur",

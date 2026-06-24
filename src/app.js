@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.4&target=2.7.4&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.5&target=2.7.5&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -895,6 +895,9 @@
       state.modal = { type: "profileProcess", kind: button.dataset.profileModal };
       saveAndRender();
     } else if (button.dataset.person) {
+      if (window.FS.Clubs && window.FS.Clubs.syncCoachRecords) {
+        try { window.FS.Clubs.syncCoachRecords(state); } catch (error) { console.warn("coach repair before person modal failed:", error); }
+      }
       state.modal = { type: "person", personId: button.dataset.person };
       saveAndRender();
     } else if (button.dataset.favoriteFighter) {
@@ -962,6 +965,9 @@
       state.clubLevelFilter = parseInt(button.dataset.clubLevelFilter, 10) || 0;
       saveAndRender();
     } else if (button.dataset.club) {
+      if (window.FS.Clubs && window.FS.Clubs.ensureClubs) {
+        try { window.FS.Clubs.ensureClubs(state); } catch (error) { console.warn("club repair before club modal failed:", error); }
+      }
       state.modal = {
         type: "club",
         clubId: button.dataset.club

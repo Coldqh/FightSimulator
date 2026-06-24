@@ -71,7 +71,7 @@
     var count = 0;
     var i;
     for (i = 0; i < log.length; i += 1) {
-      if (log[i] && /KO/TKO|нокаут/i.test(log[i].text || "")) { count += 1; }
+      if (log[i] && /KO\/TKO|нокаут/i.test(log[i].text || "")) { count += 1; }
     }
     return count;
   }
@@ -149,12 +149,42 @@
   function syncCoachRecords(state) {
     var recordsByCoach = {};
     var countsByCoach = {};
-    var i; var j; var fighter; var record; var club; var coach; var kos;
+    var clubById = {};
+    var coachById = {};
+    var i;
+    var j;
+    var fighter;
+    var record;
+    var club;
+    var coach;
+    var list;
+    var kos;
+
     if (!state) { return; }
+
+    for (i = 0; i < (state.clubs || []).length; i += 1) {
+      club = state.clubs[i];
+      if (!club || !club.id) { continue; }
+      clubById[club.id] = club;
+      ensureClubCoaches(state, club, U.findCountry(club.countryId), 91000 + i * 1000);
+      list = clubCoachList(club);
+      club.coaches = list;
+      club.coach = list[0] || club.coach;
+      for (j = 0; j < list.length; j += 1) {
+        coachById[list[j].id] = list[j];
+        recordsByCoach[list[j].id] = emptyRecord();
+        countsByCoach[list[j].id] = 0;
+      }
+    }
+
     for (i = 0; i < (state.roster || []).length; i += 1) {
       fighter = state.roster[i];
-      if (!fighter || fighter.retired || !fighter.coachId) { continue; }
-      if (!recordsByCoach[fighter.coachId]) { recordsByCoach[fighter.coachId] = emptyRecord(); countsByCoach[fighter.coachId] = 0; }
+      if (!fighter || fighter.retired) { continue; }
+      if ((!fighter.coachId || !coachById[fighter.coachId]) && fighter.gymId && clubById[fighter.gymId]) {
+        list = clubCoachList(clubById[fighter.gymId]);
+        if (list.length) { fighter.coachId = list[0].id; }
+      }
+      if (!fighter.coachId || !coachById[fighter.coachId]) { continue; }
       record = fighter.record || {};
       kos = Number(record.kos);
       if (!isFinite(kos) || kos <= 0) { kos = estimateKosFromLog(fighter); }
@@ -164,25 +194,27 @@
       recordsByCoach[fighter.coachId].kos += kos || 0;
       countsByCoach[fighter.coachId] += 1;
     }
-    for (i = 0; i < (state.clubs || []).length; i += 1) {
-      club = state.clubs[i];
-      if (!club) { continue; }
-      club.coaches = club.coaches instanceof Array ? club.coaches : (club.coach ? [club.coach] : []);
-      for (j = 0; j < club.coaches.length; j += 1) {
-        coach = club.coaches[j];
-        if (!coach) { continue; }
-        normalizeCoachStats(coach, club);
-        coach.record = recordsByCoach[coach.id] || emptyRecord();
-        coach.assignedCount = countsByCoach[coach.id] || 0;
-      }
-      if (club.coaches[0]) { club.coach = club.coaches[0]; }
-    }
+
+    Object.keys(coachById).forEach(function (coachId) {
+      coach = coachById[coachId];
+      normalizeCoachStats(coach, clubById[coach.clubId] || null);
+      coach.record = recordsByCoach[coachId] || emptyRecord();
+      coach.assignedCount = countsByCoach[coachId] || 0;
+    });
   }
 
   function clubCoachList(club) {
-    if (!club) { return []; }
-    if (club.coaches instanceof Array && club.coaches.length) { return club.coaches; }
-    return club.coach ? [club.coach] : [];
+    var out = [];
+    var seen = {};
+    function add(coach) {
+      if (!coach || typeof coach !== "object" || !coach.id || seen[coach.id]) { return; }
+      seen[coach.id] = true;
+      out.push(coach);
+    }
+    if (!club) { return out; }
+    add(club.coach);
+    if (club.coaches instanceof Array) { club.coaches.forEach(add); }
+    return out;
   }
 
   function coachBelongsToClub(club, coachId) {
@@ -225,6 +257,7 @@
   function findFighterCoach(state, fighter) {
     var club;
     var coach;
+    var list;
     if (!state || !fighter) { return null; }
 
     if (fighter.coachId) {
@@ -235,16 +268,12 @@
     if (!fighter.gymId) { return null; }
     club = findClub(state, fighter.gymId);
     if (!club) { return null; }
+    ensureClubCoaches(state, club, U.findCountry(club.countryId), 94000);
+    list = clubCoachList(club);
+    if (!list.length) { return null; }
 
-    if (!fighter.isPlayer && clubCoachList(club).length) {
-      return clubCoachList(club)[0];
-    }
-
-    if (fighter.isPlayer && clubCoachList(club).length === 1) {
-      return clubCoachList(club)[0];
-    }
-
-    return null;
+    fighter.coachId = list[0].id;
+    return list[0];
   }
 
   function coachFightBonus(state, fighter) {
@@ -301,9 +330,11 @@
   function normalizeCoach(coach, club, fallbackCountry, fallbackIndex) {
     var homeId;
     var currentId;
-    if (!coach) { return null; }
-    currentId = club && club.countryId ? club.countryId : (coach.currentCountryId || coach.countryId || fallbackCountry.id);
-    homeId = coach.homeCountryId || coach.originCountryId || coach.nationalityCountryId || coach.countryId || fallbackCountry.id;
+    var fallback = fallbackCountry || Data.countries[0];
+    var record;
+    if (!coach || typeof coach !== "object") { coach = {}; }
+    currentId = club && club.countryId ? club.countryId : (coach.currentCountryId || coach.countryId || fallback.id);
+    homeId = coach.homeCountryId || coach.originCountryId || coach.nationalityCountryId || coach.countryId || fallback.id;
     coach.id = coach.id || ("coach_" + (club ? club.id : "free") + "_" + (fallbackIndex || 0));
     coach.role = coach.role || "coach";
     coach.name = coach.name || U.createName(U.findCountry(homeId), Date.now() + (fallbackIndex || 0));
@@ -313,7 +344,13 @@
     coach.originCountryId = homeId;
     coach.age = Number(coach.age) || U.randomInt(34, 74);
     coach.clubId = club ? club.id : (coach.clubId || "");
-    coach.record = coach.record || emptyRecord();
+    record = coach.record || {};
+    coach.record = {
+      wins: Number(record.wins) || 0,
+      losses: Number(record.losses) || 0,
+      draws: Number(record.draws) || 0,
+      kos: Number(record.kos) || 0
+    };
     coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
     coach.note = coach.note || "Тренер клуба.";
     coach.active = coach.active !== false;
@@ -325,26 +362,29 @@
   }
 
   function ensureClubCoaches(state, club, hostCountry, seedBase) {
-    var targetCount = coachCountForLevel(club.level);
+    var targetCount;
     var list = [];
     var seen = {};
     var i;
     var coach;
+    var country = hostCountry || U.findCountry(club && club.countryId);
+    if (!club) { return; }
+    targetCount = coachCountForLevel(club.level);
 
     function add(coach) {
-      coach = normalizeCoach(coach, club, hostCountry, list.length);
+      coach = normalizeCoach(coach, club, country, list.length);
       if (!coach || seen[coach.id]) { return; }
       seen[coach.id] = true;
       list.push(coach);
     }
 
-    if (club.coach) { add(club.coach); }
+    add(club.coach);
     if (club.coaches instanceof Array) {
       for (i = 0; i < club.coaches.length; i += 1) { add(club.coaches[i]); }
     }
 
     while (list.length < targetCount) {
-      coach = createCoach(hostCountry, club.id + "_" + list.length, (seedBase || 0) + list.length * 137);
+      coach = createCoach(country, club.id + "_" + list.length, (seedBase || 0) + list.length * 137);
       coach.clubId = club.id;
       coach.note = list.length === 0 ? "Главный тренер клуба." : "Тренер клуба.";
       coach.stats = coachStatsFromSeed(club.level, (seedBase || 0) + list.length * 137);
@@ -356,7 +396,7 @@
 
     if (list.length > targetCount) { list.length = targetCount; }
     club.coaches = list;
-    club.coach = club.coaches[0] || normalizeCoach(club.coach, club, hostCountry, 0) || createCoach(hostCountry, club.id, seedBase || 0);
+    club.coach = club.coaches[0] || createCoach(country, club.id, seedBase || 0);
     club.coach.note = "Главный тренер клуба.";
   }
 
@@ -606,14 +646,20 @@
     var i;
     var j;
     var club;
-    if (!coachId) { return null; }
+    var list;
+    var teamCoach;
+    if (!state || !coachId) { return null; }
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
-      if (club.coach && club.coach.id === coachId) { return club.coach; }
-      if (club.coaches instanceof Array) {
-        for (j = 0; j < club.coaches.length; j += 1) {
-          if (club.coaches[j] && club.coaches[j].id === coachId) { return club.coaches[j]; }
-        }
+      list = clubCoachList(club);
+      for (j = 0; j < list.length; j += 1) {
+        if (list[j] && list[j].id === coachId) { return list[j]; }
+      }
+    }
+    if (state.world && state.world.teamCoaches) {
+      for (i = 0; i < Object.keys(state.world.teamCoaches).length; i += 1) {
+        teamCoach = state.world.teamCoaches[Object.keys(state.world.teamCoaches)[i]];
+        if (teamCoach && teamCoach.id === coachId) { return teamCoach; }
       }
     }
     return null;
