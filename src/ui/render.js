@@ -157,11 +157,17 @@
 
   function f1EffectiveOvrText(base, bonus, total) {
     base = Math.round(Number(base) || 0);
-    bonus = Math.round(Number(bonus) || 0);
+    bonus = Math.ceil(Number(bonus) || 0);
     total = Math.round(Number(total) || base + bonus);
-    return base + ' + ' + bonus + ' = ' + total;
+    return String(total);
   }
 
+
+  function f1EffectiveOvrSubText(base, bonus) {
+    base = Math.round(Number(base) || 0);
+    bonus = Math.ceil(Number(bonus) || 0);
+    return "базовый " + base + " + тренер " + bonus;
+  }
 
   function option(value, label, selectedValue) {
     return "<option value=\"" + U.escapeHtml(value) + "\"" + (value === selectedValue ? " selected" : "") + ">" + U.escapeHtml(label) + "</option>";
@@ -619,22 +625,74 @@
     return out;
   }
 
+  function f1AllCoaches(state) {
+    var out = [];
+    var seen = {};
+    function add(coach) {
+      if (!coach || !coach.id || !coach.name || seen[coach.id]) { return; }
+      seen[coach.id] = true;
+      out.push(coach);
+    }
+    (state.clubs || []).forEach(function (club) {
+      if (!club) { return; }
+      add(club.coach);
+      (club.coaches || []).forEach(add);
+    });
+    if (state.world && state.world.teamCoaches) {
+      Object.keys(state.world.teamCoaches).forEach(function (countryId) { add(state.world.teamCoaches[countryId]); });
+    }
+    if (state.world && state.world.teamsByCountry) {
+      Object.keys(state.world.teamsByCountry).forEach(function (countryId) { add(state.world.teamsByCountry[countryId] && state.world.teamsByCountry[countryId].coach); });
+    }
+    return out;
+  }
+
+  function f1AllClubs(state) {
+    return (state.clubs || []).filter(function (club) { return club && club.id && club.name; });
+  }
+
+  function f1ReplaceLinkedNames(html, items, attrName) {
+    var usedNames = {};
+    items
+      .filter(function (item) { return item && item.name; })
+      .sort(function (a, b) { return String(b.name).length - String(a.name).length; })
+      .forEach(function (item) {
+        var escapedName;
+        var rx;
+        if (usedNames[item.name]) { return; }
+        usedNames[item.name] = true;
+        escapedName = U.escapeHtml(item.name);
+        rx = new RegExp(f1EscapeRegExp(escapedName), "g");
+        html = html.replace(rx, '<button class="f1-news-link" ' + attrName + '="' + U.escapeHtml(item.id) + '">' + escapedName + '</button>');
+      });
+    return html;
+  }
+
   function f1NewsText(state, item) {
     var text = String((item && item.text) || "");
     var html = U.escapeHtml(text);
-    var fighters = f1AllFighters(state)
-      .filter(function (fighter) { return fighter.name && text.indexOf(fighter.name) !== -1; })
-      .sort(function (a, b) { return b.name.length - a.name.length; });
-    var usedNames = {};
-    fighters.forEach(function (fighter) {
-      var escapedName;
-      var rx;
-      if (usedNames[fighter.name]) { return; }
-      usedNames[fighter.name] = true;
-      escapedName = U.escapeHtml(fighter.name);
-      rx = new RegExp(f1EscapeRegExp(escapedName), "g");
-      html = html.replace(rx, '<button class="f1-news-link" data-fighter="' + U.escapeHtml(fighter.id) + '">' + escapedName + '</button>');
-    });
+    var meta = item && item.meta ? item.meta : {};
+    var fighters = f1AllFighters(state).filter(function (fighter) { return fighter.name && text.indexOf(fighter.name) !== -1; });
+    var coaches = f1AllCoaches(state).filter(function (coach) { return coach.name && text.indexOf(coach.name) !== -1; });
+    var clubs = f1AllClubs(state).filter(function (club) { return club.name && text.indexOf(club.name) !== -1; });
+
+    if (meta.fighterId) {
+      var metaFighter = U.getFighterById(state, meta.fighterId);
+      if (metaFighter) { fighters.push(metaFighter); }
+    }
+    if (meta.coachId) {
+      f1AllCoaches(state).forEach(function (coach) { if (coach.id === meta.coachId) { coaches.push(coach); } });
+    }
+    if (meta.clubId) {
+      f1AllClubs(state).forEach(function (club) { if (club.id === meta.clubId) { clubs.push(club); } });
+    }
+    if (meta.fromClubId) {
+      f1AllClubs(state).forEach(function (club) { if (club.id === meta.fromClubId) { clubs.push(club); } });
+    }
+
+    html = f1ReplaceLinkedNames(html, clubs, "data-club");
+    html = f1ReplaceLinkedNames(html, coaches, "data-person");
+    html = f1ReplaceLinkedNames(html, fighters, "data-fighter");
     return html;
   }
 
@@ -1171,7 +1229,7 @@
         "<div class=\"f1-card-title\"><h3>Сборная " + f1CountryFull(country.id) + "</h3><span class=\"f1-metric ovr\">" + ((team.main || []).length) + "/12</span></div>" +
         "<div class=\"f1-card-sub\">Тренер: " + coachButton + " · резерв: " + ((team.reserve || []).length) + " / 48</div>" +
       "</div>" +
-      (strongest ? "<div class=\"f1-row-list\">" + f1FighterRow(state, strongest, { countryMode: "flag", extra: "Сильнейший", showStatus: true }) + "</div>" : "") +
+      (strongest ? "<div class=\"f1-row-list\">" + f1FighterRow(state, strongest, { countryMode: "flag", showWeight: false, showStatus: true }) + "</div>" : "") +
       (compact ? "" : "<div class=\"row\" style=\"margin-top:12px\"><button class=\"small-btn\" data-team-card=\"" + U.escapeHtml(country.id) + "\">Открыть карточку</button><button class=\"small-btn primary\" data-team-list=\"main\" data-team-country=\"" + U.escapeHtml(country.id) + "\">Ростер</button><button class=\"small-btn\" data-team-list=\"reserve\" data-team-country=\"" + U.escapeHtml(country.id) + "\">Резерв</button></div>") +
     "</div>";
   }

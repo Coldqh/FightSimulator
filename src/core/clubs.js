@@ -66,33 +66,27 @@
     return output;
   }
 
+  function estimateKosFromLog(fighter) {
+    var log = fighter && fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    var count = 0;
+    var i;
+    for (i = 0; i < log.length; i += 1) {
+      if (log[i] && /KO/TKO|нокаут/i.test(log[i].text || "")) { count += 1; }
+    }
+    return count;
+  }
+
   function coachStatsFromSeed(level, seed) {
-    var ranges = {
-      1: [18, 38],
-      2: [34, 52],
-      3: [48, 66],
-      4: [62, 78],
-      5: [76, 90],
-      6: [88, 100]
-    };
+    var ranges = { 1: [12, 32], 2: [28, 46], 3: [42, 60], 4: [56, 74], 5: [70, 86], 6: [84, 100] };
     var safeLevel = Math.max(1, Math.min(6, Number(level) || 1));
     var range = ranges[safeLevel] || ranges[1];
     var targetOvr = U.randomInt(range[0], range[1]);
-    var targetStat = targetOvr * 2;
     var n = Math.abs(Number(seed) || 1);
-
     function roll(offset) {
       n = (n * 9301 + 49297 + offset) % 233280;
-      return U.clamp(targetStat + Math.round((n / 233280) * 18) - 9 + U.randomInt(-4, 4), 1, 200);
+      return U.clamp(targetOvr + Math.round((n / 233280) * 10) - 5 + U.randomInt(-3, 3), 1, 100);
     }
-
-    return {
-      technique: roll(11),
-      conditioning: roll(23),
-      tactics: roll(37),
-      corner: roll(53),
-      development: roll(71)
-    };
+    return { technique: roll(11), conditioning: roll(23), tactics: roll(37), corner: roll(53), development: roll(71) };
   }
 
   function normalizeCoachStats(coach, club) {
@@ -102,42 +96,36 @@
     var currentOvr;
     var tooStrongForClub;
     var tooWeakForClub;
+    var hasOldScale;
     coach.stats = coach.stats && typeof coach.stats === "object" ? coach.stats : expected;
-    coach.stats.technique = U.clamp(Number(coach.stats.technique) || expected.technique, 1, 200);
-    coach.stats.conditioning = U.clamp(Number(coach.stats.conditioning) || expected.conditioning, 1, 200);
-    coach.stats.tactics = U.clamp(Number(coach.stats.tactics) || expected.tactics, 1, 200);
-    coach.stats.corner = U.clamp(Number(coach.stats.corner) || expected.corner, 1, 200);
-    coach.stats.development = U.clamp(Number(coach.stats.development) || expected.development, 1, 200);
+    coach.stats.technique = U.clamp(Number(coach.stats.technique) || expected.technique, 1, 100);
+    coach.stats.conditioning = U.clamp(Number(coach.stats.conditioning) || expected.conditioning, 1, 100);
+    coach.stats.tactics = U.clamp(Number(coach.stats.tactics) || expected.tactics, 1, 100);
+    coach.stats.corner = U.clamp(Number(coach.stats.corner) || expected.corner, 1, 100);
+    coach.stats.development = U.clamp(Number(coach.stats.development) || expected.development, 1, 100);
     currentOvr = coachOvr(coach);
-    tooStrongForClub = (level <= 1 && currentOvr > 45) || (level <= 2 && currentOvr > 60) || (level <= 3 && currentOvr > 72);
-    tooWeakForClub = (level >= 5 && currentOvr < 68) || (level >= 6 && currentOvr < 82);
-    if (tooStrongForClub || tooWeakForClub || currentOvr <= 1) {
-      coach.stats = expected;
-    }
+    hasOldScale = [coach.stats.technique, coach.stats.conditioning, coach.stats.tactics, coach.stats.corner, coach.stats.development].some(function (value) { return Number(value) > 100; });
+    tooStrongForClub = (level <= 1 && currentOvr > 40) || (level <= 2 && currentOvr > 55) || (level <= 3 && currentOvr > 68);
+    tooWeakForClub = (level >= 5 && currentOvr < 62) || (level >= 6 && currentOvr < 78);
+    if (hasOldScale || tooStrongForClub || tooWeakForClub || currentOvr <= 1) { coach.stats = expected; }
     coach.ovr = coachOvr(coach);
   }
 
   function coachOvr(coach) {
     var stats = coach && coach.stats ? coach.stats : {};
     var average = ((Number(stats.technique) || 1) + (Number(stats.conditioning) || 1) + (Number(stats.tactics) || 1) + (Number(stats.corner) || 1) + (Number(stats.development) || 1)) / 5;
-    return U.clamp(Math.round(average / 2), 1, 100);
+    return U.clamp(Math.round(average), 1, 100);
   }
 
   function coachProfessionalismMultiplier(coach) {
-    return 1 + 0.005 * coachOvr(coach);
+    return 1 + 0.002 * coachOvr(coach);
   }
 
   function fighterEffectiveOvr(state, fighter, coach) {
     var base = fighter && fighter.stats ? U.statAverage(fighter.stats) : 0;
     var usedCoach = coach || findFighterCoach(state, fighter);
-    var bonus = usedCoach ? Math.round(base * (coachProfessionalismMultiplier(usedCoach) - 1)) : 0;
-    return {
-      personal: base,
-      bonus: bonus,
-      total: base + bonus,
-      coach: usedCoach || null,
-      coachOvr: usedCoach ? coachOvr(usedCoach) : 0
-    };
+    var bonus = usedCoach ? Math.ceil(base * (coachProfessionalismMultiplier(usedCoach) - 1)) : 0;
+    return { personal: base, bonus: bonus, total: base + bonus, coach: usedCoach || null, coachOvr: usedCoach ? coachOvr(usedCoach) : 0 };
   }
 
   function coachAssignedFighters(state, coachId) {
@@ -161,29 +149,21 @@
   function syncCoachRecords(state) {
     var recordsByCoach = {};
     var countsByCoach = {};
-    var i;
-    var j;
-    var fighter;
-    var record;
-    var club;
-    var coach;
-
+    var i; var j; var fighter; var record; var club; var coach; var kos;
     if (!state) { return; }
-
     for (i = 0; i < (state.roster || []).length; i += 1) {
       fighter = state.roster[i];
       if (!fighter || fighter.retired || !fighter.coachId) { continue; }
-      if (!recordsByCoach[fighter.coachId]) {
-        recordsByCoach[fighter.coachId] = emptyRecord();
-        countsByCoach[fighter.coachId] = 0;
-      }
+      if (!recordsByCoach[fighter.coachId]) { recordsByCoach[fighter.coachId] = emptyRecord(); countsByCoach[fighter.coachId] = 0; }
       record = fighter.record || {};
+      kos = Number(record.kos);
+      if (!isFinite(kos) || kos <= 0) { kos = estimateKosFromLog(fighter); }
       recordsByCoach[fighter.coachId].wins += Number(record.wins) || 0;
       recordsByCoach[fighter.coachId].losses += Number(record.losses) || 0;
       recordsByCoach[fighter.coachId].draws += Number(record.draws) || 0;
+      recordsByCoach[fighter.coachId].kos += kos || 0;
       countsByCoach[fighter.coachId] += 1;
     }
-
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
       if (!club) { continue; }
@@ -269,7 +249,7 @@
 
   function coachFightBonus(state, fighter) {
     var info = fighterEffectiveOvr(state, fighter);
-    return Math.round(info.bonus / 12);
+    return Math.ceil(info.bonus / 12);
   }
 
   function upsertPerson(state, person) {
@@ -776,60 +756,46 @@
   }
 
   function simulateCoachLife(state) {
-    var i;
-    var j;
-    var club;
-    var pClub;
-    var country;
-    var oldCoach;
-    var newCoach;
-    var eventType;
-    var chance;
-    var target;
-    var targetCountry;
-    var coach;
-    var moved = false;
-    var changed = false;
+    var i; var j; var club; var pClub; var country; var oldCoach; var newCoach; var eventType; var chance; var target; var targetCountry; var coach; var moved = false; var changed = false;
+    var clubs = state.clubs || [];
+    var maxClubs = clubs.length > 260 ? 90 : clubs.length;
+    var start = clubs.length > maxClubs ? ((state.week * maxClubs) % clubs.length) : 0;
+    var index;
     pClub = playerClub(state);
-
-    for (i = 0; i < (state.clubs || []).length; i += 1) {
-      club = state.clubs[i];
+    for (i = 0; i < maxClubs; i += 1) {
+      index = clubs.length ? (start + i) % clubs.length : 0;
+      club = clubs[index];
+      if (!club) { continue; }
       country = U.findCountry(club.countryId);
-      ensureClubCoaches(state, club, country, 110000 + i * 1000);
-
+      ensureClubCoaches(state, club, country, 110000 + index * 1000);
       for (j = 0; j < club.coaches.length; j += 1) {
         coach = club.coaches[j];
         normalizeCoachStats(coach, club);
         coach.age = Number(coach.age) || 45;
         if (state.week % 48 === 1) { coach.age += 1; }
         chance = coach.age >= 70 ? 0.35 : (coach.age >= 60 ? 0.12 : 0.03);
-
         if (U.randomInt(1, 10000) <= Math.round(chance * 100)) {
           oldCoach = coach;
           eventType = U.randomInt(1, 100) <= 18 ? "погиб" : "ушёл на пенсию";
-          newCoach = createCoach(country, club.id + "_" + j, 900000 + state.week * 1000 + i * 10 + j);
+          newCoach = createCoach(country, club.id + "_" + j, 900000 + state.week * 1000 + index * 10 + j);
           newCoach.clubId = club.id;
           newCoach.note = j === 0 ? "Главный тренер клуба." : "Тренер клуба.";
-          newCoach.stats = coachStatsFromSeed(club.level, 900000 + state.week * 1000 + i * 10 + j);
+          newCoach.stats = coachStatsFromSeed(club.level, 900000 + state.week * 1000 + index * 10 + j);
           newCoach.ovr = coachOvr(newCoach);
           newCoach.careerLog.unshift({ week: state.week, text: "Заменил тренера " + oldCoach.name + " в клубе " + club.name + "." });
           club.coaches[j] = newCoach;
           if (j === 0) { club.coach = newCoach; }
           reassignFightersFromCoach(state, oldCoach.id, club);
           changed = true;
-
           if (pClub && pClub.id === club.id) {
             state.modal = { type: "coachEvent", title: "Событие в клубе", text: "Тренер " + oldCoach.name + " " + eventType + ". Новым тренером стал " + newCoach.name + "." };
-            if (window.FS.World && window.FS.World.createNews) {
-              window.FS.World.createNews(state, "club", "В твоём клубе сменился тренер: " + oldCoach.name + " " + eventType + ". Новый тренер — " + newCoach.name + ".", { clubId: club.id });
-            }
+            if (window.FS.World && window.FS.World.createNews) { window.FS.World.createNews(state, "club", "В твоём клубе сменился тренер: " + oldCoach.name + " " + eventType + ". Новый тренер — " + newCoach.name + ".", { clubId: club.id, coachId: newCoach.id }); }
           }
           state.feed = "В клубе " + club.name + " сменился тренер.";
           continue;
         }
-
-        if (U.randomInt(1, 10000) <= 10 && (state.clubs || []).length > 1) {
-          target = state.clubs[U.randomInt(0, state.clubs.length - 1)];
+        if (U.randomInt(1, 10000) <= 8 && clubs.length > 1) {
+          target = clubs[U.randomInt(0, clubs.length - 1)];
           if (target && target.id !== club.id && club.coaches.length > 1 && Math.abs((target.level || 1) - (club.level || 1)) <= 1) {
             club.coaches.splice(j, 1);
             if (!target.coaches) { target.coaches = []; }
@@ -843,27 +809,18 @@
             coach.careerLog.unshift({ week: state.week, text: "Переход в клуб " + target.name + " · " + targetCountry.label + "." });
             if (coach.careerLog.length > 20) { coach.careerLog.length = 20; }
             reassignFightersFromCoach(state, coach.id, club);
-            ensureClubCoaches(state, club, country, 120000 + i * 1000 + j);
-            ensureClubCoaches(state, target, targetCountry, 130000 + i * 1000 + j);
-            if (pClub && (pClub.id === club.id || pClub.id === target.id) && window.FS.World && window.FS.World.createNews) {
-              window.FS.World.createNews(state, "club", "Тренер перешёл: " + coach.name + " · " + club.name + " → " + target.name + ".", { clubId: target.id });
-            }
-            moved = true;
-            changed = true;
-            break;
+            ensureClubCoaches(state, club, country, 120000 + index * 1000 + j);
+            ensureClubCoaches(state, target, targetCountry, 130000 + index * 1000 + j);
+            if (pClub && (pClub.id === club.id || pClub.id === target.id) && window.FS.World && window.FS.World.createNews) { window.FS.World.createNews(state, "club", "Тренер перешёл: " + coach.name + " · " + club.name + " → " + target.name + ".", { clubId: target.id, fromClubId: club.id, coachId: coach.id }); }
+            moved = true; changed = true; break;
           }
         }
       }
-
       if (club.coaches && club.coaches[0]) { club.coach = club.coaches[0]; }
     }
-
-    if (moved && window.FS.World && window.FS.World.createNews) {
-      state.feed = "На тренерском рынке были переходы.";
-    }
-    if (changed) { assignFightersToClubs(state); }
-    else { syncCoachRecords(state); }
-    maybeAddWeeklyPlayerContact(state);
+    if (moved && window.FS.World && window.FS.World.createNews) { state.feed = "На тренерском рынке были переходы."; }
+    if (changed) { assignFightersToClubs(state); } else { syncCoachRecords(state); }
+    if (typeof maybeAddWeeklyPlayerContact === "function") { maybeAddWeeklyPlayerContact(state); }
     syncPeopleForPlayerClub(state);
   }
 

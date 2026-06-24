@@ -721,6 +721,7 @@
         }
       }
       clampFighterStats(state.roster[i]);
+      clampFighterStats(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }
   }
@@ -1269,6 +1270,7 @@
       state.roster[i].hardModeDebt = !!state.roster[i].hardModeDebt;
       state.roster[i].archetypeId = state.roster[i].archetypeId || "";
       ensureTrackRecords(state.roster[i]);
+      clampFighterStats(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }
 

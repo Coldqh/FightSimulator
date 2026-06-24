@@ -80,25 +80,19 @@
     var personal = fighter && fighter.stats ? U.statAverage(fighter.stats) : 0;
     var coach = fightCoachFor(state, fighter, tournamentSession);
     var coachOvr = coachOvrValue(coach);
-    var bonus = Math.round(personal * 0.005 * coachOvr);
-    return {
-      personal: personal,
-      bonus: bonus,
-      total: personal + bonus,
-      coach: coach,
-      coachOvr: coachOvr
-    };
+    var bonus = coach ? Math.ceil(personal * 0.002 * coachOvr) : 0;
+    return { personal: personal, bonus: bonus, total: personal + bonus, coach: coach, coachOvr: coachOvr };
   }
 
   function effectiveRatingLabel(state, fighter, tournamentSession) {
     var info = effectiveRatingForFight(state, fighter, tournamentSession);
-    return info.personal + " + " + info.bonus + " = " + info.total;
+    return String(info.total);
   }
 
   function fightCoachBonus(fighter) {
     var state = window.FS.__currentFightState || null;
     var info = effectiveRatingForFight(state, fighter, window.FS.__currentTournamentSession || null);
-    return Math.round(info.bonus / 12);
+    return Math.ceil(info.bonus / 12);
   }
 
   function estimateWinChanceWithContext(state, player, opponent, tournamentSession) {

@@ -1,7 +1,7 @@
 {
-  "version": "coach-ovr-performance-2.7.2",
-  "mode": "coach-ovr-performance",
-  "cacheVersion": "fight-simulator-coach-ovr-performance-2.7.2",
+  "version": "news-links-audit-2.7.4",
+  "mode": "news-links-audit",
+  "cacheVersion": "fight-simulator-news-links-audit-2.7.4",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

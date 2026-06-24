@@ -12,14 +12,14 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "coach-ovr-performance-2.7.2",
-  "saveSchemaVersion": 272,
+  "appVersion": "news-links-audit-2.7.4",
+  "saveSchemaVersion": 274,
   "tracks": {
     "amateur": {
       "id": "amateur",
       "label": "Любители",
       "short": "Л",
-      "maxStat": 120,
+      "maxStat": 200,
       "rounds": 3,
       "basePurse": 45
     },
@@ -27,7 +27,7 @@
       "id": "street",
       "label": "Улица",
       "short": "У",
-      "maxStat": 150,
+      "maxStat": 200,
       "rounds": 3,
       "basePurse": 120
     },
