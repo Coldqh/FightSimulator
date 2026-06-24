@@ -66,19 +66,90 @@
     return output;
   }
 
+  function coachCountForLevel(level) {
+    return Math.max(1, Math.min(5, Math.ceil((Number(level) || 1) * 5 / 6)));
+  }
+
+  function normalizeCoach(coach, club, fallbackCountry, fallbackIndex) {
+    var homeId;
+    var currentId;
+    if (!coach) { return null; }
+    currentId = club && club.countryId ? club.countryId : (coach.currentCountryId || coach.countryId || fallbackCountry.id);
+    homeId = coach.homeCountryId || coach.originCountryId || coach.nationalityCountryId || coach.countryId || fallbackCountry.id;
+    coach.id = coach.id || ("coach_" + (club ? club.id : "free") + "_" + (fallbackIndex || 0));
+    coach.role = coach.role || "coach";
+    coach.name = coach.name || U.createName(U.findCountry(homeId), Date.now() + (fallbackIndex || 0));
+    coach.countryId = currentId;
+    coach.currentCountryId = currentId;
+    coach.homeCountryId = homeId;
+    coach.originCountryId = homeId;
+    coach.age = Number(coach.age) || U.randomInt(34, 74);
+    coach.clubId = club ? club.id : (coach.clubId || "");
+    coach.record = coach.record || emptyRecord();
+    coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
+    coach.note = coach.note || "Тренер клуба.";
+    coach.active = coach.active !== false;
+    if (!coach.careerLog.length && club) {
+      coach.careerLog.unshift({ week: 1, text: "Работает в клубе " + club.name + "." });
+    }
+    return coach;
+  }
+
+  function ensureClubCoaches(state, club, hostCountry, seedBase) {
+    var targetCount = coachCountForLevel(club.level);
+    var list = [];
+    var seen = {};
+    var i;
+    var coach;
+
+    function add(coach) {
+      coach = normalizeCoach(coach, club, hostCountry, list.length);
+      if (!coach || seen[coach.id]) { return; }
+      seen[coach.id] = true;
+      list.push(coach);
+    }
+
+    if (club.coach) { add(club.coach); }
+    if (club.coaches instanceof Array) {
+      for (i = 0; i < club.coaches.length; i += 1) { add(club.coaches[i]); }
+    }
+
+    while (list.length < targetCount) {
+      coach = createCoach(hostCountry, club.id + "_" + list.length, (seedBase || 0) + list.length * 137);
+      coach.clubId = club.id;
+      coach.note = list.length === 0 ? "Главный тренер клуба." : "Тренер клуба.";
+      coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
+      coach.careerLog.unshift({ week: 1, text: "Пришёл в клуб " + club.name + "." });
+      add(coach);
+    }
+
+    if (list.length > targetCount) { list.length = targetCount; }
+    club.coaches = list;
+    club.coach = club.coaches[0] || normalizeCoach(club.coach, club, hostCountry, 0) || createCoach(hostCountry, club.id, seedBase || 0);
+    club.coach.note = "Главный тренер клуба.";
+  }
+
+  
+
   function createCoach(country, clubId, seed) {
+    var hostCountry = country || Data.countries[0];
+    var originCountry = hostCountry;
     if (U.randomInt(1, 100) <= 9) {
-      country = Data.countries[U.randomInt(0, Data.countries.length - 1)] || country;
+      originCountry = Data.countries[U.randomInt(0, Data.countries.length - 1)] || hostCountry;
     }
     return {
-      id: "coach_" + clubId,
+      id: "coach_" + clubId + "_" + U.randomInt(1000, 9999),
       role: "coach",
-      name: U.createName(country, seed),
-      countryId: country.id,
+      name: U.createName(originCountry, (Number(seed) || Date.now()) + U.randomInt(1, 999999)),
+      countryId: hostCountry.id,
+      currentCountryId: hostCountry.id,
+      homeCountryId: originCountry.id,
+      originCountryId: originCountry.id,
       age: U.randomInt(34, 74),
       clubId: clubId,
       record: emptyRecord(),
-      note: "Главный тренер клуба.",
+      careerLog: [{ week: 1, text: originCountry.id === hostCountry.id ? ("Начал работу в клубе.") : ("Переехал из " + originCountry.label + " в " + hostCountry.label + ".") }],
+      note: "Тренер клуба.",
       active: true
     };
   }
@@ -149,9 +220,8 @@
         club.minOvr = band.min;
         club.maxOvr = band.max;
         club.trainingModifier = band.mod;
-        club.coach = club.coach || createCoach(country, club.id, 70000 + i * 1000 + j);
-        club.coach.clubId = club.id;
         club.rosterIds = club.rosterIds instanceof Array ? club.rosterIds : [];
+        ensureClubCoaches(state, club, country, 70000 + i * 1000 + j);
 
         if (!existingById[club.id]) {
           state.clubs.push(club);
@@ -170,6 +240,11 @@
       maxClubs = Math.max(2, Math.ceil(Math.max(1, countryTotal) / 28));
       return clubIndex >= 0 && clubIndex < maxClubs;
     });
+
+    for (i = 0; i < state.clubs.length; i += 1) {
+      country = U.findCountry(state.clubs[i].countryId);
+      ensureClubCoaches(state, state.clubs[i], country, 90000 + i * 1000);
+    }
 
     if (state._forceClubAssign || state.clubs.some(function (club) { return !(club.rosterIds instanceof Array) || !club.rosterIds.length; })) {
       assignFightersToClubs(state);
@@ -269,10 +344,18 @@
   function strongestFighter(state, clubId) { return clubRoster(state, clubId)[0] || null; }
 
   function findCoach(state, coachId) {
-    var i, club;
+    var i;
+    var j;
+    var club;
+    if (!coachId) { return null; }
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
       if (club.coach && club.coach.id === coachId) { return club.coach; }
+      if (club.coaches instanceof Array) {
+        for (j = 0; j < club.coaches.length; j += 1) {
+          if (club.coaches[j] && club.coaches[j].id === coachId) { return club.coaches[j]; }
+        }
+      }
     }
     return null;
   }
@@ -281,9 +364,20 @@
     var p = window.FS.State.player(state);
     var club = playerClub(state);
     var roster;
+    var coaches;
     state.people = [];
     if (!p || !club) { return; }
-    state.people.push({ id: club.coach.id, role: "coach", name: club.coach.name, note: "Тренер клуба " + club.name, clubId: club.id, personType: "coach" });
+    coaches = club.coaches instanceof Array && club.coaches.length ? club.coaches : (club.coach ? [club.coach] : []);
+    coaches.forEach(function (coach, index) {
+      state.people.push({
+        id: coach.id,
+        role: index === 0 ? "headCoach" : "assistantCoach",
+        name: coach.name,
+        note: (index === 0 ? "Главный тренер" : "Тренер") + " клуба " + club.name,
+        clubId: club.id,
+        personType: "coach"
+      });
+    });
     roster = clubRoster(state, club.id).filter(function (f) { return !f.isPlayer; }).slice(0, 3);
     roster.forEach(function (f) {
       if (U.randomInt(1, 100) <= 70) {
@@ -321,14 +415,19 @@
   function recordClubFight(state, winner, loser, isDraw) {
     var wc = winner ? findClub(state, winner.gymId) : null;
     var lc = loser ? findClub(state, loser.gymId) : null;
-    if (wc && wc.coach) {
-      wc.coach.record = wc.coach.record || emptyRecord();
-      if (isDraw) { wc.coach.record.draws += 1; } else { wc.coach.record.wins += 1; }
+
+    function applyRecord(club, result) {
+      var coaches = club && club.coaches instanceof Array && club.coaches.length ? club.coaches : (club && club.coach ? [club.coach] : []);
+      coaches.forEach(function (coach) {
+        coach.record = coach.record || emptyRecord();
+        if (isDraw) { coach.record.draws += 1; }
+        else if (result === "win") { coach.record.wins += 1; }
+        else { coach.record.losses += 1; }
+      });
     }
-    if (lc && lc.coach) {
-      lc.coach.record = lc.coach.record || emptyRecord();
-      if (isDraw) { lc.coach.record.draws += 1; } else { lc.coach.record.losses += 1; }
-    }
+
+    if (wc) { applyRecord(wc, "win"); }
+    if (lc) { applyRecord(lc, "loss"); }
   }
 
   function maybeMoveNpcClubs(state) {
@@ -359,27 +458,85 @@
   }
 
   function simulateCoachLife(state) {
-    var i, club, pClub, country, oldCoach, eventType, chance;
+    var i;
+    var j;
+    var club;
+    var pClub;
+    var country;
+    var oldCoach;
+    var newCoach;
+    var eventType;
+    var chance;
+    var target;
+    var targetCountry;
+    var coach;
+    var moved = false;
     pClub = playerClub(state);
+
+    function coachList(club) {
+      return club.coaches instanceof Array && club.coaches.length ? club.coaches : (club.coach ? [club.coach] : []);
+    }
+
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
-      if (!club.coach) { continue; }
-      club.coach.age = Number(club.coach.age) || 45;
-      if (state.week % 48 === 1) { club.coach.age += 1; }
-      chance = club.coach.age >= 70 ? 0.35 : (club.coach.age >= 60 ? 0.12 : 0.03);
-      if (U.randomInt(1, 10000) <= Math.round(chance * 100)) {
-        oldCoach = club.coach;
-        eventType = U.randomInt(1, 100) <= 18 ? "погиб" : "ушёл на пенсию";
-        country = U.findCountry(club.countryId);
-        club.coach = createCoach(country, club.id, 900000 + state.week * 1000 + i);
-        if (pClub && pClub.id === club.id) {
-          state.modal = { type: "coachEvent", title: "Событие в клубе", text: "Тренер " + oldCoach.name + " " + eventType + ". Новым тренером стал " + club.coach.name + "." };
-          if (window.FS.World && window.FS.World.createNews) {
-            window.FS.World.createNews(state, "club", "В твоём клубе сменился тренер: " + oldCoach.name + " " + eventType + ". Новый тренер — " + club.coach.name + ".", { clubId: club.id });
+      country = U.findCountry(club.countryId);
+      ensureClubCoaches(state, club, country, 110000 + i * 1000);
+
+      for (j = 0; j < club.coaches.length; j += 1) {
+        coach = club.coaches[j];
+        coach.age = Number(coach.age) || 45;
+        if (state.week % 48 === 1) { coach.age += 1; }
+        chance = coach.age >= 70 ? 0.35 : (coach.age >= 60 ? 0.12 : 0.03);
+
+        if (U.randomInt(1, 10000) <= Math.round(chance * 100)) {
+          oldCoach = coach;
+          eventType = U.randomInt(1, 100) <= 18 ? "погиб" : "ушёл на пенсию";
+          newCoach = createCoach(country, club.id + "_" + j, 900000 + state.week * 1000 + i * 10 + j);
+          newCoach.clubId = club.id;
+          newCoach.note = j === 0 ? "Главный тренер клуба." : "Тренер клуба.";
+          newCoach.careerLog.unshift({ week: state.week, text: "Заменил тренера " + oldCoach.name + " в клубе " + club.name + "." });
+          club.coaches[j] = newCoach;
+          if (j === 0) { club.coach = newCoach; }
+
+          if (pClub && pClub.id === club.id) {
+            state.modal = { type: "coachEvent", title: "Событие в клубе", text: "Тренер " + oldCoach.name + " " + eventType + ". Новым тренером стал " + newCoach.name + "." };
+            if (window.FS.World && window.FS.World.createNews) {
+              window.FS.World.createNews(state, "club", "В твоём клубе сменился тренер: " + oldCoach.name + " " + eventType + ". Новый тренер — " + newCoach.name + ".", { clubId: club.id });
+            }
+          }
+          state.feed = "В клубе " + club.name + " сменился тренер.";
+          continue;
+        }
+
+        if (U.randomInt(1, 10000) <= 16 && (state.clubs || []).length > 1) {
+          target = state.clubs[U.randomInt(0, state.clubs.length - 1)];
+          if (target && target.id !== club.id) {
+            club.coaches.splice(j, 1);
+            if (!target.coaches) { target.coaches = []; }
+            target.coaches.push(coach);
+            targetCountry = U.findCountry(target.countryId);
+            coach.clubId = target.id;
+            coach.countryId = target.countryId;
+            coach.currentCountryId = target.countryId;
+            coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
+            coach.careerLog.unshift({ week: state.week, text: "Переход в клуб " + target.name + " · " + targetCountry.label + "." });
+            if (coach.careerLog.length > 20) { coach.careerLog.length = 20; }
+            ensureClubCoaches(state, club, country, 120000 + i * 1000 + j);
+            ensureClubCoaches(state, target, targetCountry, 130000 + i * 1000 + j);
+            if (pClub && (pClub.id === club.id || pClub.id === target.id) && window.FS.World && window.FS.World.createNews) {
+              window.FS.World.createNews(state, "club", "Тренер перешёл: " + coach.name + " · " + club.name + " → " + target.name + ".", { clubId: target.id });
+            }
+            moved = true;
+            break;
           }
         }
-        state.feed = "В клубе " + club.name + " сменился тренер.";
       }
+
+      club.coach = coachList(club)[0] || club.coach;
+    }
+
+    if (moved && window.FS.World && window.FS.World.createNews) {
+      state.feed = "На тренерском рынке были переходы.";
     }
     syncPeopleForPlayerClub(state);
   }

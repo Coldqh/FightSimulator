@@ -355,7 +355,7 @@
     var chance = trackId === "street" ? 7 : 5;
     var pool;
     var origin;
-    if (count >= 12 && index === 0) { chance = Math.max(chance, 100); }
+    if (trackId !== "pro" && count >= 12 && index === 0) { chance = Math.max(chance, 100); }
     if (U.randomInt(1, 100) > chance) { return hostCountry; }
 
     pool = Data.countries.filter(function (country) {
@@ -409,10 +409,10 @@
           seed = 100000 + countryIndex * 10000 + weightIndex * 1000 + fighterIndex;
           count = Math.max(1, perWeight[weightIndex]);
           base = U.clamp(90 + Math.round((fighterIndex / count) * 110) + U.randomInt(-5, 5), 90, 200);
-          roster.push(createFighter(countryId, "pro", seed, base, {
+          roster.push(createHostedFighter(country, "pro", seed, base, {
             weightClassId: weightClassId,
             age: U.randomInt(19, 39)
-          }));
+          }, fighterIndex + weightIndex * 100, count));
         }
       }
     }

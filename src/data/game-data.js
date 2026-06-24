@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "fatigue-people-tournaments-2.6.7",
-  "saveSchemaVersion": 267,
+  "appVersion": "rating-migration-coaches-ui-2.6.8",
+  "saveSchemaVersion": 268,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -10600,9 +10600,12 @@
   ],
   "peopleRoles": {
     "coach": "Тренер",
+    "headCoach": "Главный тренер",
+    "assistantCoach": "Тренер",
     "clubmate": "Одноклубник",
     "rival": "Соперник",
-    "promoter": "Промоутер"
+    "promoter": "Промоутер",
+    "teamCoach": "Тренер сборной"
   }
 };
 }());

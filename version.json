@@ -1,7 +1,7 @@
 {
-  "version": "fatigue-people-tournaments-2.6.7",
-  "mode": "fatigue-people-tournaments",
-  "cacheVersion": "fight-simulator-fatigue-people-tournaments-2.6.7",
+  "version": "rating-migration-coaches-ui-2.6.8",
+  "mode": "rating-migration-coaches-ui",
+  "cacheVersion": "fight-simulator-rating-migration-coaches-ui-2.6.8",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

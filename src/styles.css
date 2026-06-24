@@ -4066,3 +4066,110 @@ h1, h2, h3 { color: #f2f4f7; }
   text-overflow: ellipsis !important;
 }
 /* ===== /Profile Country 2.6.2 ===== */
+
+/* ===== 2.6.8 Rating Migration Coaches UI ===== */
+.ranking-filters .filter-group.selected-filter {
+  border: 1px solid rgba(214, 160, 25, 0.18);
+  border-radius: 14px;
+  padding: 6px;
+  background: rgba(214, 160, 25, 0.045);
+}
+
+.ranking-filters .small-btn.active,
+.ranking-filters .selected-filter-btn,
+.ranking-country-dropdown .country-summary {
+  border-color: rgba(214, 160, 25, 0.72) !important;
+  color: #f5d98d !important;
+  background: rgba(214, 160, 25, 0.14) !important;
+}
+
+.ranking-origin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.bright-route {
+  gap: 6px;
+}
+
+.bright-route .country-arrow {
+  color: #f5d98d;
+  opacity: 0.9;
+  font-weight: 900;
+}
+
+.f1-skill-list {
+  display: grid;
+  gap: 10px;
+}
+
+.f1-skill-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.f1-skill-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.f1-skill-head span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.f1-skill-head strong {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.f1-skill-track {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.f1-skill-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #d6a019);
+}
+
+.coach-row .muted.small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+  .ranking-row .f1-row-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .ranking-origin .country-label span:last-child {
+    display: none;
+  }
+
+  .f1-skill-list {
+    gap: 8px;
+  }
+
+  .f1-skill-head {
+    font-size: 11px;
+  }
+
+  .f1-skill-track {
+    height: 9px;
+  }
+}
+/* ===== /2.6.8 Rating Migration Coaches UI ===== */

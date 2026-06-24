@@ -9,7 +9,10 @@
   var Fight = window.FS.Fight;
 
   function renderSkillRow(label, value) {
-    return "<div class=\"skill-row\"><span>" + U.escapeHtml(label) + "</span><strong>" + value + "</strong></div>";
+    var max = 200;
+    var safe = Math.max(1, Math.min(max, Math.round(Number(value) || 0)));
+    var pct = Math.max(1, Math.min(100, Math.round(safe / max * 100)));
+    return "<div class=\"f1-skill-progress\"><div class=\"f1-skill-head\"><span>" + U.escapeHtml(label) + "</span><strong>" + safe + "/" + max + "</strong></div><div class=\"f1-skill-track\"><i style=\"width:" + pct + "%\"></i></div></div>";
   }
 
   function flagEmoji(countryId) {
@@ -90,6 +93,36 @@
     }
     return countryLabel(fighter.countryId);
   }
+
+  function f1OriginCountryId(fighter) {
+    if (!fighter) { return ""; }
+    return fighter.originCountryId || fighter.homeCountryId || fighter.nameCountryId || fighter.countryId || "";
+  }
+
+  function f1OriginCountryFull(fighter) {
+    return f1CountryFull(f1OriginCountryId(fighter));
+  }
+
+  function f1CountryRouteBright(fighter) {
+    var originId = f1OriginCountryId(fighter);
+    var currentId = fighter ? (fighter.countryId || fighter.currentCountryId || originId) : originId;
+    if (originId && currentId && originId !== currentId) {
+      return '<span class="fighter-country-route bright-route">' + f1CountryBright(originId) + '<span class="country-arrow">→</span>' + f1CountryBright(currentId) + '</span>';
+    }
+    return f1CountryBright(currentId || originId);
+  }
+
+  function renderStatProgressRows(fighter) {
+    return '<div class="f1-skill-list">' +
+      renderSkillRow('Сила', fighter.stats.power) +
+      renderSkillRow('Техника', fighter.stats.technique) +
+      renderSkillRow('Скорость', fighter.stats.speed) +
+      renderSkillRow('Выносливость', fighter.stats.stamina) +
+      renderSkillRow('Защита / здоровье', fighter.stats.defense || fighter.stats.health) +
+    '</div>';
+  }
+
+  
 
   function option(value, label, selectedValue) {
     return "<option value=\"" + U.escapeHtml(value) + "\"" + (value === selectedValue ? " selected" : "") + ">" + U.escapeHtml(label) + "</option>";
@@ -609,7 +642,7 @@
           '<div class="f1-profile-title">' +
             '<h2>' + U.escapeHtml(p.name) + '</h2>' +
             '<div class="f1-profile-sub">' +
-              '<span class="pill flag-mini">' + f1CountryFull(p) + '</span>' +
+              '<span class="pill flag-mini">' + f1CountryRouteBright(p) + '</span>' +
               '<span class="pill">' + U.escapeHtml(U.findTrack(p.trackId).label) + '</span>' +
               (weightText ? '<span class="pill">' + U.escapeHtml(weightText) + '</span>' : '') +
             '</div>' +
@@ -619,12 +652,13 @@
         '<div class="f1-profile-grid">' +
           '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(p.record)) + '</strong></div>' +
           '<div class="f1-profile-stat"><span>Возраст</span><strong>' + p.age + '</strong></div>' +
-          '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryBright(p) + '</strong></div>' +
+          '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryRouteBright(p) + '</strong></div>' +
           '<div class="f1-profile-stat"><span>' + f1StatusLabel(p) + '</span><strong>' + f1StatusHtml(state, p) + '</strong></div>' +
         '</div>' +
       '</div>' +
       '<div class="content-card f1-gym-card"><h3>Зал</h3>' + (club ? '<button class="f1-gym-button" data-club="' + U.escapeHtml(club.id) + '">' + U.escapeHtml(club.name) + '</button>' : '<div class="f1-gym-name">Без клуба</div>') + '</div>' +
       '<div class="content-card"><h3>' + (p.trackId === 'amateur' ? 'Награды' : 'Титулы') + '</h3>' + (p.trackId === 'amateur' ? renderFighterAwards(state, p) : renderFighterTitles(state, p)) + '</div>' +
+      '<div class="skills" style="grid-column:1/-1"><div class="label">Навыки</div>' + renderStatProgressRows(p) + '</div>' +
       renderTrackRecords(p) +
       '<div class="content-card profile-actions-card" style="grid-column:1/-1"><h3>Управление карьерой</h3><div class="row"><button class="primary" data-profile-modal="travel">Перелёт</button><button data-profile-modal="weight">Смена веса</button><button data-profile-modal="path">Смена пути</button></div></div>' +
     '</div>';
@@ -878,20 +912,20 @@
 
   function renderRankingFilters(state) {
     var countryGroup = state.rankingTrackId === "pro" ? "" :
-      "<div class=\"filter-group compact-country-filter\"><span class=\"filter-title\">Страна</span>" +
+      "<div class=\"filter-group compact-country-filter selected-filter\"><span class=\"filter-title\">Страна</span>" +
       countryDropdown(state.rankingCountryId, "data-ranking-country", "ranking-country-dropdown") +
       "</div>";
 
     var weightGroup = state.rankingTrackId === "street" ? "" :
-      "<div class=\"filter-group\"><span class=\"filter-title\">Вес</span>" +
+      "<div class=\"filter-group selected-filter\"><span class=\"filter-title\">Вес</span>" +
       Data.weightClasses.map(function (weightClass) {
-        return "<button class=\"small-btn " + (state.rankingWeightClassId === weightClass.id ? "active" : "") + "\" data-ranking-weight=\"" + weightClass.id + "\">" + U.escapeHtml(weightClass.label) + "</button>";
+        return "<button class=\"small-btn " + (state.rankingWeightClassId === weightClass.id ? "active selected-filter-btn" : "") + "\" data-ranking-weight=\"" + weightClass.id + "\">" + U.escapeHtml(weightClass.label) + "</button>";
       }).join("") +
       "</div>";
 
-    return "<div class=\"filters\">" + countryGroup + "<div class=\"filter-group\"><span class=\"filter-title\">Путь</span>" +
+    return "<div class=\"filters ranking-filters\">" + countryGroup + "<div class=\"filter-group selected-filter\"><span class=\"filter-title\">Путь</span>" +
       Object.keys(Data.tracks).map(function (trackId) {
-        return "<button class=\"small-btn " + (state.rankingTrackId === trackId ? "active" : "") + "\" data-ranking-track=\"" + trackId + "\">" + U.escapeHtml(Data.tracks[trackId].label) + "</button>";
+        return "<button class=\"small-btn " + (state.rankingTrackId === trackId ? "active selected-filter-btn" : "") + "\" data-ranking-track=\"" + trackId + "\">" + U.escapeHtml(Data.tracks[trackId].label) + "</button>";
       }).join("") +
       "</div>" + weightGroup + "</div>";
   }
@@ -956,10 +990,10 @@
 
     function fighterSubline(fighter) {
       var parts = [
-        f1CountryFull(fighter),
+        (fighter.age ? fighter.age + " лет" : "возраст —"),
+        '<span class="ranking-origin">Родина: ' + f1OriginCountryFull(fighter) + '</span>',
         U.escapeHtml(U.recordText(fighter.record))
       ];
-      if (f1HasWeight(fighter)) { parts.push(U.escapeHtml(f1FighterWeight(fighter))); }
       if (fighter.trackId === 'amateur') { parts.push(U.escapeHtml(f1AmateurRank(fighter))); }
       return parts.join(' · ');
     }
@@ -1215,11 +1249,16 @@
   function renderClubModal(state, club) {
     var roster = window.FS.Clubs.clubRoster(state, club.id).slice(0, 40);
     var strongest = window.FS.Clubs.strongestFighter(state, club.id);
-    var coach = club.coach || { name: club.coachName || "Тренер", age: "—", record: { wins: 0, losses: 0, draws: 0 }, id: "" };
+    var coaches = club.coaches instanceof Array && club.coaches.length ? club.coaches : (club.coach ? [club.coach] : []);
+    var coach = coaches[0] || { name: club.coachName || "Тренер", age: "—", record: { wins: 0, losses: 0, draws: 0 }, id: "" };
     var coachButton = coach.id ? "<button class=\"small-btn\" data-person=\"" + U.escapeHtml(coach.id) + "\">" + U.escapeHtml(coach.name) + "</button>" : U.escapeHtml(coach.name);
 
     function rosterRow(fighter) {
       return f1FighterRow(state, fighter, { countryMode: "flag", showStatus: true, className: "club-roster-row" });
+    }
+
+    function coachRow(item, index) {
+      return '<div class="split-row coach-row"><div><button class="small-btn" data-person="' + U.escapeHtml(item.id) + '">' + U.escapeHtml(item.name) + '</button><div class="muted small">' + (index === 0 ? 'Главный тренер' : 'Тренер') + ' · ' + f1CountryRouteBright(item) + ' · ' + (item.age || '—') + ' лет</div></div><span class="pill">' + ((item.record && item.record.wins) || 0) + '-' + ((item.record && item.record.losses) || 0) + '-' + ((item.record && item.record.draws) || 0) + '</span></div>';
     }
 
     return '<div class="modal-backdrop"><div class="modal club-profile-modal">' +
@@ -1227,8 +1266,9 @@
       '<div class="modal-body">' +
         '<div class="f1-card-hero">' +
           '<div class="f1-card-title"><h3>Клуб</h3><span class="f1-metric ovr">Ур. ' + club.level + '</span></div>' +
-          '<div class="f1-card-sub">Тренер: ' + coachButton + ' · сильнейший: ' + (strongest ? U.escapeHtml(strongest.name) : '—') + '</div>' +
+          '<div class="f1-card-sub">Главный тренер: ' + coachButton + ' · тренеров: ' + coaches.length + ' · сильнейший: ' + (strongest ? U.escapeHtml(strongest.name) : '—') + '</div>' +
         '</div>' +
+        '<div class="content-card"><h3>Тренеры</h3>' + coaches.map(coachRow).join("") + '</div>' +
         '<div class="content-card"><div class="split-row"><span>Ростер</span><strong>' + roster.length + '+</strong></div><div class="f1-row-list">' + roster.map(rosterRow).join("") + '</div></div>' +
       '</div>' +
       '<div class="modal-actions"><button data-action="close-modal">Закрыть</button></div>' +
@@ -1247,7 +1287,7 @@
             '<div class="f1-profile-title">' +
               '<h2>' + U.escapeHtml(fighter.name) + '</h2>' +
               '<div class="f1-profile-sub">' +
-                '<span class="pill flag-mini">' + f1CountryFull(fighter) + '</span>' +
+                '<span class="pill flag-mini">' + f1CountryRouteBright(fighter) + '</span>' +
                 '<span class="pill">' + U.escapeHtml(U.findTrack(fighter.trackId).label) + '</span>' +
                 (weightText ? '<span class="pill">' + U.escapeHtml(weightText) + '</span>' : '') +
                 (fighter.retired ? '<span class="pill red">завершил</span>' : '') +
@@ -1258,19 +1298,13 @@
           '<div class="f1-profile-grid">' +
             '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(fighter.record)) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Возраст</span><strong>' + fighter.age + '</strong></div>' +
-            '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryBright(fighter) + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryRouteBright(fighter) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>' + f1StatusLabel(fighter) + '</span><strong>' + f1StatusHtml(state, fighter) + '</strong></div>' +
           '</div>' +
           '<div class="row">' + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : '') + '</div>' +
         '</div>' +
         '<div class="content-card f1-gym-card" style="margin-top:12px"><h3>Зал</h3>' + (club ? '<button class="f1-gym-button" data-club="' + U.escapeHtml(club.id) + '">' + U.escapeHtml(club.name) + '</button>' : '<div class="f1-gym-name">Без клуба</div>') + '</div>' +
-        '<div class="skills" style="margin-top:12px"><div class="label">Навыки</div>' +
-          renderSkillRow('Сила', fighter.stats.power) +
-          renderSkillRow('Техника', fighter.stats.technique) +
-          renderSkillRow('Скорость', fighter.stats.speed) +
-          renderSkillRow('Выносливость', fighter.stats.stamina) +
-          renderSkillRow('Защита / здоровье', fighter.stats.defense || fighter.stats.health) +
-        '</div>' +
+        '<div class="skills" style="margin-top:12px"><div class="label">Навыки</div>' + renderStatProgressRows(fighter) + '</div>' +
         '<div class="content-card" style="margin-top:12px"><h3>Награды</h3>' + renderFighterAwards(state, fighter) + '</div>' +
         '<div class="content-card" style="margin-top:12px"><h3>Титулы</h3>' + renderFighterTitles(state, fighter) + '</div>' +
         '<div class="content-card" style="margin-top:12px"><h3>История карьеры</h3>' + renderCareerLog(state, fighter, 10) + '</div>' +
@@ -1458,6 +1492,15 @@
     if (modal.type === "person") {
       var person = (state.people || []).find(function (item) { return item.id === modal.personId; });
       var coach = window.FS.Clubs && window.FS.Clubs.findCoach ? window.FS.Clubs.findCoach(state, modal.personId) : null;
+
+      function coachCareerLog(coach) {
+        var log = coach && coach.careerLog instanceof Array ? coach.careerLog : [];
+        if (!log.length) { return '<div class="muted small">Пока без заметных событий.</div>'; }
+        return '<div class="f1-history-list">' + log.slice(0, 10).map(function (entry) {
+          return '<div class="f1-history-row"><div class="f1-history-week">Неделя ' + (entry.week || '—') + '</div><div class="f1-history-text">' + U.escapeHtml(entry.text || '') + '</div></div>';
+        }).join('') + '</div>';
+      }
+
       if (person && person.personType === "fighter" && person.fighterId) {
         fighter = U.getFighterById(state, person.fighterId);
         return fighter ? renderFighterModal(state, fighter) : "";
@@ -1480,8 +1523,8 @@
       if (!coach && window.FS.Clubs && window.FS.Clubs.findCoach) { coach = window.FS.Clubs.findCoach(state, person.id); }
       var pClub = coach && coach.clubId && window.FS.Clubs ? window.FS.Clubs.findClub(state, coach.clubId) : null;
       var coachCountry = person.countryId ? U.findCountry(person.countryId) : null;
-      var coachRole = person.personType === "teamCoach" ? "Тренер сборной" : "Тренер";
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(person.name) + "</h2><div class=\"muted small\">" + coachRole + "</div></div><div class=\"modal-body\"><div class=\"split-row\"><span>Страна</span><strong>" + (coach && coach.countryId ? countryLabel(coach.countryId) : (coachCountry ? countryLabel(coachCountry.id) : "—")) + "</strong></div><div class=\"split-row\"><span>Возраст</span><strong>" + (coach ? coach.age : "—") + "</strong></div><div class=\"split-row\"><span>" + (coachCountry ? "Сборная" : "Клуб") + "</span><strong>" + (coachCountry ? countryLabel(coachCountry.id) : (pClub ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(pClub.id) + "\">" + U.escapeHtml(pClub.name) + "</button>" : "—")) + "</strong></div><div class=\"split-row\"><span>Рекорд тренера</span><strong>" + (coach && coach.record ? (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) : "0-0-0") + "</strong></div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
+      var coachRole = person.personType === "teamCoach" ? "Тренер сборной" : (person.role === "headCoach" ? "Главный тренер" : "Тренер");
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(person.name) + "</h2><div class=\"muted small\">" + coachRole + "</div></div><div class=\"modal-body\"><div class=\"f1-profile-hero\"><div class=\"f1-profile-grid\"><div class=\"f1-profile-stat\"><span>Страна</span><strong>" + (coach ? f1CountryRouteBright(coach) : (coachCountry ? countryLabel(coachCountry.id) : "—")) + "</strong></div><div class=\"f1-profile-stat\"><span>Возраст</span><strong>" + (coach ? coach.age : "—") + "</strong></div><div class=\"f1-profile-stat\"><span>" + (coachCountry ? "Сборная" : "Клуб") + "</span><strong>" + (coachCountry ? countryLabel(coachCountry.id) : (pClub ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(pClub.id) + "\">" + U.escapeHtml(pClub.name) + "</button>" : "—")) + "</strong></div><div class=\"f1-profile-stat\"><span>Рекорд</span><strong>" + (coach && coach.record ? (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) : "0-0-0") + "</strong></div></div></div><div class=\"content-card\" style=\"margin-top:12px\"><h3>История карьеры</h3>" + coachCareerLog(coach) + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
     if (modal.type === "coachEvent") {

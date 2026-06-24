@@ -909,6 +909,8 @@ function simulateInternationalGymMoves(state) {
     var targetClubs;
     var rating;
     var club;
+    var oldClub;
+    var oldCountry;
     var moved = false;
 
     if (!window.FS.Clubs || !state.clubs || !state.clubs.length) {
@@ -947,14 +949,22 @@ function simulateInternationalGymMoves(state) {
         continue;
       }
 
+      oldCountry = U.findCountry(currentCountry);
+      oldClub = fighter.gymId && window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
       fighter.countryId = targetCountry.id;
       fighter.currentCountryId = targetCountry.id;
+      fighter.homeCountryId = fighter.homeCountryId || fighter.originCountryId || currentCountry;
+      fighter.originCountryId = fighter.originCountryId || fighter.homeCountryId || currentCountry;
       fighter.gymId = club.id;
       fighter.isForeignResident = (fighter.originCountryId || fighter.homeCountryId || currentCountry) !== targetCountry.id;
       fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
-      fighter.careerLog.unshift({ week: state.week, text: "Переезд в " + targetCountry.label + ", клуб " + club.name + "." });
-      if (fighter.careerLog.length > 8) { fighter.careerLog.length = 8; }
-      U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал в " + targetCountry.label + "." }, 120);
+      fighter.careerLog.unshift({
+        week: state.week,
+        text: "Переезд: " + oldCountry.label + " → " + targetCountry.label + ", клуб " + club.name + ".",
+        meta: { fromCountryId: oldCountry.id, toCountryId: targetCountry.id, oldClubId: oldClub ? oldClub.id : "", clubId: club.id }
+      });
+      if (fighter.careerLog.length > 12) { fighter.careerLog.length = 12; }
+      U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал: " + oldCountry.label + " → " + targetCountry.label + "." }, 120);
       migrationNewsForMove(state, fighter, currentCountry, targetCountry.id);
       moved = true;
     }
