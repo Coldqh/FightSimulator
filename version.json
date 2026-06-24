@@ -1,7 +1,7 @@
 {
-  "version": "emergency-render-coach-fix-2.7.5",
-  "mode": "emergency-render-coach-fix",
-  "cacheVersion": "fight-simulator-emergency-render-coach-fix-2.7.5",
+  "version": "awards-teamcoach-performance-2.7.6",
+  "mode": "awards-teamcoach-performance",
+  "cacheVersion": "fight-simulator-awards-teamcoach-performance-2.7.6",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

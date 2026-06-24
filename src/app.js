@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.5&target=2.7.5&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.6&target=2.7.6&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -604,7 +604,7 @@
 
       modalType = state.modal && state.modal.type;
       if (modalType !== "activeFight" && modalType !== "fightCount") {
-        gameplayFixKey = [Data.appVersion, state.week, state.roster ? state.roster.length : 0].join("|");
+        gameplayFixKey = [Data.appVersion, state.roster ? state.roster.length : 0].join("|");
         if (state._lastGameplayFixKey !== gameplayFixKey) {
           applyIntegratedGameplayFixes(state);
           state._lastGameplayFixKey = gameplayFixKey;

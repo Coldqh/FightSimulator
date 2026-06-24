@@ -721,7 +721,6 @@
         }
       }
       clampFighterStats(state.roster[i]);
-      clampFighterStats(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }
   }
@@ -996,36 +995,104 @@
 
   function getFighterAwards(state, fighter) {
     var result = [];
-    var medals;
-    var i;
     var seen = {};
 
+    function keyOf(award) {
+      return [
+        award.label || "",
+        award.source || "",
+        award.competitionId || "",
+        award.place || "",
+        Number(award.week) || 0
+      ].join("|");
+    }
+
+    function medalFromPlace(place) {
+      if (place === "1 место") { return "gold"; }
+      if (place === "2 место") { return "silver"; }
+      if (place === "3 место") { return "bronze"; }
+      return "";
+    }
+
     function pushAward(award) {
-      if (!award || !award.label || seen[award.label]) {
-        return;
-      }
-      seen[award.label] = true;
-      result.push(award);
+      var item;
+      var key;
+      if (!award || !award.label) { return; }
+      item = {
+        id: award.id || "",
+        week: Number(award.week) || 0,
+        label: award.label,
+        source: award.source || "award",
+        medal: award.medal || medalFromPlace(award.place || ""),
+        competitionId: award.competitionId || "",
+        place: award.place || ""
+      };
+      key = keyOf(item);
+      if (seen[key]) { return; }
+      seen[key] = true;
+      result.push(item);
+    }
+
+    function awardLabelFromMedal(medal) {
+      var label = medal.label || "Турнир";
+      if (medal.awardLabel) { return medal.awardLabel; }
+      if (medal.place === "1 место") { return "Победитель · " + label; }
+      if (medal.place === "2 место") { return "Серебро · " + label; }
+      if (medal.place === "3 место") { return "Бронза · " + label; }
+      return label + (medal.place ? " · " + medal.place : "");
+    }
+
+    function recoverFromLog(entry) {
+      var text = entry && entry.text ? String(entry.text) : "";
+      var meta = entry && entry.meta ? entry.meta : {};
+      var match = text.match(/Турнир:\s*([^·,]+)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)/i);
+      var place = meta.place || "";
+      var prefix;
+      if (!match) { return; }
+      if (!place && /Победитель|1 место/i.test(match[2])) { place = "1 место"; }
+      if (!place && /Серебро|2 место/i.test(match[2])) { place = "2 место"; }
+      if (!place && /Бронза|3 место/i.test(match[2])) { place = "3 место"; }
+      prefix = place === "1 место" ? "Победитель" : (place === "2 место" ? "Серебро" : (place === "3 место" ? "Бронза" : "Место"));
+      pushAward({
+        week: entry.week,
+        label: prefix + " · " + match[1].trim(),
+        source: "amateur",
+        medal: medalFromPlace(place),
+        competitionId: meta.competitionId || "",
+        place: place
+      });
     }
 
     if (!fighter) { return result; }
-    if (fighter.awards instanceof Array) {
-      fighter.awards.forEach(pushAward);
-    }
+    fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
+    fighter.awards.forEach(pushAward);
 
     if (fighter.isPlayer && state.amateurPath && state.amateurPath.medals instanceof Array) {
-      medals = state.amateurPath.medals;
-      for (i = 0; i < medals.length; i += 1) {
-        pushAward({ week: medals[i].week, label: medals[i].awardLabel || medals[i].label, source: "amateur" });
-      }
+      state.amateurPath.medals.forEach(function (medal) {
+        pushAward({
+          id: medal.id || "",
+          week: medal.week,
+          label: awardLabelFromMedal(medal),
+          source: "amateur",
+          medal: medal.medal || medalFromPlace(medal.place || ""),
+          competitionId: medal.competitionId || "",
+          place: medal.place || ""
+        });
+      });
     }
 
+    if (fighter.careerLog instanceof Array) {
+      fighter.careerLog.forEach(recoverFromLog);
+    }
+
+    result.sort(function (a, b) { return (Number(b.week) || 0) - (Number(a.week) || 0); });
     return result;
   }
 
   function addFighterAward(state, fighter, awardLabel, source, meta) {
     var data = meta || {};
     var awardSource = source || "award";
+    var medal = data.medal || (data.place === "1 место" ? "gold" : (data.place === "2 место" ? "silver" : (data.place === "3 место" ? "bronze" : "")));
     var exists;
     if (!fighter || !awardLabel) { return; }
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
@@ -1044,11 +1111,11 @@
         week: state.week,
         label: awardLabel,
         source: awardSource,
-        medal: data.medal || "",
+        medal: medal,
         competitionId: data.competitionId || "",
         place: data.place || ""
       });
-      if (fighter.awards.length > 40) { fighter.awards.length = 40; }
+      if (fighter.awards.length > 60) { fighter.awards.length = 60; }
     }
   }
 
@@ -1200,7 +1267,7 @@
     var p;
 
     if (!state) { return null; }
-    if (state._fullRepairDone && state._lastRepairVersion === Data.appVersion && state._lastRepairWeek === state.week) {
+    if (state._fullRepairDone && state._lastRepairVersion === Data.appVersion) {
       return state;
     }
     state.version = (Data && Data.appVersion) || "boot-core-hotfix-2.6.1";

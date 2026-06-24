@@ -474,20 +474,24 @@
 
   function simulateNpcTraining(state) {
     var keys = ["power", "technique", "speed", "stamina", "defense"];
-    var i, fighter, key, cap, seed, factor, growthChance;
-    for (i = 0; i < state.roster.length; i += 1) {
-      fighter = state.roster[i];
+    var roster = state.roster || [];
+    var sampleLimit = roster.length > 8000 ? 1600 : (roster.length > 5000 ? 2200 : roster.length);
+    var start = roster.length > sampleLimit ? ((state.week * sampleLimit) % roster.length) : 0;
+    var i, index, fighter, key, cap, seed, factor, growthChance;
+    for (i = 0; i < sampleLimit; i += 1) {
+      index = roster.length ? (start + i) % roster.length : 0;
+      fighter = roster[index];
       if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
-      seed = Math.abs((fighter.seed || i * 37) + state.week * 13);
+      seed = Math.abs((fighter.seed || index * 37) + state.week * 13);
       factor = ageGrowthFactor(fighter);
       if (factor < 0) {
-        if (seed % 12 === 0) { agingAdjustment(fighter); }
+        if (seed % 16 === 0) { agingAdjustment(fighter); }
         continue;
       }
-      growthChance = factor >= 1.4 ? 3 : (factor >= 1.2 ? 4 : (factor >= 1.0 ? 6 : 9));
+      growthChance = factor >= 1.4 ? 4 : (factor >= 1.2 ? 5 : (factor >= 1.0 ? 7 : 11));
       if (seed % growthChance !== 0) { continue; }
       key = keys[seed % keys.length];
-      cap = U.findTrack(fighter.trackId).maxStat;
+      cap = Math.min(200, U.findTrack(fighter.trackId).maxStat || 200);
       fighter.stats[key] = U.clamp((Number(fighter.stats[key]) || 1) + 1, 1, cap);
       State.updateDerivedFighterFields(fighter);
     }
@@ -557,9 +561,14 @@
     var report = [];
     var i, fighter, opponent, result, bucketKey;
     var scheduled = 0;
+    var roster = state.roster || [];
+    var sampleLimit = roster.length > 8000 ? 2600 : roster.length;
+    var start = roster.length > sampleLimit ? ((state.week * 977) % roster.length) : 0;
+    var index;
 
-    for (i = 0; i < (state.roster || []).length; i += 1) {
-      fighter = state.roster[i];
+    for (i = 0; i < sampleLimit; i += 1) {
+      index = roster.length ? (start + i) % roster.length : 0;
+      fighter = roster[index];
       if (!fighter || fighter.isPlayer || fighter.trackId !== "pro") { continue; }
       pros.push(fighter);
       bucketKey = fighter.weightClassId || "open";
@@ -575,7 +584,7 @@
       fighter = pros[i];
       bucketKey = fighter.weightClassId || "open";
       if (!fighter.nextFightWeek || !fighter.contractOpponentId) {
-        if (scheduled < 80 && U.randomInt(1, 100) <= 12) {
+        if (scheduled < 45 && U.randomInt(1, 100) <= 10) {
           if (scheduleProContract(state, fighter, proBuckets[bucketKey])) { scheduled += 1; }
         }
         continue;
@@ -598,21 +607,26 @@
 
   function simulateNpcFights(state) {
     var report = [];
-    var due = state.roster.filter(function (fighter) {
-      return !fighter.isPlayer && fighter.trackId !== "pro" && state.week - (fighter.lastFightWeek || 0) >= 3;
-    });
+    var roster = state.roster || [];
+    var sampleLimit = roster.length > 8000 ? 1200 : (roster.length > 5000 ? 1700 : 2600);
+    var start = roster.length > sampleLimit ? ((state.week * 1231) % roster.length) : 0;
+    var due = [];
     var buckets = {};
     var key;
     var i;
+    var index;
     var bucket;
     var a;
     var b;
     var result;
     var maxPairs = 0;
-    var sampleLimit = state.roster.length > 7000 ? 1800 : 3200;
+    var fighter;
 
-    if (due.length > sampleLimit) {
-      due = due.slice(0, sampleLimit);
+    for (i = 0; i < sampleLimit; i += 1) {
+      index = roster.length ? (start + i) % roster.length : 0;
+      fighter = roster[index];
+      if (!fighter || fighter.isPlayer || fighter.trackId === "pro" || fighter.retired || state.week - (fighter.lastFightWeek || 0) < 3) { continue; }
+      due.push(fighter);
     }
 
     for (i = 0; i < due.length; i += 1) {
@@ -624,23 +638,18 @@
     for (key in buckets) {
       if (!Object.prototype.hasOwnProperty.call(buckets, key)) { continue; }
       bucket = shuffleList(buckets[key]);
-      maxPairs = Math.min(Math.floor(bucket.length / 2), state.roster.length > 7000 ? 70 : 140);
+      maxPairs = Math.min(Math.floor(bucket.length / 2), roster.length > 7000 ? 45 : 90);
       for (i = 0; i < maxPairs; i += 1) {
         a = bucket[i * 2];
         b = bucket[i * 2 + 1];
         if (!a || !b) { continue; }
         result = resolveNpcFight(state, a, b);
-        if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) {
-          window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser);
-        }
+        if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser); }
         if (report.length < 8) { report.push(result.text); }
       }
     }
 
-    if (state.week % 2 === 0) {
-      report = report.concat(processProContracts(state).slice(0, 8 - report.length));
-    }
-
+    if (state.week % 2 === 0) { report = report.concat(processProContracts(state).slice(0, 8 - report.length)); }
     return report;
   }
 
@@ -676,22 +685,17 @@
   }
 
   function simulateTransitions(state) {
-    var candidates = state.roster.filter(function (fighter) {
-      return !fighter.isPlayer && state.week - (fighter.lastMoveWeek || 1) >= 5;
-    });
-    var attempts = Math.min(8, candidates.length);
-    var i;
-    var fighter;
-    var rating;
+    var roster = state.roster || [];
+    var sampleLimit = roster.length > 8000 ? 900 : (roster.length > 5000 ? 1300 : roster.length);
+    var start = roster.length > sampleLimit ? ((state.week * 571) % roster.length) : 0;
+    var attempts = Math.min(8, sampleLimit);
+    var i, index, fighter, rating;
 
     for (i = 0; i < attempts; i += 1) {
-      fighter = candidates[U.randomInt(0, candidates.length - 1)];
-      if (!fighter) {
-        continue;
-      }
-
+      index = roster.length ? (start + U.randomInt(0, sampleLimit - 1)) % roster.length : 0;
+      fighter = roster[index];
+      if (!fighter || fighter.isPlayer || state.week - (fighter.lastMoveWeek || 1) < 5) { continue; }
       rating = U.statAverage(fighter.stats);
-
       if (fighter.trackId === "street" && rating >= 43 && U.randomInt(1, 100) <= 14) {
         tryMoveFighter(state, fighter, "amateur", "перешёл с улицы в любители");
       } else if (fighter.trackId === "amateur" && rating >= 58 && U.randomInt(1, 100) <= 12) {
@@ -702,28 +706,75 @@
     }
   }
 
+  function nationalCoachBaseOvr(country) {
+    var tierMap = {
+      cuba: 96, usa: 94, mexico: 93, russia: 92, kazakhstan: 90, uzbekistan: 90,
+      ukraine: 86, japan: 84, united_kingdom: 84, gb: 84, ireland: 82, philippines: 82,
+      germany: 78, france: 78, italy: 76, poland: 76, brazil: 74, thailand: 74,
+      turkey: 72, azerbaijan: 72, armenia: 70, south_korea: 70, korea: 70,
+      china: 68, georgia: 66, australia: 66, argentina: 66, spain: 66,
+      canada: 64, netherlands: 64, mongolia: 64, morocco: 64, serbia: 62, croatia: 62,
+      algeria: 62, nigeria: 62, india: 62, greece: 60, sweden: 60, norway: 58,
+      denmark: 58, south_africa: 58, finland: 56
+    };
+    if (tierMap[country.id] != null) { return tierMap[country.id]; }
+    if (country.continentId === "Europe") { return 60; }
+    if (country.continentId === "Asia") { return 58; }
+    if (country.continentId === "North America") { return 58; }
+    if (country.continentId === "South America") { return 56; }
+    if (country.continentId === "Africa") { return 54; }
+    return 50;
+  }
+
   function createNationalCoach(country, seed) {
     var record = { wins: U.randomInt(20, 180), losses: U.randomInt(5, 70), draws: U.randomInt(0, 12), kos: U.randomInt(8, 95) };
-    var tierMap = { cuba: 96, usa: 94, mexico: 92, russia: 90, kazakhstan: 90, uzbekistan: 90, ukraine: 86, japan: 84, united_kingdom: 84, gb: 84, ireland: 82, philippines: 82, germany: 78, france: 78, italy: 76, poland: 76, brazil: 74, thailand: 74, turkey: 72, azerbaijan: 72, armenia: 70, south_korea: 70, korea: 70, china: 68, india: 62 };
-    var base = tierMap[country.id] || (country.continentId === "Europe" ? 72 : (country.continentId === "Asia" ? 68 : (country.continentId === "North America" ? 70 : (country.continentId === "South America" ? 66 : 60))));
-    var ovr = U.clamp(base + U.randomInt(-5, 5), 45, 100);
-    function stat(offset) { return U.clamp(ovr + U.randomInt(-8, 8) + offset, 1, 100); }
-    return { id: "team_coach_" + country.id + "_" + seed, role: "teamCoach", name: U.createName(country, seed), countryId: country.id, currentCountryId: country.id, homeCountryId: country.id, originCountryId: country.id, age: U.randomInt(42, 72), record: record, stats: { technique: stat(0), conditioning: stat(-4), tactics: stat(6), corner: stat(2), development: stat(-2) }, ovr: ovr, hiredWeek: seed, careerLog: [{ week: 1, text: "Назначен тренером сборной " + country.label + "." }] };
+    var base = nationalCoachBaseOvr(country);
+    var delta = U.randomInt(2, 4) * (U.randomInt(0, 1) ? 1 : -1);
+    var ovr = U.clamp(base + delta, 35, 99);
+    function stat(offset) { return U.clamp(ovr + U.randomInt(-4, 4) + offset, 1, 100); }
+    return {
+      id: "team_coach_" + country.id + "_" + seed,
+      role: "teamCoach",
+      name: U.createName(country, seed),
+      countryId: country.id,
+      currentCountryId: country.id,
+      homeCountryId: country.id,
+      originCountryId: country.id,
+      age: U.randomInt(42, 72),
+      record: record,
+      stats: { technique: stat(0), conditioning: stat(-2), tactics: stat(3), corner: stat(1), development: stat(-1) },
+      ovr: ovr,
+      baseOvr: base,
+      teamCoachTierVersion: "team-coach-v3",
+      hiredWeek: seed,
+      careerLog: [{ week: 1, text: "Назначен тренером сборной " + country.label + "." }]
+    };
   }
 
   function ensureNationalCoach(state, country) {
     state.world.teamCoaches = state.world.teamCoaches || {};
     var current = state.world.teamCoaches[country.id];
     var oldScale = current && current.stats && Object.keys(current.stats).some(function (key) { return Number(current.stats[key]) > 100; });
-    if (!current || (Number(current.ovr) || 0) <= 1 || !current.stats || oldScale || (state.week > 1 && state.week % 52 === 1 && U.randomInt(1, 100) <= 16)) {
+    var brokenHundred = current && Number(current.ovr) >= 100 && nationalCoachBaseOvr(country) < 96;
+    var oldTier = current && current.teamCoachTierVersion !== "team-coach-v3";
+
+    if (!current || oldTier || brokenHundred || (Number(current.ovr) || 0) <= 1 || !current.stats || oldScale || (state.week > 1 && state.week % 52 === 1 && U.randomInt(1, 100) <= 16)) {
       current = createNationalCoach(country, state.week * 100 + country.id.length);
       state.world.teamCoaches[country.id] = current;
       U.pushLimited(state.world.transitionLog, { week: state.week, text: "Сборная " + country.label + " получила нового тренера: " + current.name + " · OVR " + current.ovr + "." }, 120);
       createNews(state, "team", "Сборная " + country.label + " получила нового тренера: " + current.name + " · OVR " + current.ovr + ".", { coachId: current.id, countryId: country.id });
     } else {
-      current.ovr = U.clamp(Math.round(Number(current.ovr) || 1), 1, 100);
+      current.ovr = U.clamp(Math.round(Number(current.ovr) || nationalCoachBaseOvr(country)), 1, 99);
+      current.baseOvr = current.baseOvr || nationalCoachBaseOvr(country);
+      current.teamCoachTierVersion = "team-coach-v3";
       current.record = current.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
       current.record.kos = Number(current.record.kos) || 0;
+      current.stats = current.stats || {};
+      current.stats.technique = U.clamp(Number(current.stats.technique) || current.ovr, 1, 100);
+      current.stats.conditioning = U.clamp(Number(current.stats.conditioning) || current.ovr, 1, 100);
+      current.stats.tactics = U.clamp(Number(current.stats.tactics) || current.ovr, 1, 100);
+      current.stats.corner = U.clamp(Number(current.stats.corner) || current.ovr, 1, 100);
+      current.stats.development = U.clamp(Number(current.stats.development) || current.ovr, 1, 100);
     }
     return current;
   }
@@ -742,11 +793,20 @@
     var main;
     var reserve;
     var p = State.player(state);
+    var previous = state.world && state.world.teamsByCountry ? state.world.teamsByCountry : {};
+    var playerHome = p ? (p.homeCountryId || p.countryId) : "";
+    var previousRole = "";
+    var newRole = "";
 
     if (!state.world) { state.world = {}; }
     state.world.nationalTeamQualification = state.world.nationalTeamQualification || {};
     state.world.reserveAdditions = state.world.reserveAdditions || {};
     state.world.teamCoaches = state.world.teamCoaches || {};
+
+    if (p && previous[playerHome]) {
+      if ((previous[playerHome].main || []).indexOf(p.id) !== -1) { previousRole = "main"; }
+      else if ((previous[playerHome].reserve || []).indexOf(p.id) !== -1) { previousRole = "reserve"; }
+    }
 
     for (i = 0; i < (state.roster || []).length; i += 1) {
       fighter = state.roster[i];
@@ -757,9 +817,7 @@
     }
 
     Object.keys(buckets).forEach(function (bucketKey) {
-      buckets[bucketKey].sort(function (left, right) {
-        return U.statAverage(right.stats) - U.statAverage(left.stats);
-      });
+      buckets[bucketKey].sort(function (left, right) { return U.statAverage(right.stats) - U.statAverage(left.stats); });
     });
 
     for (countryIndex = 0; countryIndex < Data.countries.length; countryIndex += 1) {
@@ -786,6 +844,25 @@
     }
 
     state.world.teamsByCountry = teams;
+
+    if (p && playerHome && teams[playerHome]) {
+      if ((teams[playerHome].main || []).indexOf(p.id) !== -1) { newRole = "main"; }
+      else if ((teams[playerHome].reserve || []).indexOf(p.id) !== -1) { newRole = "reserve"; }
+
+      if (newRole && newRole !== previousRole) {
+        if (newRole === "main") {
+          pushNews(state, "team", "Тебя взяли в основу сборной " + U.findCountry(playerHome).label + ".", { fighterId: p.id, countryId: playerHome, role: "main" });
+          p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+          p.careerLog.unshift({ week: state.week, text: "Вызван в основу сборной " + U.findCountry(playerHome).label + ".", meta: { countryId: playerHome } });
+        } else if (newRole === "reserve") {
+          pushNews(state, "team", "Тебя взяли в резерв сборной " + U.findCountry(playerHome).label + ".", { fighterId: p.id, countryId: playerHome, role: "reserve" });
+          p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+          p.careerLog.unshift({ week: state.week, text: "Вызван в резерв сборной " + U.findCountry(playerHome).label + ".", meta: { countryId: playerHome } });
+        }
+      }
+    }
+
+    state.world.lastNationalTeamBuildWeek = state.week;
   }
 
   function buildOfferOpponent(state, index) {
@@ -1175,7 +1252,13 @@ function simulateInternationalGymMoves(state) {
     if (window.FS.Clubs && window.FS.Clubs.maybeMoveNpcClubs) { window.FS.Clubs.maybeMoveNpcClubs(state); }
     simulateInternationalGymMoves(state);
     if (window.FS.Clubs && window.FS.Clubs.simulateCoachLife) { window.FS.Clubs.simulateCoachLife(state); }
-    buildNationalTeams(state);
+    if (!state.world.teamsByCountry || !Object.keys(state.world.teamsByCountry).length || state.week % 4 === 1) {
+      buildNationalTeams(state);
+    } else if (state.world.teamCoaches) {
+      Object.keys(state.world.teamCoaches).forEach(function (countryId) {
+        ensureNationalCoach(state, U.findCountry(countryId));
+      });
+    }
     simulateAutonomousTournaments(state);
     if (window.FS.Titles) {
       window.FS.Titles.updateTitles(state);
@@ -1218,7 +1301,13 @@ function simulateInternationalGymMoves(state) {
       window.FS.Clubs.ensureClubs(state);
       
     }
-    buildNationalTeams(state);
+    if (!state.world.teamsByCountry || !Object.keys(state.world.teamsByCountry).length || state.week % 4 === 1) {
+      buildNationalTeams(state);
+    } else if (state.world.teamCoaches) {
+      Object.keys(state.world.teamCoaches).forEach(function (countryId) {
+        ensureNationalCoach(state, U.findCountry(countryId));
+      });
+    }
     simulateAutonomousTournaments(state);
     if (window.FS.Titles) {
       window.FS.Titles.ensureTitles(state);

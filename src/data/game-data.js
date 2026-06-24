@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "emergency-render-coach-fix-2.7.5",
-  "saveSchemaVersion": 275,
+  "appVersion": "awards-teamcoach-performance-2.7.6",
+  "saveSchemaVersion": 276,
   "tracks": {
     "amateur": {
       "id": "amateur",

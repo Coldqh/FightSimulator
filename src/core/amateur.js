@@ -680,16 +680,16 @@
       xpReward: xpReward
     });
 
-    if (state.amateurPath.medals.length > 40) {
-      state.amateurPath.medals.length = 40;
+    if (state.amateurPath.medals.length > 60) {
+      state.amateurPath.medals.length = 60;
     }
 
-    if (State.addFighterAward && medal) {
+    if (State.addFighterAward) {
       State.addFighterAward(state, p, awardLabel, "amateur", { medal: medal, competitionId: comp.id, place: place });
     }
 
     if (p && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + place + ", $" + moneyReward + ", +" + xpReward + " опыта.", meta: { competitionId: comp.id } });
+      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + ", $" + moneyReward + ", +" + xpReward + " опыта.", meta: { competitionId: comp.id, place: place } });
     }
 
     return { moneyReward: moneyReward, xpReward: xpReward };
