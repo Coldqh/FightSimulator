@@ -327,10 +327,10 @@
 
   function rankForBaseValue(value) {
     if (value >= 100) { return "msmk"; }
-    if (value >= 85) { return "ms"; }
-    if (value >= 65) { return "kms"; }
-    if (value >= 42) { return "adult_1"; }
-    if (value >= 22) { return "adult_2"; }
+    if (value >= 80) { return "ms"; }
+    if (value >= 60) { return "kms"; }
+    if (value >= 40) { return "adult_1"; }
+    if (value >= 20) { return "adult_2"; }
     return "adult_3";
   }
 
@@ -766,13 +766,15 @@
 
   function isLockedByFatigue(state) {
     var p = ensurePlayerSystems(state);
-    return !!(p && p.fatigue >= 100);
+    var limit = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.actionLockAbove) || 75) : 75;
+    return !!(p && p.fatigue > limit);
   }
 
   function fatigueLockedModal(state) {
     var p = ensurePlayerSystems(state);
-    state.modal = { type: "fatigueLock", fatigue: p ? p.fatigue : 100 };
-    state.feed = "Усталость 100/100. Можно только отдыхать.";
+    var limit = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.actionLockAbove) || 75) : 75;
+    state.modal = { type: "fatigueLock", fatigue: p ? p.fatigue : 100, limit: limit };
+    state.feed = "Усталость выше " + limit + "/100. Бои, турниры и тренировка закрыты до восстановления.";
     return false;
   }
 
@@ -917,9 +919,9 @@
   }
 
   function restPlayer(state) {
-    var reduction = Data.economy && Data.economy.fatigue ? Data.economy.fatigue.restWeek : 18;
+    var reduction = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.restWeek) || 20) : 20;
     adjustFatigue(state, -reduction, "Неделя восстановления");
-    state.feed = "Неделя восстановления: усталость снижена.";
+    state.feed = "Неделя восстановления: усталость -" + reduction + ".";
     updateDebtStatus(state, "rest");
     return true;
   }
@@ -945,20 +947,21 @@
     var p = ensurePlayerSystems(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var cap;
+    var cost;
 
     if (!p) { return; }
     p.trainingPoints = Number(p.trainingPoints) || 0;
 
     if (!statKey) {
-      if (p.fatigue >= 100) {
-        state.feed = "Усталость 100/100. Тренироваться нельзя, сначала восстановись.";
-        state.modal = { type: "fatigueLock", fatigue: p.fatigue };
+      if (isLockedByFatigue(state)) {
+        fatigueLockedModal(state);
         return;
       }
+      cost = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.training) || 15) : 15;
       p.trainingPoints += 3;
-      adjustFatigue(state, 20, "Тренировка");
+      adjustFatigue(state, cost, "Тренировка");
       p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/100." });
-      state.feed = "Тренировка: +3 очка характеристик. Усталость " + p.fatigue + "/100.";
+      state.feed = "Тренировка: +3 очка характеристик. Усталость +" + cost + ".";
       updateDebtStatus(state, "training");
       return;
     }

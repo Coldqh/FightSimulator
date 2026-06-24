@@ -35,22 +35,58 @@
     if (comp.schedule === "country") { return "2 раза в год"; }
     if (comp.schedule === "continent") { return "1 раз в год"; }
     if (comp.schedule === "world") { return "1 раз в 2 года"; }
-    if (comp.schedule === "olympiad") { return "1 раз в 4 года"; }
+    if (comp.schedule === "olympiad") { return "1 раз в 2 года"; }
     return "по расписанию";
   }
 
   function isScheduledNow(state, comp) {
     var w = Math.max(1, Number(state.week) || 1);
-    var idx = (w - 1) % 192;
+    var idx = (w - 1) % 96;
     if (comp.schedule === "city") { return idx % 8 === 1; }
     if (comp.schedule === "oblast") { return idx % 12 === 3; }
     if (comp.schedule === "region") { return idx % 16 === 5; }
     if (comp.schedule === "country") { return idx % 24 === 7; }
     if (comp.schedule === "continent") { return idx % 48 === 11; }
     if (comp.schedule === "world") { return idx % 96 === 17; }
-    if (comp.schedule === "olympiad") { return idx === 29; }
+    if (comp.schedule === "olympiad") { return idx % 96 === 29; }
     return false;
   }
+
+  function competitionScope(comp) {
+    if (!comp) { return "local"; }
+    if (comp.scope) { return comp.scope; }
+    if (comp.id === "continent" || comp.schedule === "continent") { return "continent"; }
+    if (comp.id === "world" || comp.schedule === "world") { return "world"; }
+    if (comp.id === "olympiad" || comp.schedule === "olympiad") { return "world_elite"; }
+    return "local";
+  }
+
+  function nationalCountryId(fighter) {
+    return fighter ? (fighter.homeCountryId || fighter.originCountryId || fighter.nameCountryId || fighter.countryId) : "";
+  }
+
+  function continentTournamentLabel(country) {
+    var label = country && country.continentLabel ? country.continentLabel : "";
+    var byId = {
+      "Europe": "Европы",
+      "Asia": "Азии",
+      "North America": "Северной Америки",
+      "South America": "Южной Америки",
+      "Africa": "Африки",
+      "Oceania": "Океании"
+    };
+    var genitive = byId[country && country.continentId] || {
+      "Европа": "Европы",
+      "Азия": "Азии",
+      "Северная Америка": "Северной Америки",
+      "Южная Америка": "Южной Америки",
+      "Африка": "Африки",
+      "Океания": "Океании"
+    }[label] || label;
+    return "Чемпионат " + genitive;
+  }
+
+  
 
   function dateTextForWeek(week) {
     var parts = State.dateParts ? State.dateParts({ week: week }) : { year: 1, monthLabel: "месяц", weekOfMonth: 1 };
@@ -83,9 +119,10 @@
     var cooldownLeft;
     ensureAmateurState(state);
     lastWeek = state.amateurPath.lastCompetitionWeekById[comp.id] || 0;
-    cooldownLeft = lastWeek ? Math.max(0, comp.weekCooldown - (state.week - lastWeek)) : 0;
+    cooldownLeft = lastWeek && comp.weekCooldown ? Math.max(0, comp.weekCooldown - (state.week - lastWeek)) : 0;
 
     if (p.trackId !== "amateur") { return { available: false, reason: "Доступно только на любительском пути.", cooldownLeft: cooldownLeft }; }
+    if (State.isLockedByFatigue && State.isLockedByFatigue(state)) { return { available: false, reason: "Усталость выше 75/100. Сначала восстановись.", cooldownLeft: cooldownLeft }; }
     if (rating < comp.minRating) { return { available: false, reason: "Нужен OVR " + comp.minRating + "+.", cooldownLeft: cooldownLeft }; }
     if (typeof comp.maxRating === "number" && rating > comp.maxRating) { return { available: false, reason: "OVR выше лимита: максимум " + comp.maxRating + ".", cooldownLeft: cooldownLeft }; }
     if (!isScheduledNow(state, comp)) { return { available: false, reason: "Следующий турнир: " + scheduleTextForState(state, comp) + ".", cooldownLeft: cooldownLeft }; }
@@ -95,11 +132,12 @@
 
   function availableCompetitions(state) {
     var p = State.player(state);
-    var playerCountry = p ? U.findCountry(p.countryId) : null;
+    var nationalCountry = p ? U.findCountry(nationalCountryId(p)) : null;
     ensureAmateurState(state);
     return Data.amateurCompetitions.map(function (comp) {
       var status = competitionStatus(state, comp);
-      var label = comp.scope === "continent" && playerCountry ? "Чемпионат " + playerCountry.continentLabel : comp.label;
+      var scope = competitionScope(comp);
+      var label = scope === "continent" && nationalCountry ? continentTournamentLabel(nationalCountry) : comp.label;
       return {
         id: comp.id,
         label: label,
@@ -120,12 +158,13 @@
   function countryPool(state, comp) {
     var p = State.player(state);
     var currentCountry = U.findCountry(p.countryId);
-    var homeCountry = U.findCountry(p.homeCountryId || p.countryId);
+    var homeCountry = U.findCountry(nationalCountryId(p));
+    var scope = competitionScope(comp);
 
-    if (comp.scope === "continent") {
+    if (scope === "continent") {
       return Data.countries.filter(function (country) { return country.continentId === homeCountry.continentId; });
     }
-    if (comp.scope === "world" || comp.scope === "world_elite") {
+    if (scope === "world" || scope === "world_elite") {
       return Data.countries.slice();
     }
 
@@ -138,11 +177,13 @@
 
   function candidatePool(state, comp, usedIds) {
     var p = State.player(state);
+    var scope = competitionScope(comp);
     var countries = countryPool(state, comp).map(function (country) { return country.id; });
     var min = typeof comp.minRating === "number" ? comp.minRating : 0;
     var max = typeof comp.maxRating === "number" ? comp.maxRating : 120;
     var used = usedIds || {};
-    var teamOnly = comp.scope === "world" || comp.scope === "world_elite";
+    var teamOnly = scope === "world" || scope === "world_elite";
+    var nationalScope = scope === "continent" || teamOnly;
     var teamSet = {};
     var countryId;
     var team;
@@ -158,10 +199,11 @@
 
     return state.roster.filter(function (fighter) {
       var rating = U.statAverage(fighter.stats);
+      var countryForTournament = nationalScope ? nationalCountryId(fighter) : fighter.countryId;
       return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
         fighter.trackId === "amateur" &&
         fighter.weightClassId === p.weightClassId &&
-        countries.indexOf(fighter.countryId) !== -1 &&
+        countries.indexOf(countryForTournament) !== -1 &&
         (!teamOnly || teamSet[fighter.id]) &&
         rating >= min && rating <= max;
     });
@@ -768,7 +810,7 @@
     session.continueMode = continueMode;
     session.finalPlace = finalPlace;
     awardDirectOpponentPlacement(state, opponent, comp, finalPlace);
-    session.pendingFatigue = (session.pendingFatigue || 0) + (result === "Победа" ? 25 : (result === "Ничья" ? 30 : 40));
+    session.pendingFatigue = (session.pendingFatigue || 0) + (Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.fight) || 25) : 25);
 
     return {
       type: "tournamentResult",

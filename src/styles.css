@@ -4173,3 +4173,25 @@ h1, h2, h3 { color: #f2f4f7; }
   }
 }
 /* ===== /2.6.8 Rating Migration Coaches UI ===== */
+
+/* ===== 2.6.9 Fatigue Ranks Amateur Opponents ===== */
+button:disabled,
+button.primary:disabled,
+.f1-fight-btn:disabled {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  filter: grayscale(0.35);
+}
+
+button:disabled:hover {
+  background: var(--panel-2);
+  border-color: var(--line);
+  transform: none !important;
+}
+
+.fatigue-warning {
+  margin: 6px 0 8px;
+  color: #f5d98d;
+}
+/* ===== /2.6.9 Fatigue Ranks Amateur Opponents ===== */

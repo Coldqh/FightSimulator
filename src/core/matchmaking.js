@@ -158,8 +158,21 @@
   function localOpponentCountryIds(player) {
     var home = U.findCountry(player.countryId);
     var rank = window.FS.State && window.FS.State.rankForFighter ? window.FS.State.rankForFighter(player).id : "";
-    var usePool = player.trackId === "street" || (player.trackId === "amateur" && rank !== "ms" && rank !== "msmk");
-    if (!usePool) { return null; }
+    var rating = U.statAverage(player.stats);
+
+    if (player.trackId === "amateur") {
+      if (rating >= 100 || rank === "ms" || rank === "msmk") {
+        return null;
+      }
+      if (rank === "kms") {
+        return Data.countries.filter(function (country) { return country.continentId === home.continentId; }).map(function (country) { return country.id; });
+      }
+    }
+
+    if (player.trackId !== "street" && player.trackId !== "amateur") {
+      return null;
+    }
+
     if (home.localPoolId && home.localPoolId !== home.id) {
       return Data.countries.filter(function (country) { return country.localPoolId === home.localPoolId; }).map(function (country) { return country.id; });
     }
@@ -167,7 +180,7 @@
   }
 
   function rankingWindowCandidates(state, player, localCountries, used) {
-    var rankingCountry = player.trackId === "pro" ? "world" : (localCountries && localCountries.length === 1 ? localCountries[0] : player.countryId);
+    var rankingCountry = localCountries && localCountries.length === 1 ? localCountries[0] : "world";
     var rankingWeight = player.trackId === "street" ? "" : player.weightClassId;
     var list = State.ranking(state, rankingCountry, player.trackId, rankingWeight).filter(function (fighter) {
       return !fighter.isPlayer && !fighter.retired && !used[fighter.id] &&
@@ -186,7 +199,8 @@
     var playerOvr = U.statAverage(player.stats);
     var used = usedIds || {};
     var playerRank = player.trackId === "amateur" && State.rankForFighter ? State.rankForFighter(player) : null;
-    var internationalAmateur = player.trackId === "amateur" && ["ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1;
+    var internationalAmateur = player.trackId === "amateur" && (playerOvr >= 100 || ["ms", "msmk"].indexOf(playerRank ? playerRank.id : "") !== -1);
+    var continentalAmateur = player.trackId === "amateur" && !internationalAmateur && playerRank && playerRank.id === "kms";
     var tier = careerTier(player);
     var streetInternational = player.trackId === "street" && tier && tier.level >= 4;
     var forceForeignStreet = streetInternational && slotIndex < 8;
@@ -200,6 +214,10 @@
 
     if (forceForeignStreet) {
       candidates = candidates.filter(function (fighter) { return fighter.countryId !== player.countryId; });
+    }
+
+    if (continentalAmateur) {
+      candidates = candidates.filter(function (fighter) { return fighter.countryId !== player.countryId || slotIndex >= 2; });
     }
 
     if (!candidates.length) {

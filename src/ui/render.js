@@ -612,10 +612,23 @@
     "</div></div>";
   }
 
+  function f1FatigueActionBlocked(state) {
+    var p = State.player(state);
+    var limit = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.actionLockAbove) || 75) : 75;
+    return !!(p && (Number(p.fatigue) || 0) > limit);
+  }
+
+  function f1FatigueDisabledAttr(state) {
+    return f1FatigueActionBlocked(state) ? ' disabled title="Усталость выше 75/100"' : '';
+  }
+
+  
+
   function renderDashboardTab(state) {
     var p = State.player(state);
     var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
     var breakdown = State.monthlyExpenseBreakdown ? State.monthlyExpenseBreakdown(state) : { total: 0 };
+    var trainingDisabled = f1FatigueDisabledAttr(state);
 
     return '<div class="grid two dashboard-grid">' +
       '<div class="content-card"><h3>Текущее положение</h3>' +
@@ -626,7 +639,7 @@
         '<div class="split-row"><span>Баланс</span><strong>$' + (p.money || 0) + '</strong></div>' +
         '<div class="split-row"><span>Очки прокачки</span><strong>' + (p.trainingPoints || 0) + '</strong></div>' +
         '<div class="split-row"><span>Ежемесячные расходы</span><strong>$' + (breakdown.total || 0) + '</strong></div>' +
-        '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week">Тренировка</button></div>' +
+        '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
       '</div>' +
     '</div>';
   }
@@ -750,6 +763,7 @@
     var offers = (state.offers || []).filter(function (offer) { return !offer.isCompetition && offer.opponentId; });
     var competitions = (state.offers || []).filter(function (offer) { return offer && offer.isCompetition; });
     var invite = state.world && state.world.pendingTournamentInvite;
+    var fatigueDisabled = f1FatigueDisabledAttr(state);
 
     function fightRow(offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
@@ -766,7 +780,7 @@
         ].join(" · "),
         money: preview.purse,
         chance: preview.winChance,
-        actionHtml: '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '">Бой</button>'
+        actionHtml: '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '"' + fatigueDisabled + '>Бой</button>'
       });
     }
 
@@ -777,7 +791,7 @@
       return '<div class="f1-tournament-row">' +
         '<div class="f1-tournament-title"><strong>' + U.escapeHtml(title) + '</strong><span>' + U.escapeHtml(subtitle) + '</span></div>' +
         '<span class="f1-metric money">Турнир</span>' +
-        '<button data-amateur-competition="' + U.escapeHtml(id) + '">Открыть</button>' +
+        '<button data-amateur-competition="' + U.escapeHtml(id) + '"' + fatigueDisabled + '>Открыть</button>' +
       '</div>';
     }
 
@@ -786,12 +800,13 @@
       return '<div class="f1-tournament-row">' +
         '<div class="f1-tournament-title"><strong>' + U.escapeHtml(invite.label || "Доступен турнир") + '</strong><span>' + U.escapeHtml(invite.reason || "можно принять заявку") + '</span></div>' +
         '<button data-tournament-invite="ignore">Скрыть</button>' +
-        '<button class="primary" data-tournament-invite="accept">Принять</button>' +
+        '<button class="primary" data-tournament-invite="accept"' + fatigueDisabled + '>Принять</button>' +
       '</div>';
     }
 
     return '<div class="f1-fights-top">' +
         '<div class="f1-section-head"><h3>Бои</h3><button class="small-btn" data-action="refresh-offers">Обновить</button></div>' +
+        (f1FatigueActionBlocked(state) ? '<div class="muted small fatigue-warning">Усталость выше 75/100. Бои и турниры закрыты, пропусти неделю или отдохни.</div>' : '') +
         inviteRow() +
         (p.trackId === "amateur" ? competitions.map(competitionRow).join("") : "") +
       '</div>' +
@@ -1117,12 +1132,14 @@
 
   function renderWorldTab(state) {
     var p = State.player(state);
-    var homeId = p.homeCountryId || p.countryId;
+    var homeId = p.homeCountryId || p.originCountryId || p.countryId;
     var selectedTeamId = state.selectedTeamCountryId || homeId;
     var comps = window.FS.Amateur ? window.FS.Amateur.availableCompetitions(state) : [];
+    var fatigueDisabled = f1FatigueDisabledAttr(state);
 
     function renderCompetition(comp) {
-      return '<div class="split-row tournament-row"><div><div class="name-line">' + U.escapeHtml(comp.label) + '</div><div class="muted small">OVR ' + comp.minRating + '–' + comp.maxRating + ' · +' + comp.rewardRating + ' · ' + U.escapeHtml(tournamentWeeksOnly(comp)) + '</div></div><span>' + (comp.available ? '<button class="small-btn primary" data-amateur-competition="' + U.escapeHtml(comp.id) + '">Начать турнир</button>' : '<span class="pill">закрыто</span>') + '</span></div>';
+      var disabled = comp.available ? fatigueDisabled : ' disabled';
+      return '<div class="split-row tournament-row"><div><div class="name-line">' + U.escapeHtml(comp.label) + '</div><div class="muted small">OVR ' + comp.minRating + '–' + comp.maxRating + ' · +' + comp.rewardRating + ' · ' + U.escapeHtml(tournamentWeeksOnly(comp)) + '</div></div><span>' + (comp.available ? '<button class="small-btn primary" data-amateur-competition="' + U.escapeHtml(comp.id) + '"' + disabled + '>Начать турнир</button>' : '<span class="pill">закрыто</span>') + '</span></div>';
     }
 
     return '<div class="grid two world-grid">' +
@@ -1455,7 +1472,7 @@
     }
 
     if (modal.type === "fatigueLock") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость 100/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться, покупать услуги или двигать карьеру. Доступен только отдых.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость выше 75/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться и идти в турниры. Остальные разделы работают.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
     }
 
     if (modal.type === "activeFight") {

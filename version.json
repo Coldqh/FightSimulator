@@ -1,7 +1,7 @@
 {
-  "version": "rating-migration-coaches-ui-2.6.8",
-  "mode": "rating-migration-coaches-ui",
-  "cacheVersion": "fight-simulator-rating-migration-coaches-ui-2.6.8",
+  "version": "fatigue-ranks-amateur-opponents-2.6.9",
+  "mode": "fatigue-ranks-amateur-opponents",
+  "cacheVersion": "fight-simulator-fatigue-ranks-amateur-opponents-2.6.9",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

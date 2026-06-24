@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.8&target=2.6.8&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.9&target=2.6.9&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -526,12 +526,24 @@
     function addForeignAmateurOffers() {
       var player;
       var rank;
+      var rating;
       var pool;
+      var countries = null;
       if (!targetState || !targetState.offers) { return; }
       player = State.player(targetState);
       if (!player || player.trackId !== "amateur") { return; }
-      rank = player.amateurRankId || "";
-      if (["ms", "msmk"].indexOf(rank) === -1) { return; }
+      rank = State.rankForFighter ? State.rankForFighter(player) : null;
+      rating = ovr(player);
+
+      if (rating >= 100 || (rank && (rank.id === "ms" || rank.id === "msmk"))) {
+        countries = null;
+      } else if (rank && rank.id === "kms") {
+        var home = U.findCountry(player.countryId);
+        countries = (D.countries || []).filter(function (country) { return country.continentId === home.continentId; }).map(function (country) { return country.id; });
+      } else {
+        return;
+      }
+
       if (targetState.offers.some(function (offer) {
         var fighter = byId(offer.opponentId);
         return fighter && fighter.countryId !== player.countryId;
@@ -542,7 +554,8 @@
           fighter.trackId === "amateur" &&
           fighter.weightClassId === player.weightClassId &&
           fighter.countryId !== player.countryId &&
-          Math.abs(ovr(fighter) - ovr(player)) <= 18;
+          (!countries || countries.indexOf(fighter.countryId) !== -1) &&
+          Math.abs(ovr(fighter) - rating) <= 18;
       });
 
       for (var i = 0; i < Math.min(3, pool.length, targetState.offers.length); i += 1) {
@@ -772,7 +785,6 @@
       World.advanceWeek(state, "training");
       saveAndRender();
     } else if (button.dataset.action === "rest-week") {
-      if (State.restPlayer) { State.restPlayer(state); }
       World.advanceWeek(state, "rest");
       if (!State.isLockedByFatigue || !State.isLockedByFatigue(state)) { state.modal = null; }
       saveAndRender();

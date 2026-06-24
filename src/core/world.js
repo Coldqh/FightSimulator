@@ -117,14 +117,14 @@
     return window.FS.Amateur && window.FS.Amateur.availableCompetitions ?
       (function () {
         var w = Math.max(1, Number(state.week) || 1);
-        var idx = (w - 1) % 192;
+        var idx = (w - 1) % 96;
         if (comp.schedule === "city") { return idx % 8 === 1; }
         if (comp.schedule === "oblast") { return idx % 12 === 3; }
         if (comp.schedule === "region") { return idx % 16 === 5; }
         if (comp.schedule === "country") { return idx % 24 === 7; }
         if (comp.schedule === "continent") { return idx % 48 === 11; }
         if (comp.schedule === "world") { return idx % 96 === 17; }
-        if (comp.schedule === "olympiad") { return idx === 29; }
+        if (comp.schedule === "olympiad") { return idx % 96 === 29; }
         return false;
       }()) : false;
   }
@@ -1148,8 +1148,8 @@ function simulateInternationalGymMoves(state) {
 
     if (action === "rest" && State.restPlayer) {
       State.restPlayer(state);
-    } else if (State.adjustFatigue) {
-      fatigueRecovery = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.weeklyRecovery) || 10) : 10;
+    } else if ((action === "skip" || !action) && State.adjustFatigue) {
+      fatigueRecovery = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.weeklyRecovery) || 20) : 20;
       State.adjustFatigue(state, -fatigueRecovery, "Еженедельное восстановление");
     }
 

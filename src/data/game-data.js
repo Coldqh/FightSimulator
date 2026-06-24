@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "rating-migration-coaches-ui-2.6.8",
-  "saveSchemaVersion": 268,
+  "appVersion": "fatigue-ranks-amateur-opponents-2.6.9",
+  "saveSchemaVersion": 269,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -145,30 +145,30 @@
       "id": "adult_3",
       "label": "3 взрослый",
       "minRating": 0,
-      "maxRating": 21
+      "maxRating": 19
     },
     {
       "id": "adult_2",
       "label": "2 взрослый",
-      "minRating": 22,
-      "maxRating": 41
+      "minRating": 20,
+      "maxRating": 39
     },
     {
       "id": "adult_1",
       "label": "1 взрослый",
-      "minRating": 42,
-      "maxRating": 64
+      "minRating": 40,
+      "maxRating": 59
     },
     {
       "id": "kms",
       "label": "КМС",
-      "minRating": 65,
-      "maxRating": 84
+      "minRating": 60,
+      "maxRating": 79
     },
     {
       "id": "ms",
       "label": "МС",
-      "minRating": 85,
+      "minRating": 80,
       "maxRating": 99
     },
     {
@@ -311,7 +311,8 @@
       "schedule": "city",
       "minRating": 0,
       "maxRating": 60,
-      "rewardRating": 1
+      "rewardRating": 1,
+      "scope": "local"
     },
     {
       "id": "oblast",
@@ -319,7 +320,8 @@
       "schedule": "oblast",
       "minRating": 20,
       "maxRating": 80,
-      "rewardRating": 2
+      "rewardRating": 2,
+      "scope": "local"
     },
     {
       "id": "region",
@@ -327,7 +329,8 @@
       "schedule": "region",
       "minRating": 40,
       "maxRating": 95,
-      "rewardRating": 3
+      "rewardRating": 3,
+      "scope": "local"
     },
     {
       "id": "country",
@@ -335,7 +338,8 @@
       "schedule": "country",
       "minRating": 55,
       "maxRating": 110,
-      "rewardRating": 4
+      "rewardRating": 4,
+      "scope": "local"
     },
     {
       "id": "continent",
@@ -343,7 +347,8 @@
       "schedule": "continent",
       "minRating": 75,
       "maxRating": 120,
-      "rewardRating": 5
+      "rewardRating": 5,
+      "scope": "continent"
     },
     {
       "id": "world",
@@ -351,7 +356,8 @@
       "schedule": "world",
       "minRating": 85,
       "maxRating": 120,
-      "rewardRating": 6
+      "rewardRating": 6,
+      "scope": "world"
     },
     {
       "id": "olympiad",
@@ -359,7 +365,8 @@
       "schedule": "olympiad",
       "minRating": 90,
       "maxRating": 120,
-      "rewardRating": 7
+      "rewardRating": 7,
+      "scope": "world_elite"
     }
   ],
   "economy": {
@@ -470,8 +477,11 @@
     "fatigue": {
       "travel": 14,
       "monthlyStressNoMoney": 16,
-      "weeklyRecovery": 10,
-      "restWeek": 28
+      "weeklyRecovery": 20,
+      "restWeek": 20,
+      "training": 15,
+      "fight": 25,
+      "actionLockAbove": 75
     },
     "equipment": [
       {
