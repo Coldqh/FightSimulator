@@ -259,7 +259,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.6.9&target=2.6.9&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.0&target=2.7.0&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -952,6 +952,9 @@
       }
       state.selectedTab = "myclub";
       saveAndRender();
+    } else if (button.dataset.selectCoach) {
+      if (window.FS.Clubs && window.FS.Clubs.selectPlayerCoach) { window.FS.Clubs.selectPlayerCoach(state, button.dataset.selectCoach); }
+      saveAndRender();
     } else if (button.dataset.action === "leave-club") {
       if (window.FS.Clubs && window.FS.Clubs.leavePlayerClub) { window.FS.Clubs.leavePlayerClub(state); }
       saveAndRender();
@@ -1024,6 +1027,7 @@
         window.FS.Clubs.ensureClubs(state);
       }
       World.refreshOffers(state);
+      state.modal = null;
       saveAndRender();
     }
   });

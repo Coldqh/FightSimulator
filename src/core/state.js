@@ -1096,7 +1096,13 @@
         return !fighter.retired && countryOk && fighter.trackId === trackId && weightOk;
       })
       .sort(function (left, right) {
-        return (recordStrengthForRanking(right) + U.statAverage(right.stats) * 0.08) - (recordStrengthForRanking(left) + U.statAverage(left.stats) * 0.08);
+        var leftOvr = U.statAverage(left.stats);
+        var rightOvr = U.statAverage(right.stats);
+        if (trackId === "amateur" || trackId === "street") {
+          if (rightOvr !== leftOvr) { return rightOvr - leftOvr; }
+          return recordStrengthForRanking(right) - recordStrengthForRanking(left);
+        }
+        return (recordStrengthForRanking(right) + rightOvr * 0.08) - (recordStrengthForRanking(left) + leftOvr * 0.08);
       });
 
     state._rankingCache[key] = result;

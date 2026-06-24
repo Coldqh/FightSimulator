@@ -31,9 +31,19 @@
     return null;
   }
 
+  function fightCoachBonus(fighter) {
+    var state = window.FS.__currentFightState || null;
+    if (state && window.FS.Clubs && window.FS.Clubs.coachFightBonus) {
+      return window.FS.Clubs.coachFightBonus(state, fighter);
+    }
+    return 0;
+  }
+
+  
+
   function estimateWinChance(player, opponent) {
-    var playerScore = U.statAverage(player.stats) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
-    var opponentScore = U.statAverage(opponent.stats) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
+    var playerScore = U.statAverage(player.stats) + fightCoachBonus(player) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
+    var opponentScore = U.statAverage(opponent.stats) + fightCoachBonus(opponent) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
     var diff = playerScore - opponentScore;
     var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 8);
     var underdogHelp = diff < 0 ? Math.min(8, Math.round(Math.abs(diff) * 0.22)) : 0;
@@ -64,7 +74,7 @@
   }
 
   function damageScale(fighter) {
-    return 1 + U.clamp(Number(fighter.stats.power) || 0, 0, 200) * 0.0075;
+    return 1 + U.clamp(Number(fighter.stats.power) || 0, 0, 200) * 0.0075 + fightCoachBonus(fighter) * 0.004;
   }
 
   function basePunchDamage(punch) {
@@ -145,8 +155,8 @@
   function hitChance(attacker, defender, punch, attackerState, defenderState) {
     var staminaFactor = attackerState.stamina / attackerState.maxStamina;
     var actionPenalty = repeatPenalty(attackerState, punch.id);
-    var attackGrowth = attacker.stats.technique * 0.38 + attacker.stats.speed * 0.27;
-    var dodgeGrowth = defender.stats.speed * 0.24 + defender.stats.technique * 0.08;
+    var attackGrowth = attacker.stats.technique * 0.38 + attacker.stats.speed * 0.27 + fightCoachBonus(attacker) * 0.9;
+    var dodgeGrowth = defender.stats.speed * 0.24 + defender.stats.technique * 0.08 + fightCoachBonus(defender) * 0.45;
     return Math.round(U.clamp((36 + attackGrowth + punch.accuracy + staminaFactor * 10 - dodgeGrowth - blockEffect(defenderState) - counterRisk(defenderState)) * actionPenalty, 5, 92));
   }
 
@@ -292,6 +302,7 @@
   }
 
   function startInteractiveFight(state, offerId) {
+    window.FS.__currentFightState = state;
     var p = State.player(state);
     var offer = findOffer(state, offerId);
     var opponent;
@@ -639,6 +650,8 @@
       if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }
       else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
     }
+    if (window.FS.Clubs && window.FS.Clubs.rememberFightRelationship) { window.FS.Clubs.rememberFightRelationship(state, opponent); }
+    if (window.FS.Clubs && window.FS.Clubs.syncCoachRecords) { window.FS.Clubs.syncCoachRecords(state); }
     if (State.invalidateCaches) { State.invalidateCaches(state); }
     return true;
   }
@@ -855,6 +868,7 @@
   }
 
   function resolveRandomFight(state, offerId) {
+    window.FS.__currentFightState = state;
     var offer = findOffer(state, offerId);
     var p = State.player(state);
     var opponent;
@@ -885,6 +899,7 @@
   }
 
   function startTournamentInteractiveFight(state, tournamentModal) {
+    window.FS.__currentFightState = state;
     var p = State.player(state);
     var session = tournamentModal && tournamentModal.session;
     var opponent;
@@ -901,6 +916,7 @@
   }
 
   function skipProContractFight(state) {
+    window.FS.__currentFightState = state;
     var p = State.player(state);
     var opponent;
     var fakeOffer;
@@ -929,6 +945,7 @@
   }
 
   function startProContractFight(state) {
+    window.FS.__currentFightState = state;
     var p = State.player(state);
     var opponent;
     var offer;

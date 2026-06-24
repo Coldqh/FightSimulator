@@ -1,7 +1,7 @@
 /* Fight World service worker - F1 Mobile UI 2.5.0 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-fatigue-ranks-amateur-opponents-2.6.9";
+const CACHE_VERSION = "fight-simulator-coach-system-tournament-rewards-2.7.0";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

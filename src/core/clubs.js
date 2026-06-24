@@ -66,6 +66,180 @@
     return output;
   }
 
+  function coachStatsFromSeed(level, seed) {
+    var base = Math.max(18, Math.min(165, 34 + (Number(level) || 1) * 18));
+    var n = Math.abs(Number(seed) || 1);
+    function roll(offset) {
+      n = (n * 9301 + 49297 + offset) % 233280;
+      return U.clamp(base + Math.round((n / 233280) * 42) + U.randomInt(-8, 8), 1, 200);
+    }
+    return {
+      technique: roll(11),
+      conditioning: roll(23),
+      tactics: roll(37),
+      corner: roll(53),
+      development: roll(71)
+    };
+  }
+
+  function normalizeCoachStats(coach, club) {
+    var level = club ? club.level : 1;
+    var seed = String(coach && coach.id ? coach.id : Date.now()).split("").reduce(function (sum, ch) { return sum + ch.charCodeAt(0); }, 0);
+    coach.stats = coach.stats && typeof coach.stats === "object" ? coach.stats : coachStatsFromSeed(level, seed);
+    coach.stats.technique = U.clamp(Number(coach.stats.technique) || 1, 1, 200);
+    coach.stats.conditioning = U.clamp(Number(coach.stats.conditioning) || 1, 1, 200);
+    coach.stats.tactics = U.clamp(Number(coach.stats.tactics) || 1, 1, 200);
+    coach.stats.corner = U.clamp(Number(coach.stats.corner) || 1, 1, 200);
+    coach.stats.development = U.clamp(Number(coach.stats.development) || 1, 1, 200);
+    coach.ovr = coachOvr(coach);
+  }
+
+  function coachOvr(coach) {
+    var stats = coach && coach.stats ? coach.stats : {};
+    return Math.round(((Number(stats.technique) || 1) + (Number(stats.conditioning) || 1) + (Number(stats.tactics) || 1) + (Number(stats.corner) || 1) + (Number(stats.development) || 1)) / 5);
+  }
+
+  function coachAssignedFighters(state, coachId) {
+    if (!state || !coachId) { return []; }
+    return (state.roster || []).filter(function (fighter) {
+      return fighter && !fighter.retired && fighter.coachId === coachId;
+    });
+  }
+
+  function coachRecordFor(state, coachId) {
+    var record = emptyRecord();
+    coachAssignedFighters(state, coachId).forEach(function (fighter) {
+      var r = fighter.record || {};
+      record.wins += Number(r.wins) || 0;
+      record.losses += Number(r.losses) || 0;
+      record.draws += Number(r.draws) || 0;
+    });
+    return record;
+  }
+
+  function syncCoachRecords(state) {
+    var i;
+    var j;
+    var club;
+    var coach;
+    for (i = 0; i < (state.clubs || []).length; i += 1) {
+      club = state.clubs[i];
+      if (!club) { continue; }
+      for (j = 0; j < ((club.coaches instanceof Array && club.coaches.length) ? club.coaches.length : 0); j += 1) {
+        coach = club.coaches[j];
+        if (!coach) { continue; }
+        normalizeCoachStats(coach, club);
+        coach.record = coachRecordFor(state, coach.id);
+        coach.assignedCount = coachAssignedFighters(state, coach.id).length;
+      }
+      if (club.coaches && club.coaches[0]) { club.coach = club.coaches[0]; }
+    }
+  }
+
+  function clubCoachList(club) {
+    if (!club) { return []; }
+    if (club.coaches instanceof Array && club.coaches.length) { return club.coaches; }
+    return club.coach ? [club.coach] : [];
+  }
+
+  function coachBelongsToClub(club, coachId) {
+    return !!clubCoachList(club).some(function (coach) { return coach && coach.id === coachId; });
+  }
+
+  function leastBusyCoach(state, club) {
+    var coaches = clubCoachList(club);
+    var best = null;
+    var bestCount = Infinity;
+    var i;
+    var count;
+    for (i = 0; i < coaches.length; i += 1) {
+      count = coachAssignedFighters(state, coaches[i].id).length;
+      if (!best || count < bestCount || (count === bestCount && coachOvr(coaches[i]) > coachOvr(best))) {
+        best = coaches[i];
+        bestCount = count;
+      }
+    }
+    return best || null;
+  }
+
+  function assignCoachToFighter(state, fighter, club, force) {
+    var coach;
+    if (!fighter || !club) { return; }
+    if (!force && fighter.coachId && coachBelongsToClub(club, fighter.coachId)) { return; }
+    coach = leastBusyCoach(state, club);
+    fighter.coachId = coach ? coach.id : "";
+  }
+
+  function findFighterCoach(state, fighter) {
+    var pClub;
+    var coach;
+    if (!state || !fighter) { return null; }
+    if (fighter.coachId) {
+      coach = findCoach(state, fighter.coachId);
+      if (coach) { return coach; }
+    }
+    if (fighter.gymId) {
+      pClub = findClub(state, fighter.gymId);
+      if (pClub && !fighter.isPlayer) {
+        assignCoachToFighter(state, fighter, pClub, true);
+        return fighter.coachId ? findCoach(state, fighter.coachId) : null;
+      }
+      if (pClub && fighter.isPlayer && clubCoachList(pClub).length === 1) {
+        assignCoachToFighter(state, fighter, pClub, true);
+        return fighter.coachId ? findCoach(state, fighter.coachId) : null;
+      }
+    }
+    return null;
+  }
+
+  function coachFightBonus(state, fighter) {
+    var coach = findFighterCoach(state, fighter);
+    if (!coach) { return 0; }
+    return U.clamp(Math.round(coachOvr(coach) / 20), 0, 10);
+  }
+
+  function upsertPerson(state, person) {
+    var list;
+    var existing;
+    if (!state || !person || !person.id) { return; }
+    state.people = state.people instanceof Array ? state.people : [];
+    list = state.people;
+    existing = list.find(function (item) { return item && item.id === person.id; });
+    if (existing) {
+      Object.keys(person).forEach(function (key) { existing[key] = person[key]; });
+    } else {
+      list.unshift(person);
+      if (list.length > 120) { list.length = 120; }
+    }
+  }
+
+  function rememberCoachPerson(state, coach, role, note) {
+    if (!coach) { return; }
+    upsertPerson(state, {
+      id: coach.id,
+      role: role || "coach",
+      name: coach.name,
+      note: note || "Тренер",
+      clubId: coach.clubId || "",
+      personType: "coach"
+    });
+  }
+
+  function rememberFighterPerson(state, fighter, role, note) {
+    if (!fighter || fighter.isPlayer) { return; }
+    upsertPerson(state, {
+      id: "person_" + fighter.id,
+      role: role || "clubmate",
+      name: fighter.name,
+      note: note || "Боец",
+      fighterId: fighter.id,
+      clubId: fighter.gymId || "",
+      personType: "fighter"
+    });
+  }
+
+  
+
   function coachCountForLevel(level) {
     return Math.max(1, Math.min(5, Math.ceil((Number(level) || 1) * 5 / 6)));
   }
@@ -89,6 +263,7 @@
     coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
     coach.note = coach.note || "Тренер клуба.";
     coach.active = coach.active !== false;
+    normalizeCoachStats(coach, club);
     if (!coach.careerLog.length && club) {
       coach.careerLog.unshift({ week: 1, text: "Работает в клубе " + club.name + "." });
     }
@@ -118,6 +293,8 @@
       coach = createCoach(hostCountry, club.id + "_" + list.length, (seedBase || 0) + list.length * 137);
       coach.clubId = club.id;
       coach.note = list.length === 0 ? "Главный тренер клуба." : "Тренер клуба.";
+      coach.stats = coachStatsFromSeed(club.level, (seedBase || 0) + list.length * 137);
+      coach.ovr = coachOvr(coach);
       coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
       coach.careerLog.unshift({ week: 1, text: "Пришёл в клуб " + club.name + "." });
       add(coach);
@@ -127,6 +304,7 @@
     club.coaches = list;
     club.coach = club.coaches[0] || normalizeCoach(club.coach, club, hostCountry, 0) || createCoach(hostCountry, club.id, seedBase || 0);
     club.coach.note = "Главный тренер клуба.";
+    syncCoachRecords(state);
   }
 
   
@@ -134,13 +312,15 @@
   function createCoach(country, clubId, seed) {
     var hostCountry = country || Data.countries[0];
     var originCountry = hostCountry;
+    var valueSeed = Number(seed) || Date.now();
+    var coach;
     if (U.randomInt(1, 100) <= 9) {
       originCountry = Data.countries[U.randomInt(0, Data.countries.length - 1)] || hostCountry;
     }
-    return {
+    coach = {
       id: "coach_" + clubId + "_" + U.randomInt(1000, 9999),
       role: "coach",
-      name: U.createName(originCountry, (Number(seed) || Date.now()) + U.randomInt(1, 999999)),
+      name: U.createName(originCountry, valueSeed + U.randomInt(1, 999999)),
       countryId: hostCountry.id,
       currentCountryId: hostCountry.id,
       homeCountryId: originCountry.id,
@@ -148,10 +328,13 @@
       age: U.randomInt(34, 74),
       clubId: clubId,
       record: emptyRecord(),
-      careerLog: [{ week: 1, text: originCountry.id === hostCountry.id ? ("Начал работу в клубе.") : ("Переехал из " + originCountry.label + " в " + hostCountry.label + ".") }],
+      careerLog: [{ week: 1, text: originCountry.id === hostCountry.id ? "Начал работу в клубе." : ("Переехал из " + originCountry.label + " в " + hostCountry.label + ".") }],
       note: "Тренер клуба.",
-      active: true
+      active: true,
+      stats: coachStatsFromSeed(1, valueSeed)
     };
+    coach.ovr = coachOvr(coach);
+    return coach;
   }
 
   function ensureClubs(state) {
@@ -316,18 +499,27 @@
         club = pickLeastFilled(countryClubs, rating);
         if (club) {
           fighter.gymId = club.id;
+          assignCoachToFighter(state, fighter, club, false);
           club.rosterIds.push(fighter.id);
         }
       }
     }
 
-    /* Игрок остаётся без клуба до ручного выбора, но если уже выбран — добавляем в roster. */
     for (i = 0; i < (state.roster || []).length; i += 1) {
       fighter = state.roster[i];
       if (!fighter || fighter.retired || !fighter.gymId) { continue; }
       club = findClub(state, fighter.gymId);
+      if (!club) { fighter.coachId = ""; continue; }
+      if (fighter.isPlayer) {
+        if (!coachBelongsToClub(club, fighter.coachId)) {
+          fighter.coachId = clubCoachList(club).length === 1 ? clubCoachList(club)[0].id : "";
+        }
+      } else {
+        assignCoachToFighter(state, fighter, club, false);
+      }
       if (club && club.rosterIds.indexOf(fighter.id) === -1) { club.rosterIds.push(fighter.id); }
     }
+    syncCoachRecords(state);
   }
 
   function playerClub(state) {
@@ -365,40 +557,66 @@
     var club = playerClub(state);
     var roster;
     var coaches;
-    state.people = [];
+    var selected;
+    state.people = state.people instanceof Array ? state.people : [];
     if (!p || !club) { return; }
-    coaches = club.coaches instanceof Array && club.coaches.length ? club.coaches : (club.coach ? [club.coach] : []);
+
+    coaches = clubCoachList(club);
+    selected = findFighterCoach(state, p);
+
     coaches.forEach(function (coach, index) {
-      state.people.push({
-        id: coach.id,
-        role: index === 0 ? "headCoach" : "assistantCoach",
-        name: coach.name,
-        note: (index === 0 ? "Главный тренер" : "Тренер") + " клуба " + club.name,
-        clubId: club.id,
-        personType: "coach"
-      });
+      rememberCoachPerson(state, coach, coach.id === p.coachId ? "playerCoach" : (index === 0 ? "headCoach" : "assistantCoach"), (coach.id === p.coachId ? "Твой тренер" : (index === 0 ? "Главный тренер" : "Тренер")) + " · " + club.name);
     });
-    roster = clubRoster(state, club.id).filter(function (f) { return !f.isPlayer; }).slice(0, 3);
+
+    roster = clubRoster(state, club.id).filter(function (f) { return !f.isPlayer; }).slice(0, 6);
     roster.forEach(function (f) {
-      if (U.randomInt(1, 100) <= 70) {
-        state.people.push({ id: "person_" + f.id, role: "clubmate", name: f.name, note: "Одноклубник · " + U.findTrack(f.trackId).label, fighterId: f.id, clubId: club.id, personType: "fighter" });
+      if (U.randomInt(1, 100) <= 38) {
+        rememberFighterPerson(state, f, "clubmate", "Одноклубник · " + U.findTrack(f.trackId).label);
       }
     });
+
+    if (selected) {
+      rememberCoachPerson(state, selected, "playerCoach", "Твой тренер · OVR " + coachOvr(selected));
+    }
   }
 
   function movePlayerToClub(state, clubId) {
     var p = window.FS.State.player(state);
     var club = findClub(state, clubId);
     var rating = p ? U.statAverage(p.stats) : 0;
+    var coaches;
     if (!p || !club || club.countryId !== p.countryId || rating < club.minOvr || rating > club.maxOvr) {
       state.feed = "Нельзя перейти в этот клуб.";
       return false;
     }
     p.gymId = club.id;
+    coaches = clubCoachList(club);
+    p.coachId = coaches.length === 1 ? coaches[0].id : "";
     p.careerLog.unshift({ week: state.week, text: "Переход в клуб: " + club.name + "." });
     assignFightersToClubs(state);
     syncPeopleForPlayerClub(state);
-    state.feed = "Ты перешёл в клуб: " + club.name + ".";
+    state.feed = coaches.length > 1 ? ("Ты перешёл в клуб: " + club.name + ". Теперь выбери тренера.") : ("Ты перешёл в клуб: " + club.name + ".");
+    return true;
+  }
+
+  function selectPlayerCoach(state, coachId) {
+    var p = window.FS.State.player(state);
+    var club = playerClub(state);
+    var coach;
+    if (!p || !club || !coachBelongsToClub(club, coachId)) {
+      state.feed = "Этот тренер не работает в твоём клубе.";
+      return false;
+    }
+    coach = findCoach(state, coachId);
+    if (!coach) {
+      state.feed = "Тренер не найден.";
+      return false;
+    }
+    p.coachId = coach.id;
+    p.careerLog.unshift({ week: state.week, text: "Выбран тренер: " + coach.name + "." });
+    rememberCoachPerson(state, coach, "playerCoach", "Твой тренер · " + club.name);
+    syncCoachRecords(state);
+    state.feed = "Тренер выбран: " + coach.name + ".";
     return true;
   }
 
@@ -406,28 +624,21 @@
     var p = window.FS.State.player(state);
     if (!p) { return false; }
     p.gymId = "";
-    state.people = [];
+    p.coachId = "";
     assignFightersToClubs(state);
     state.feed = "Ты покинул клуб.";
     return true;
   }
 
   function recordClubFight(state, winner, loser, isDraw) {
-    var wc = winner ? findClub(state, winner.gymId) : null;
-    var lc = loser ? findClub(state, loser.gymId) : null;
+    syncCoachRecords(state);
+  }
 
-    function applyRecord(club, result) {
-      var coaches = club && club.coaches instanceof Array && club.coaches.length ? club.coaches : (club && club.coach ? [club.coach] : []);
-      coaches.forEach(function (coach) {
-        coach.record = coach.record || emptyRecord();
-        if (isDraw) { coach.record.draws += 1; }
-        else if (result === "win") { coach.record.wins += 1; }
-        else { coach.record.losses += 1; }
-      });
-    }
-
-    if (wc) { applyRecord(wc, "win"); }
-    if (lc) { applyRecord(lc, "loss"); }
+  function rememberFightRelationship(state, opponent) {
+    if (!opponent || opponent.isPlayer) { return false; }
+    if (U.randomInt(1, 100) > 12) { return false; }
+    rememberFighterPerson(state, opponent, "formerOpponent", "Бывший соперник · " + U.findTrack(opponent.trackId).label);
+    return true;
   }
 
   function maybeMoveNpcClubs(state) {
@@ -457,6 +668,17 @@
     if (moved) { assignFightersToClubs(state); }
   }
 
+  function reassignFightersFromCoach(state, oldCoachId, oldClub) {
+    (state.roster || []).forEach(function (fighter) {
+      if (!fighter || fighter.retired || fighter.coachId !== oldCoachId) { return; }
+      if (fighter.isPlayer) {
+        fighter.coachId = "";
+      } else {
+        assignCoachToFighter(state, fighter, oldClub, true);
+      }
+    });
+  }
+
   function simulateCoachLife(state) {
     var i;
     var j;
@@ -473,10 +695,6 @@
     var moved = false;
     pClub = playerClub(state);
 
-    function coachList(club) {
-      return club.coaches instanceof Array && club.coaches.length ? club.coaches : (club.coach ? [club.coach] : []);
-    }
-
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
       country = U.findCountry(club.countryId);
@@ -484,6 +702,7 @@
 
       for (j = 0; j < club.coaches.length; j += 1) {
         coach = club.coaches[j];
+        normalizeCoachStats(coach, club);
         coach.age = Number(coach.age) || 45;
         if (state.week % 48 === 1) { coach.age += 1; }
         chance = coach.age >= 70 ? 0.35 : (coach.age >= 60 ? 0.12 : 0.03);
@@ -494,9 +713,12 @@
           newCoach = createCoach(country, club.id + "_" + j, 900000 + state.week * 1000 + i * 10 + j);
           newCoach.clubId = club.id;
           newCoach.note = j === 0 ? "Главный тренер клуба." : "Тренер клуба.";
+          newCoach.stats = coachStatsFromSeed(club.level, 900000 + state.week * 1000 + i * 10 + j);
+          newCoach.ovr = coachOvr(newCoach);
           newCoach.careerLog.unshift({ week: state.week, text: "Заменил тренера " + oldCoach.name + " в клубе " + club.name + "." });
           club.coaches[j] = newCoach;
           if (j === 0) { club.coach = newCoach; }
+          reassignFightersFromCoach(state, oldCoach.id, club);
 
           if (pClub && pClub.id === club.id) {
             state.modal = { type: "coachEvent", title: "Событие в клубе", text: "Тренер " + oldCoach.name + " " + eventType + ". Новым тренером стал " + newCoach.name + "." };
@@ -510,7 +732,7 @@
 
         if (U.randomInt(1, 10000) <= 16 && (state.clubs || []).length > 1) {
           target = state.clubs[U.randomInt(0, state.clubs.length - 1)];
-          if (target && target.id !== club.id) {
+          if (target && target.id !== club.id && club.coaches.length > 1) {
             club.coaches.splice(j, 1);
             if (!target.coaches) { target.coaches = []; }
             target.coaches.push(coach);
@@ -518,9 +740,11 @@
             coach.clubId = target.id;
             coach.countryId = target.countryId;
             coach.currentCountryId = target.countryId;
+            normalizeCoachStats(coach, target);
             coach.careerLog = coach.careerLog instanceof Array ? coach.careerLog : [];
             coach.careerLog.unshift({ week: state.week, text: "Переход в клуб " + target.name + " · " + targetCountry.label + "." });
             if (coach.careerLog.length > 20) { coach.careerLog.length = 20; }
+            reassignFightersFromCoach(state, coach.id, club);
             ensureClubCoaches(state, club, country, 120000 + i * 1000 + j);
             ensureClubCoaches(state, target, targetCountry, 130000 + i * 1000 + j);
             if (pClub && (pClub.id === club.id || pClub.id === target.id) && window.FS.World && window.FS.World.createNews) {
@@ -532,13 +756,15 @@
         }
       }
 
-      club.coach = coachList(club)[0] || club.coach;
+      if (club.coaches && club.coaches[0]) { club.coach = club.coaches[0]; }
     }
 
     if (moved && window.FS.World && window.FS.World.createNews) {
       state.feed = "На тренерском рынке были переходы.";
     }
+    assignFightersToClubs(state);
     syncPeopleForPlayerClub(state);
+    syncCoachRecords(state);
   }
 
   window.FS.Clubs = {
@@ -550,6 +776,13 @@
     leavePlayerClub: leavePlayerClub,
     clubRoster: clubRoster,
     strongestFighter: strongestFighter,
+    findFighterCoach: findFighterCoach,
+    coachOvr: coachOvr,
+    coachFightBonus: coachFightBonus,
+    coachAssignedFighters: coachAssignedFighters,
+    syncCoachRecords: syncCoachRecords,
+    selectPlayerCoach: selectPlayerCoach,
+    rememberFightRelationship: rememberFightRelationship,
     eligibleClubsForFighter: eligibleClubsForFighter,
     maybeMoveNpcClubs: maybeMoveNpcClubs,
     levelBand: levelBand,

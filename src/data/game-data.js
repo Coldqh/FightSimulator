@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "fatigue-ranks-amateur-opponents-2.6.9",
-  "saveSchemaVersion": 269,
+  "appVersion": "coach-system-tournament-rewards-2.7.0",
+  "saveSchemaVersion": 270,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -10612,7 +10612,11 @@
     "coach": "Тренер",
     "headCoach": "Главный тренер",
     "assistantCoach": "Тренер",
+    "playerCoach": "Личный тренер",
+    "formerCoach": "Бывший тренер",
     "clubmate": "Одноклубник",
+    "formerClubmate": "Бывший одноклубник",
+    "formerOpponent": "Бывший соперник",
     "rival": "Соперник",
     "promoter": "Промоутер",
     "teamCoach": "Тренер сборной"

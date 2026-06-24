@@ -4195,3 +4195,43 @@ button:disabled:hover {
   color: #f5d98d;
 }
 /* ===== /2.6.9 Fatigue Ranks Amateur Opponents ===== */
+
+/* ===== 2.7.0 Coach System Tournament Rewards ===== */
+.f1-skill-track i {
+  background-image: linear-gradient(90deg, #3bbcff 0%, #4a7dff 45%, #d6a019 100%) !important;
+  background-position: left center;
+  background-repeat: no-repeat;
+}
+
+.coach-choice-row,
+.coach-row {
+  gap: 10px;
+}
+
+.coach-link-btn {
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inner-card {
+  margin-top: 12px;
+  background: rgba(255,255,255,0.025);
+}
+
+.ranking-origin .country-label {
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .coach-choice-row,
+  .coach-row {
+    align-items: flex-start;
+  }
+
+  .coach-choice-row .small-btn,
+  .coach-row .small-btn {
+    max-width: 160px;
+  }
+}
+/* ===== /2.7.0 Coach System Tournament Rewards ===== */
