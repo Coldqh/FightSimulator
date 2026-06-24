@@ -1,7 +1,7 @@
 {
-  "version": "stability-hotfix-2.7.1",
-  "mode": "stability-hotfix",
-  "cacheVersion": "fight-simulator-stability-hotfix-2.7.1",
+  "version": "coach-ovr-performance-2.7.2",
+  "mode": "coach-ovr-performance",
+  "cacheVersion": "fight-simulator-coach-ovr-performance-2.7.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

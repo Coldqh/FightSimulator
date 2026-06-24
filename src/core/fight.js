@@ -31,24 +31,90 @@
     return null;
   }
 
-  function fightCoachBonus(fighter) {
-    var state = window.FS.__currentFightState || null;
-    if (state && window.FS.Clubs && window.FS.Clubs.coachFightBonus) {
-      return window.FS.Clubs.coachFightBonus(state, fighter);
-    }
-    return 0;
+  function competitionUsesNationalCoach(tournamentSession) {
+    var compId = tournamentSession && tournamentSession.competitionId;
+    var comp;
+    if (!compId) { return false; }
+    comp = (Data.amateurCompetitions || []).find(function (item) { return item.id === compId; });
+    return !!(comp && (comp.scope === "continent" || comp.scope === "world" || comp.scope === "world_elite" || comp.id === "continent" || comp.id === "world" || comp.id === "olympiad"));
   }
 
-  
+  function nationalCountryId(fighter) {
+    return fighter ? (fighter.homeCountryId || fighter.originCountryId || fighter.nameCountryId || fighter.countryId) : "";
+  }
 
-  function estimateWinChance(player, opponent) {
-    var playerScore = U.statAverage(player.stats) + fightCoachBonus(player) + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
-    var opponentScore = U.statAverage(opponent.stats) + fightCoachBonus(opponent) + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
+  function coachOvrValue(coach) {
+    if (!coach) { return 0; }
+    if (window.FS.Clubs && window.FS.Clubs.coachOvr && coach.stats) {
+      return window.FS.Clubs.coachOvr(coach);
+    }
+    return U.clamp(Math.round(Number(coach.ovr) || 0), 0, 100);
+  }
+
+  function nationalCoachFor(state, fighter) {
+    var countryId = nationalCountryId(fighter);
+    var team;
+    if (!state || !countryId) { return null; }
+    if (state.world && state.world.teamsByCountry && state.world.teamsByCountry[countryId]) {
+      team = state.world.teamsByCountry[countryId];
+      if (team && team.coach) { return team.coach; }
+    }
+    if (state.world && state.world.teamCoaches && state.world.teamCoaches[countryId]) {
+      return state.world.teamCoaches[countryId];
+    }
+    return null;
+  }
+
+  function fightCoachFor(state, fighter, tournamentSession) {
+    if (!state || !fighter) { return null; }
+    if (competitionUsesNationalCoach(tournamentSession)) {
+      return nationalCoachFor(state, fighter);
+    }
+    if (window.FS.Clubs && window.FS.Clubs.findFighterCoach) {
+      return window.FS.Clubs.findFighterCoach(state, fighter);
+    }
+    return null;
+  }
+
+  function effectiveRatingForFight(state, fighter, tournamentSession) {
+    var personal = fighter && fighter.stats ? U.statAverage(fighter.stats) : 0;
+    var coach = fightCoachFor(state, fighter, tournamentSession);
+    var coachOvr = coachOvrValue(coach);
+    var bonus = Math.round(personal * 0.005 * coachOvr);
+    return {
+      personal: personal,
+      bonus: bonus,
+      total: personal + bonus,
+      coach: coach,
+      coachOvr: coachOvr
+    };
+  }
+
+  function effectiveRatingLabel(state, fighter, tournamentSession) {
+    var info = effectiveRatingForFight(state, fighter, tournamentSession);
+    return info.personal + " + " + info.bonus + " = " + info.total;
+  }
+
+  function fightCoachBonus(fighter) {
+    var state = window.FS.__currentFightState || null;
+    var info = effectiveRatingForFight(state, fighter, window.FS.__currentTournamentSession || null);
+    return Math.round(info.bonus / 12);
+  }
+
+  function estimateWinChanceWithContext(state, player, opponent, tournamentSession) {
+    var playerInfo = effectiveRatingForFight(state, player, tournamentSession);
+    var opponentInfo = effectiveRatingForFight(state, opponent, tournamentSession);
+    var playerScore = playerInfo.total + Math.min((player.record.wins || 0) * 0.20, 14) - Math.min((player.record.losses || 0) * 0.14, 9);
+    var opponentScore = opponentInfo.total + Math.min((opponent.record.wins || 0) * 0.20, 14) - Math.min((opponent.record.losses || 0) * 0.14, 9);
     var diff = playerScore - opponentScore;
     var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 8);
     var underdogHelp = diff < 0 ? Math.min(8, Math.round(Math.abs(diff) * 0.22)) : 0;
     var favoriteHelp = diff > 0 ? Math.min(6, Math.round(diff * 0.15)) : 0;
-    return U.clamp(54 + Math.round(diff * 2.25) + underdogHelp + favoriteHelp - fatiguePenalty, 12, 94);
+    return U.clamp(54 + Math.round(diff * 2.05) + underdogHelp + favoriteHelp - fatiguePenalty, 12, 94);
+  }
+
+  function estimateWinChance(player, opponent) {
+    return estimateWinChanceWithContext(window.FS.__currentFightState || null, player, opponent, window.FS.__currentTournamentSession || null);
   }
 
   function computePurse(player, opponent) {
@@ -219,6 +285,8 @@
 
   function createSession(state, offer, opponent, tournamentSession) {
     var p = State.player(state);
+    window.FS.__currentFightState = state;
+    window.FS.__currentTournamentSession = tournamentSession || null;
     return {
       id: U.uid("active_fight"),
       offerId: offer.id,
@@ -242,7 +310,7 @@
       roundLog: [],
       finished: false,
       purse: tournamentSession ? 0 : computePurse(p, opponent),
-      winChance: estimateWinChance(p, opponent),
+      winChance: estimateWinChanceWithContext(state, p, opponent, tournamentSession || null),
       count: null
     };
   }
@@ -252,11 +320,17 @@
     var p = State.player(state);
     var opponent;
     var difficulty;
+    var playerInfo;
+    var opponentInfo;
 
     if (!offer || !p) { return null; }
+    window.FS.__currentFightState = state;
+    window.FS.__currentTournamentSession = null;
     opponent = U.getFighterById(state, offer.opponentId);
     if (!opponent) { return null; }
     difficulty = U.findDifficulty(offer.difficultyId);
+    playerInfo = effectiveRatingForFight(state, p, null);
+    opponentInfo = effectiveRatingForFight(state, opponent, null);
 
     return {
       type: "fightPreview",
@@ -267,9 +341,13 @@
       opponentName: opponent.name,
       rounds: offer.rounds,
       purse: computePurse(p, opponent),
-      winChance: estimateWinChance(p, opponent),
-      playerRating: U.statAverage(p.stats),
-      opponentRating: U.statAverage(opponent.stats),
+      winChance: estimateWinChanceWithContext(state, p, opponent, null),
+      playerRating: playerInfo.total,
+      opponentRating: opponentInfo.total,
+      playerPersonalRating: playerInfo.personal,
+      opponentPersonalRating: opponentInfo.personal,
+      playerCoachBonus: playerInfo.bonus,
+      opponentCoachBonus: opponentInfo.bonus,
       playerRecord: U.recordText(p.record),
       opponentRecord: U.recordText(opponent.record),
       weightClassLabel: U.formatWeightClass(p.weightClassId),
@@ -303,6 +381,7 @@
 
   function startInteractiveFight(state, offerId) {
     window.FS.__currentFightState = state;
+    window.FS.__currentTournamentSession = null;
     var p = State.player(state);
     var offer = findOffer(state, offerId);
     var opponent;
@@ -730,8 +809,12 @@
         method: method,
         scoreLine: scoreLine,
         knockdown: knockdown,
-        playerRating: U.statAverage(p.stats),
-        opponentRating: U.statAverage(opponent.stats),
+        playerRating: effectiveRatingForFight(state, p, session.tournamentSession || null).total,
+        opponentRating: effectiveRatingForFight(state, opponent, session.tournamentSession || null).total,
+        playerPersonalRating: U.statAverage(p.stats),
+        opponentPersonalRating: U.statAverage(opponent.stats),
+        playerCoachBonus: effectiveRatingForFight(state, p, session.tournamentSession || null).bonus,
+        opponentCoachBonus: effectiveRatingForFight(state, opponent, session.tournamentSession || null).bonus,
         statsLine: "Урон: " + session.player.damage + ":" + session.opponent.damage + ". Удары: " + (session.player.landed || 0) + "/" + (session.player.thrown || 0) + " — " + (session.opponent.landed || 0) + "/" + (session.opponent.thrown || 0) + ". Контратаки: " + (session.player.counterLanded || 0) + ":" + (session.opponent.counterLanded || 0) + ". HP: " + session.player.hp + "/" + session.player.maxHp + " — " + session.opponent.hp + "/" + session.opponent.maxHp + ".",
         roundLog: (session.actionLog || []).slice(-60),
         winChance: session.winChance
@@ -894,7 +977,7 @@
     completeFightEconomy(state, p, opponent, result, purse, Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.fight) || 25) : 25);
     state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
     advanceAfterFight(state);
-    state.modal = { type: "fightResult", result: result, method: method, scoreLine: scoreLine + " · шанс " + chance + "%", opponentName: opponent.name, week: state.week, playerRating: U.statAverage(p.stats), opponentRating: U.statAverage(opponent.stats), purse: purse, winChance: chance, roundLog: [], knockdown: method === "KO/TKO" ? { round: 1, by: result === "Победа" ? "player" : "opponent" } : null, statsLine: "Бой решён автоматически." };
+    state.modal = { type: "fightResult", result: result, method: method, scoreLine: scoreLine + " · шанс " + chance + "%", opponentName: opponent.name, week: state.week, playerRating: effectiveRatingForFight(state, p, null).total, opponentRating: effectiveRatingForFight(state, opponent, null).total, playerPersonalRating: U.statAverage(p.stats), opponentPersonalRating: U.statAverage(opponent.stats), playerCoachBonus: effectiveRatingForFight(state, p, null).bonus, opponentCoachBonus: effectiveRatingForFight(state, opponent, null).bonus, purse: purse, winChance: chance, roundLog: [], knockdown: method === "KO/TKO" ? { round: 1, by: result === "Победа" ? "player" : "opponent" } : null, statsLine: "Бой решён автоматически." };
     return true;
   }
 
@@ -902,6 +985,7 @@
     window.FS.__currentFightState = state;
     var p = State.player(state);
     var session = tournamentModal && tournamentModal.session;
+    window.FS.__currentTournamentSession = session || null;
     var opponent;
     var fakeOffer;
     var active;
@@ -1010,6 +1094,9 @@
     resolveRandomFight: resolveRandomFight,
     resultClass: resultClass,
     estimateWinChance: estimateWinChance,
+    estimateWinChanceWithContext: estimateWinChanceWithContext,
+    effectiveRatingForFight: effectiveRatingForFight,
+    effectiveRatingLabel: effectiveRatingLabel,
     simulateRounds: simulateRounds,
     computePurse: computePurse,
     buildTitleChallengePreview: buildTitleChallengePreview,

@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "stability-hotfix-2.7.1",
-  "saveSchemaVersion": 271,
+  "appVersion": "coach-ovr-performance-2.7.2",
+  "saveSchemaVersion": 272,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -35,7 +35,7 @@
       "id": "pro",
       "label": "Профи",
       "short": "П",
-      "maxStat": 220,
+      "maxStat": 200,
       "rounds": 8,
       "basePurse": 650
     }

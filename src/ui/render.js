@@ -133,7 +133,7 @@
   function f1CoachOvr(coach) {
     if (!coach) { return 0; }
     if (window.FS.Clubs && window.FS.Clubs.coachOvr) { return window.FS.Clubs.coachOvr(coach); }
-    return Number(coach.ovr) || 0;
+    return Math.max(0, Math.min(100, Math.round(Number(coach.ovr) || 0)));
   }
 
   function f1CoachButton(state, fighter) {
@@ -154,6 +154,14 @@
   }
 
   
+
+  function f1EffectiveOvrText(base, bonus, total) {
+    base = Math.round(Number(base) || 0);
+    bonus = Math.round(Number(bonus) || 0);
+    total = Math.round(Number(total) || base + bonus);
+    return base + ' + ' + bonus + ' = ' + total;
+  }
+
 
   function option(value, label, selectedValue) {
     return "<option value=\"" + U.escapeHtml(value) + "\"" + (value === selectedValue ? " selected" : "") + ">" + U.escapeHtml(label) + "</option>";
@@ -1318,7 +1326,7 @@
     var coachButton = coach.id ? "<button class=\"small-btn\" data-person=\"" + U.escapeHtml(coach.id) + "\">" + U.escapeHtml(coach.name) + "</button>" : U.escapeHtml(coach.name);
 
     function rosterRow(fighter) {
-      return f1FighterRow(state, fighter, { countryMode: "flag", showStatus: true, className: "club-roster-row", extra: f1CoachFor(state, fighter) ? ("Тренер: " + U.escapeHtml(f1CoachFor(state, fighter).name)) : "" });
+      return f1FighterRow(state, fighter, { countryMode: "flag", showStatus: true, className: "club-roster-row" });
     }
 
     function coachRow(item, index) {
@@ -1590,6 +1598,7 @@
       var pClub = coach && coach.clubId && window.FS.Clubs ? window.FS.Clubs.findClub(state, coach.clubId) : null;
       var coachCountry = person.countryId ? U.findCountry(person.countryId) : null;
       var coachRole = person.personType === "teamCoach" ? "Тренер сборной" : (person.role === "headCoach" ? "Главный тренер" : (person.role === "playerCoach" ? "Личный тренер" : "Тренер"));
+      if (coach && (!coach.stats || f1CoachOvr(coach) <= 1) && coach.ovr) { coach.stats = { technique: coach.ovr * 2, conditioning: coach.ovr * 2, tactics: coach.ovr * 2, corner: coach.ovr * 2, development: coach.ovr * 2 }; }
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(person.name) + "</h2><div class=\"muted small\">" + coachRole + "</div></div><div class=\"modal-body\"><div class=\"f1-profile-hero\"><div class=\"f1-profile-top\"><div class=\"f1-profile-title\"><h2>OVR " + (coach ? f1CoachOvr(coach) : "—") + "</h2></div></div><div class=\"f1-profile-grid\"><div class=\"f1-profile-stat\"><span>Страна</span><strong>" + (coach ? f1CountryRouteBright(coach) : (coachCountry ? countryLabel(coachCountry.id) : "—")) + "</strong></div><div class=\"f1-profile-stat\"><span>Возраст</span><strong>" + (coach ? coach.age : "—") + "</strong></div><div class=\"f1-profile-stat\"><span>" + (coachCountry ? "Сборная" : "Клуб") + "</span><strong>" + (coachCountry ? countryLabel(coachCountry.id) : (pClub ? "<button class=\"small-btn\" data-club=\"" + U.escapeHtml(pClub.id) + "\">" + U.escapeHtml(pClub.name) + "</button>" : "—")) + "</strong></div><div class=\"f1-profile-stat\"><span>Рекорд бойцов</span><strong>" + (coach && coach.record ? (coach.record.wins || 0) + "-" + (coach.record.losses || 0) + "-" + (coach.record.draws || 0) : "0-0-0") + "</strong></div></div></div>" + (coach ? "<div class=\"content-card\" style=\"margin-top:12px\"><h3>Характеристики тренера</h3>" + renderCoachStatsRows(coach) + "</div>" : "") + "<div class=\"content-card\" style=\"margin-top:12px\"><h3>История карьеры</h3>" + coachCareerLog(coach) + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Закрыть</button></div></div></div>";
     }
 
@@ -1666,7 +1675,7 @@
     }
 
     if (modal.type === "tournamentFight") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal tournament-modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Турнирный бой</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentCountry) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Выйти</button><button data-tournament-fight=\"1\">Пропустить бой</button><button class=\"primary\" data-tournament-ring=\"1\">Выйти на ринг</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal tournament-modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Турнирный бой</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + f1EffectiveOvrText(modal.playerPersonalRating || modal.playerRating, modal.playerCoachBonus || 0, modal.playerRating) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + f1EffectiveOvrText(modal.opponentPersonalRating || modal.opponentRating, modal.opponentCoachBonus || 0, modal.opponentRating) + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentCountry) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill blue\">Шанс " + modal.winChance + "%</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Выйти</button><button data-tournament-fight=\"1\">Пропустить бой</button><button class=\"primary\" data-tournament-ring=\"1\">Выйти на ринг</button></div></div></div>";
     }
 
     if (modal.type === "tournamentResult") {
@@ -1682,7 +1691,7 @@
       var previewOpponent = U.getFighterById(state, modal.opponentId);
       var playerCoach = previewPlayer ? f1CoachFor(state, previewPlayer) : null;
       var opponentCoach = previewOpponent ? f1CoachFor(state, previewOpponent) : null;
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + modal.playerRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + modal.opponentRating + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Статистика</div><div class=\"muted small\">Рекорд: " + U.escapeHtml(modal.playerRecord) + " — " + U.escapeHtml(modal.opponentRecord) + ". Тренеры: " + (playerCoach ? U.escapeHtml(playerCoach.name) + " OVR " + f1CoachOvr(playerCoach) : "нет") + " — " + (opponentCoach ? U.escapeHtml(opponentCoach.name) + " OVR " + f1CoachOvr(opponentCoach) : "нет") + ".</div></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + f1EffectiveOvrText(modal.playerPersonalRating || modal.playerRating, modal.playerCoachBonus || 0, modal.playerRating) + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + f1EffectiveOvrText(modal.opponentPersonalRating || modal.opponentRating, modal.opponentCoachBonus || 0, modal.opponentRating) + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Статистика</div><div class=\"muted small\">OVR: " + f1EffectiveOvrText(modal.playerPersonalRating || modal.playerRating, modal.playerCoachBonus || 0, modal.playerRating) + " — " + f1EffectiveOvrText(modal.opponentPersonalRating || modal.opponentRating, modal.opponentCoachBonus || 0, modal.opponentRating) + ". Рекорд: " + U.escapeHtml(modal.playerRecord) + " — " + U.escapeHtml(modal.opponentRecord) + ". Тренеры: " + (playerCoach ? U.escapeHtml(playerCoach.name) + " OVR " + f1CoachOvr(playerCoach) : "нет") + " — " + (opponentCoach ? U.escapeHtml(opponentCoach.name) + " OVR " + f1CoachOvr(opponentCoach) : "нет") + ".</div></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
     }
 
     if (modal.type === "fightResult") {

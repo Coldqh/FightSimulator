@@ -245,6 +245,19 @@
     };
   }
 
+  function clampFighterStats(fighter) {
+    var keys = ["power", "technique", "speed", "stamina", "defense", "health"];
+    var i;
+    if (!fighter || !fighter.stats) { return; }
+    for (i = 0; i < keys.length; i += 1) {
+      if (fighter.stats[keys[i]] != null) {
+        fighter.stats[keys[i]] = U.clamp(Math.round(Number(fighter.stats[keys[i]]) || 1), 1, 200);
+      }
+    }
+  }
+
+  
+
   function createRecord(seed) {
     return recordByTrackAndRating("amateur", Math.abs(seed) % 100, "", 18);
   }
@@ -255,7 +268,8 @@
     var weightClassId = trackId === "street" ? "" : (opts.weightClassId || Data.weightClasses[Math.abs(seed) % Data.weightClasses.length].id);
     var stanceId = opts.stanceId || "";
     var age = typeof opts.age === "number" ? opts.age : U.clamp(18 + (Math.abs(seed) % 18), 18, 42);
-    var stats = opts.stats || U.createStats(trackId, baseValue);
+    var stats = opts.stats || U.createStats(trackId, U.clamp(baseValue, 1, 200));
+    Object.keys(stats).forEach(function (key) { stats[key] = U.clamp(Math.round(Number(stats[key]) || 1), 1, 200); });
     var rankId = opts.rankId || "";
     var record = opts.record || recordByTrackAndRating(trackId, U.statAverage(stats), rankId, age);
     var fighter = {
@@ -706,6 +720,7 @@
           state.roster[i].namesSchemaVersion = NAME_SCHEMA_VERSION;
         }
       }
+      clampFighterStats(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
     }
   }

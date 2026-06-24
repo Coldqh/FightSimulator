@@ -609,6 +609,11 @@
     var b;
     var result;
     var maxPairs = 0;
+    var sampleLimit = state.roster.length > 7000 ? 1800 : 3200;
+
+    if (due.length > sampleLimit) {
+      due = due.slice(0, sampleLimit);
+    }
 
     for (i = 0; i < due.length; i += 1) {
       key = due[i].trackId + "|" + due[i].countryId + "|" + (due[i].trackId === "street" ? "open" : due[i].weightClassId);
@@ -619,7 +624,7 @@
     for (key in buckets) {
       if (!Object.prototype.hasOwnProperty.call(buckets, key)) { continue; }
       bucket = shuffleList(buckets[key]);
-      maxPairs = Math.min(Math.floor(bucket.length / 2), 260);
+      maxPairs = Math.min(Math.floor(bucket.length / 2), state.roster.length > 7000 ? 70 : 140);
       for (i = 0; i < maxPairs; i += 1) {
         a = bucket[i * 2];
         b = bucket[i * 2 + 1];
@@ -632,7 +637,9 @@
       }
     }
 
-    report = report.concat(processProContracts(state).slice(0, 8 - report.length));
+    if (state.week % 2 === 0) {
+      report = report.concat(processProContracts(state).slice(0, 8 - report.length));
+    }
 
     return report;
   }
@@ -696,24 +703,47 @@
   }
 
   function createNationalCoach(country, seed) {
-    var record = { wins: U.randomInt(0, 120), losses: U.randomInt(0, 55), draws: U.randomInt(0, 8), kos: 0 };
+    var record = { wins: U.randomInt(0, 120), losses: U.randomInt(0, 55), draws: U.randomInt(0, 8), kos: U.randomInt(0, 70) };
+    var tierMap = {
+      cuba: 96, usa: 94, mexico: 92, russia: 90, kazakhstan: 90, uzbekistan: 90,
+      ukraine: 86, japan: 84, united_kingdom: 84, gb: 84, ireland: 82,
+      philippines: 82, germany: 78, france: 78, italy: 76, poland: 76,
+      brazil: 74, thailand: 74, turkey: 72, azerbaijan: 72, armenia: 70,
+      south_korea: 70, korea: 70, china: 68, india: 62
+    };
+    var base = tierMap[country.id] || (country.continentId === "Europe" ? 72 : (country.continentId === "Asia" ? 68 : (country.continentId === "North America" ? 70 : (country.continentId === "South America" ? 66 : 60))));
+    var ovr = U.clamp(base + U.randomInt(-5, 5), 45, 100);
+    function stat(offset) { return U.clamp(ovr * 2 + U.randomInt(-10, 10) + offset, 1, 200); }
     return {
       id: "team_coach_" + country.id + "_" + seed,
+      role: "teamCoach",
       name: U.createName(country, seed),
       countryId: country.id,
+      currentCountryId: country.id,
+      homeCountryId: country.id,
+      originCountryId: country.id,
       age: U.randomInt(42, 72),
       record: record,
-      hiredWeek: seed
+      stats: {
+        technique: stat(0),
+        conditioning: stat(-4),
+        tactics: stat(6),
+        corner: stat(2),
+        development: stat(-2)
+      },
+      ovr: ovr,
+      hiredWeek: seed,
+      careerLog: [{ week: 1, text: "Назначен тренером сборной " + country.label + "." }]
     };
   }
 
   function ensureNationalCoach(state, country) {
     state.world.teamCoaches = state.world.teamCoaches || {};
     var current = state.world.teamCoaches[country.id];
-    if (!current || (state.week > 1 && state.week % 52 === 1 && U.randomInt(1, 100) <= 24)) {
+    if (!current || (Number(current.ovr) || 0) <= 1 || !current.stats || (state.week > 1 && state.week % 52 === 1 && U.randomInt(1, 100) <= 16)) {
       current = createNationalCoach(country, state.week * 100 + country.id.length);
       state.world.teamCoaches[country.id] = current;
-      U.pushLimited(state.world.transitionLog, { week: state.week, text: "Сборная " + country.label + " получила нового тренера: " + current.name + "." }, 120);
+      U.pushLimited(state.world.transitionLog, { week: state.week, text: "Сборная " + country.label + " получила нового тренера: " + current.name + " · OVR " + current.ovr + "." }, 120);
     }
     return current;
   }

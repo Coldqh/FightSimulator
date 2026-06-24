@@ -101,7 +101,8 @@
   }
 
   function recordText(record) {
-    return record.wins + "-" + record.losses + "-" + record.draws + " · KO " + record.kos;
+    var safe = record || {};
+    return (Number(safe.wins) || 0) + "-" + (Number(safe.losses) || 0) + "-" + (Number(safe.draws) || 0) + " · KO " + (Number(safe.kos) || 0);
   }
 
   function getStatLabel(statId) {

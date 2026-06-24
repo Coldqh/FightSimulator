@@ -480,12 +480,22 @@
     var opponentId = session.specialRound === "third" ? session.thirdPlaceOpponentId : findPlayerOpponent(session);
     var opponent = opponentId ? U.getFighterById(state, opponentId) : null;
     var roundLabel = session.specialRound === "third" ? "Матч за 3 место" : session.rounds[session.roundIndex];
+    var playerInfo;
+    var opponentInfo;
 
     session.opponentId = opponentId;
     session.roundLabel = roundLabel;
 
     if (blockedReason) { return { type: "tournamentFinal", label: comp.label, blocked: true, reason: blockedReason, session: session }; }
     if (!opponent) { return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Не найден соперник.", session: session }; }
+
+    if (window.FS.Fight && window.FS.Fight.effectiveRatingForFight) {
+      playerInfo = window.FS.Fight.effectiveRatingForFight(state, p, session);
+      opponentInfo = window.FS.Fight.effectiveRatingForFight(state, opponent, session);
+    } else {
+      playerInfo = { total: U.statAverage(p.stats), personal: U.statAverage(p.stats), bonus: 0 };
+      opponentInfo = { total: U.statAverage(opponent.stats), personal: U.statAverage(opponent.stats), bonus: 0 };
+    }
 
     return {
       type: "tournamentFight",
@@ -498,9 +508,13 @@
       opponentName: opponent.name,
       opponentCountry: U.findCountry(opponent.countryId).label,
       opponentRecord: U.recordText(opponent.record),
-      opponentRating: U.statAverage(opponent.stats),
-      playerRating: U.statAverage(p.stats),
-      winChance: window.FS.Fight && window.FS.Fight.estimateWinChance ? window.FS.Fight.estimateWinChance(p, opponent) : chanceFor(p, opponent),
+      opponentRating: opponentInfo.total,
+      playerRating: playerInfo.total,
+      opponentPersonalRating: opponentInfo.personal,
+      playerPersonalRating: playerInfo.personal,
+      opponentCoachBonus: opponentInfo.bonus,
+      playerCoachBonus: playerInfo.bonus,
+      winChance: window.FS.Fight && window.FS.Fight.estimateWinChanceWithContext ? window.FS.Fight.estimateWinChanceWithContext(state, p, opponent, session) : chanceFor(p, opponent),
       alive: summarizeAlive(state, session),
       session: session
     };
@@ -700,7 +714,7 @@
     if (!opponent) { return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Соперник исчез из турнира.", fights: session.fights || [] }; }
 
     chance = window.FS.Fight && window.FS.Fight.estimateWinChance ? window.FS.Fight.estimateWinChance(p, opponent) : chanceFor(p, opponent);
-    roundData = (window.FS.__currentFightState = state, window.FS.Fight.simulateRounds(p, opponent, 3));
+    roundData = (window.FS.__currentFightState = state, window.FS.__currentTournamentSession = session, window.FS.Fight.simulateRounds(p, opponent, 3));
 
     if (roundData.stoppage) {
       result = roundData.stoppage.winner === "player" ? "Победа" : "Поражение";
