@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "coach-system-tournament-rewards-2.7.0",
-  "saveSchemaVersion": 270,
+  "appVersion": "stability-hotfix-2.7.1",
+  "saveSchemaVersion": 271,
   "tracks": {
     "amateur": {
       "id": "amateur",

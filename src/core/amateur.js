@@ -122,6 +122,7 @@
     cooldownLeft = lastWeek && comp.weekCooldown ? Math.max(0, comp.weekCooldown - (state.week - lastWeek)) : 0;
 
     if (p.trackId !== "amateur") { return { available: false, reason: "Доступно только на любительском пути.", cooldownLeft: cooldownLeft }; }
+    if (lastWeek === state.week) { return { available: false, reason: "Этот турнир уже завершён на этой неделе.", cooldownLeft: 0 }; }
     if (State.isLockedByFatigue && State.isLockedByFatigue(state)) { return { available: false, reason: "Усталость выше 75/100. Сначала восстановись.", cooldownLeft: cooldownLeft }; }
     if (rating < comp.minRating) { return { available: false, reason: "Нужен OVR " + comp.minRating + "+.", cooldownLeft: cooldownLeft }; }
     if (typeof comp.maxRating === "number" && rating > comp.maxRating) { return { available: false, reason: "OVR выше лимита: максимум " + comp.maxRating + ".", cooldownLeft: cooldownLeft }; }
@@ -886,6 +887,9 @@
     }
 
     state.amateurPath.lastCompetitionWeekById[comp.id] = state.week;
+    if (state.world && state.world.pendingTournamentInvite && state.world.pendingTournamentInvite.competitionId === comp.id) {
+      state.world.pendingTournamentInvite = null;
+    }
     if (State.adjustFatigue && session.pendingFatigue) {
       State.adjustFatigue(state, Math.min(100, session.pendingFatigue), "Турнир завершён");
       session.pendingFatigue = 0;

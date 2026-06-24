@@ -118,21 +118,43 @@
   }
 
   function syncCoachRecords(state) {
+    var recordsByCoach = {};
+    var countsByCoach = {};
     var i;
     var j;
+    var fighter;
+    var record;
     var club;
     var coach;
+
+    if (!state) { return; }
+
+    for (i = 0; i < (state.roster || []).length; i += 1) {
+      fighter = state.roster[i];
+      if (!fighter || fighter.retired || !fighter.coachId) { continue; }
+      if (!recordsByCoach[fighter.coachId]) {
+        recordsByCoach[fighter.coachId] = emptyRecord();
+        countsByCoach[fighter.coachId] = 0;
+      }
+      record = fighter.record || {};
+      recordsByCoach[fighter.coachId].wins += Number(record.wins) || 0;
+      recordsByCoach[fighter.coachId].losses += Number(record.losses) || 0;
+      recordsByCoach[fighter.coachId].draws += Number(record.draws) || 0;
+      countsByCoach[fighter.coachId] += 1;
+    }
+
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
       if (!club) { continue; }
-      for (j = 0; j < ((club.coaches instanceof Array && club.coaches.length) ? club.coaches.length : 0); j += 1) {
+      club.coaches = club.coaches instanceof Array ? club.coaches : (club.coach ? [club.coach] : []);
+      for (j = 0; j < club.coaches.length; j += 1) {
         coach = club.coaches[j];
         if (!coach) { continue; }
         normalizeCoachStats(coach, club);
-        coach.record = coachRecordFor(state, coach.id);
-        coach.assignedCount = coachAssignedFighters(state, coach.id).length;
+        coach.record = recordsByCoach[coach.id] || emptyRecord();
+        coach.assignedCount = countsByCoach[coach.id] || 0;
       }
-      if (club.coaches && club.coaches[0]) { club.coach = club.coaches[0]; }
+      if (club.coaches[0]) { club.coach = club.coaches[0]; }
     }
   }
 
@@ -152,43 +174,55 @@
     var bestCount = Infinity;
     var i;
     var count;
+
     for (i = 0; i < coaches.length; i += 1) {
-      count = coachAssignedFighters(state, coaches[i].id).length;
+      count = Number(coaches[i].assignedCount) || 0;
       if (!best || count < bestCount || (count === bestCount && coachOvr(coaches[i]) > coachOvr(best))) {
         best = coaches[i];
         bestCount = count;
       }
     }
+
     return best || null;
   }
 
   function assignCoachToFighter(state, fighter, club, force) {
     var coach;
     if (!fighter || !club) { return; }
-    if (!force && fighter.coachId && coachBelongsToClub(club, fighter.coachId)) { return; }
+
+    if (!force && fighter.coachId && coachBelongsToClub(club, fighter.coachId)) {
+      coach = findCoach(state, fighter.coachId);
+      if (coach) { coach.assignedCount = (Number(coach.assignedCount) || 0) + 1; }
+      return;
+    }
+
     coach = leastBusyCoach(state, club);
     fighter.coachId = coach ? coach.id : "";
+    if (coach) { coach.assignedCount = (Number(coach.assignedCount) || 0) + 1; }
   }
 
   function findFighterCoach(state, fighter) {
-    var pClub;
+    var club;
     var coach;
     if (!state || !fighter) { return null; }
+
     if (fighter.coachId) {
       coach = findCoach(state, fighter.coachId);
       if (coach) { return coach; }
     }
-    if (fighter.gymId) {
-      pClub = findClub(state, fighter.gymId);
-      if (pClub && !fighter.isPlayer) {
-        assignCoachToFighter(state, fighter, pClub, true);
-        return fighter.coachId ? findCoach(state, fighter.coachId) : null;
-      }
-      if (pClub && fighter.isPlayer && clubCoachList(pClub).length === 1) {
-        assignCoachToFighter(state, fighter, pClub, true);
-        return fighter.coachId ? findCoach(state, fighter.coachId) : null;
-      }
+
+    if (!fighter.gymId) { return null; }
+    club = findClub(state, fighter.gymId);
+    if (!club) { return null; }
+
+    if (!fighter.isPlayer && clubCoachList(club).length) {
+      return clubCoachList(club)[0];
     }
+
+    if (fighter.isPlayer && clubCoachList(club).length === 1) {
+      return clubCoachList(club)[0];
+    }
+
     return null;
   }
 
@@ -304,7 +338,6 @@
     club.coaches = list;
     club.coach = club.coaches[0] || normalizeCoach(club.coach, club, hostCountry, 0) || createCoach(hostCountry, club.id, seedBase || 0);
     club.coach.note = "Главный тренер клуба.";
-    syncCoachRecords(state);
   }
 
   
@@ -357,6 +390,7 @@
     var city;
     var countryTotal;
     var clubIndex;
+    var needsAssign;
 
     if (!(state.clubs instanceof Array)) { state.clubs = []; }
 
@@ -429,9 +463,12 @@
       ensureClubCoaches(state, state.clubs[i], country, 90000 + i * 1000);
     }
 
-    if (state._forceClubAssign || state.clubs.some(function (club) { return !(club.rosterIds instanceof Array) || !club.rosterIds.length; })) {
+    needsAssign = state._forceClubAssign || state.clubs.some(function (club) { return !(club.rosterIds instanceof Array) || !club.rosterIds.length; });
+    if (needsAssign) {
       assignFightersToClubs(state);
       state._forceClubAssign = false;
+    } else {
+      syncCoachRecords(state);
     }
   }
 
@@ -460,6 +497,7 @@
 
   function assignFightersToClubs(state) {
     var i;
+    var j;
     var c;
     var fighter;
     var club;
@@ -473,6 +511,11 @@
     for (i = 0; i < (state.clubs || []).length; i += 1) {
       club = state.clubs[i];
       club.rosterIds = [];
+      if (club.coaches instanceof Array) {
+        for (j = 0; j < club.coaches.length; j += 1) {
+          if (club.coaches[j]) { club.coaches[j].assignedCount = 0; }
+        }
+      }
       clubsByCountry[club.countryId] = clubsByCountry[club.countryId] || [];
       clubsByCountry[club.countryId].push(club);
     }
@@ -513,6 +556,10 @@
       if (fighter.isPlayer) {
         if (!coachBelongsToClub(club, fighter.coachId)) {
           fighter.coachId = clubCoachList(club).length === 1 ? clubCoachList(club)[0].id : "";
+        }
+        if (fighter.coachId) {
+          var playerCoach = findCoach(state, fighter.coachId);
+          if (playerCoach) { playerCoach.assignedCount = (Number(playerCoach.assignedCount) || 0) + 1; }
         }
       } else {
         assignCoachToFighter(state, fighter, club, false);
