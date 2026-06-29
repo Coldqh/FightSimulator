@@ -279,31 +279,38 @@
 
   function renderFighterAwards(state, fighter) {
     var awards = State.getFighterAwards ? State.getFighterAwards(state, fighter) : (fighter.awards || []);
+    var total;
+    var visible;
 
     function medalIcon(award) {
-      if (award.medal === "gold") { return "🥇"; }
-      if (award.medal === "silver") { return "🥈"; }
-      if (award.medal === "bronze") { return "🥉"; }
+      if (award.medal === "gold" || award.place === "1 место") { return "🥇"; }
+      if (award.medal === "silver" || award.place === "2 место") { return "🥈"; }
+      if (award.medal === "bronze" || award.place === "3 место") { return "🥉"; }
       return "";
     }
 
     function isPodiumAward(award) {
+      var label = String((award && award.label) || "").toLowerCase();
       var place = String((award && (award.place || (award.meta && award.meta.place))) || "");
+      var medal = String((award && award.medal) || "");
       if (!award) { return false; }
-      if (["gold", "silver", "bronze"].indexOf(award.medal) !== -1) { return true; }
-      return place === "1 место" || place === "2 место" || place === "3 место";
+      if (["gold", "silver", "bronze"].indexOf(medal) !== -1) { return true; }
+      if (place === "1 место" || place === "2 место" || place === "3 место") { return true; }
+      return /победитель|серебро|бронза|золото|🥇|🥈|🥉/.test(label);
     }
 
     awards = (awards || []).filter(isPodiumAward);
+    total = awards.length;
+    visible = awards.slice(0, 12);
 
-    if (!awards.length) {
+    if (!visible.length) {
       return "<div class=\"muted small\">Наград пока нет.</div>";
     }
 
-    return awards.slice(0, 12).map(function (award) {
+    return visible.map(function (award) {
       var icon = medalIcon(award);
       return "<div class=\"split-row\"><span>" + icon + " " + U.escapeHtml(award.label) + "</span><strong>Неделя " + (award.week || "—") + "</strong></div>";
-    }).join("");
+    }).join("") + (total > visible.length ? "<div class=\"muted small\">+ ещё " + (total - visible.length) + " наград</div>" : "");
   }
 
   function renderFighterTitles(state, fighter) {

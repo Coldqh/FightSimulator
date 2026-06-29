@@ -3123,6 +3123,56 @@
     var result = [];
     var seen = {};
 
+    function normalizeText(value) {
+      return String(value || "").trim();
+    }
+
+    function normalizePlace(value, fallbackLabel, fallbackMedal) {
+      var text = (normalizeText(value) + " " + normalizeText(fallbackLabel) + " " + normalizeText(fallbackMedal)).toLowerCase();
+      if (/\b1\b/.test(text) && /мест/.test(text)) { return "1 место"; }
+      if (/\b2\b/.test(text) && /мест/.test(text)) { return "2 место"; }
+      if (/\b3\b/.test(text) && /мест/.test(text)) { return "3 место"; }
+      if (/победитель|чемпион|gold|золото|🥇/.test(text)) { return "1 место"; }
+      if (/серебро|silver|🥈/.test(text)) { return "2 место"; }
+      if (/бронза|bronze|🥉/.test(text)) { return "3 место"; }
+      return "";
+    }
+
+    function medalFromPlace(place) {
+      if (place === "1 место") { return "gold"; }
+      if (place === "2 место") { return "silver"; }
+      if (place === "3 место") { return "bronze"; }
+      return "";
+    }
+
+    function placeFromMedal(medal) {
+      if (medal === "gold") { return "1 место"; }
+      if (medal === "silver") { return "2 место"; }
+      if (medal === "bronze") { return "3 место"; }
+      return "";
+    }
+
+    function titleFromLabel(label) {
+      var text = normalizeText(label);
+      var match;
+      match = text.match(/^(Победитель|Серебро|Бронза)\s*·\s*(.+?)\.?$/i);
+      if (match) { return match[2].trim(); }
+      match = text.match(/^(.+?)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)\.?$/i);
+      if (match) { return match[1].trim(); }
+      match = text.match(/^Турнир:\s*(.+?)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место).*$/i);
+      if (match) { return match[1].trim(); }
+      return text.replace(/^(🥇|🥈|🥉)\s*/, "").trim();
+    }
+
+    function normalizedLabel(label, place) {
+      var title = titleFromLabel(label);
+      if (!place) { return normalizeText(label); }
+      if (place === "1 место") { return "Победитель · " + title; }
+      if (place === "2 место") { return "Серебро · " + title; }
+      if (place === "3 место") { return "Бронза · " + title; }
+      return normalizeText(label);
+    }
+
     function keyOf(award) {
       return [
         award.label || "",
@@ -3133,26 +3183,27 @@
       ].join("|");
     }
 
-    function medalFromPlace(place) {
-      if (place === "1 место") { return "gold"; }
-      if (place === "2 место") { return "silver"; }
-      if (place === "3 место") { return "bronze"; }
-      return "";
-    }
-
     function pushAward(award) {
       var item;
       var key;
+      var place;
+      var medal;
       if (!award || !award.label) { return; }
+
+      place = normalizePlace(award.place || "", award.label || "", award.medal || "");
+      if (!place && award.medal) { place = placeFromMedal(award.medal); }
+      medal = award.medal || medalFromPlace(place);
+
       item = {
         id: award.id || "",
         week: Number(award.week) || 0,
-        label: award.label,
+        label: normalizedLabel(award.label, place),
         source: award.source || "award",
-        medal: award.medal || medalFromPlace(award.place || ""),
-        competitionId: award.competitionId || "",
-        place: award.place || ""
+        medal: medal || medalFromPlace(place),
+        competitionId: award.competitionId || (award.meta && award.meta.competitionId) || "",
+        place: place || award.place || ""
       };
+
       key = keyOf(item);
       if (seen[key]) { return; }
       seen[key] = true;
@@ -3161,27 +3212,51 @@
 
     function awardLabelFromMedal(medal) {
       var label = medal.label || "Турнир";
-      if (medal.awardLabel) { return medal.awardLabel; }
-      if (medal.place === "1 место") { return "Победитель · " + label; }
-      if (medal.place === "2 место") { return "Серебро · " + label; }
-      if (medal.place === "3 место") { return "Бронза · " + label; }
-      return label + (medal.place ? " · " + medal.place : "");
+      var place = normalizePlace(medal.place || "", medal.awardLabel || medal.label || "", medal.medal || "");
+      if (medal.awardLabel) { return normalizedLabel(medal.awardLabel, place); }
+      return normalizedLabel(label, place);
     }
 
     function recoverFromLog(entry) {
-      var text = entry && entry.text ? String(entry.text) : "";
+      var text = entry && entry.text ? String(entry.text).trim() : "";
       var meta = entry && entry.meta ? entry.meta : {};
-      var match = text.match(/Турнир:\s*([^·,]+)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)/i);
+      var match;
       var place = meta.place || "";
-      var prefix;
-      if (!match) { return; }
-      if (!place && /Победитель|1 место/i.test(match[2])) { place = "1 место"; }
-      if (!place && /Серебро|2 место/i.test(match[2])) { place = "2 место"; }
-      if (!place && /Бронза|3 место/i.test(match[2])) { place = "3 место"; }
-      prefix = place === "1 место" ? "Победитель" : (place === "2 место" ? "Серебро" : (place === "3 место" ? "Бронза" : "Место"));
+      var label = "";
+      if (!text) { return; }
+
+      match = text.match(/^Турнир:\s*(.+?)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)/i);
+      if (match) {
+        place = normalizePlace(place, match[2], "");
+        label = normalizedLabel(match[1].trim(), place);
+      }
+
+      if (!label) {
+        match = text.match(/^(Победитель|Серебро|Бронза)\s*·\s*(.+?)\.?$/i);
+        if (match) {
+          place = normalizePlace(place, match[1], "");
+          label = normalizedLabel(match[2].trim(), place);
+        }
+      }
+
+      if (!label) {
+        match = text.match(/^(.+?)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)\.?$/i);
+        if (match) {
+          place = normalizePlace(place, match[2], "");
+          label = normalizedLabel(match[1].trim(), place);
+        }
+      }
+
+      if (!label) {
+        place = normalizePlace(place, text, "");
+        if (place) { label = normalizedLabel(titleFromLabel(text), place); }
+      }
+
+      if (!label || !place) { return; }
+
       pushAward({
         week: entry.week,
-        label: prefix + " · " + match[1].trim(),
+        label: label,
         source: "amateur",
         medal: medalFromPlace(place),
         competitionId: meta.competitionId || "",
@@ -3200,9 +3275,9 @@
           week: medal.week,
           label: awardLabelFromMedal(medal),
           source: "amateur",
-          medal: medal.medal || medalFromPlace(medal.place || ""),
+          medal: medal.medal || medalFromPlace(normalizePlace(medal.place || "", medal.awardLabel || medal.label || "", medal.medal || "")),
           competitionId: medal.competitionId || "",
-          place: medal.place || ""
+          place: normalizePlace(medal.place || "", medal.awardLabel || medal.label || "", medal.medal || "")
         });
       });
     }

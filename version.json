@@ -1,7 +1,7 @@
 {
-  "version": "engagement-polish-2.8.2",
-  "mode": "engagement-polish",
-  "cacheVersion": "fight-simulator-engagement-polish-2.8.2",
+  "version": "awards-normalization-2.8.3",
+  "mode": "awards-normalization",
+  "cacheVersion": "fight-simulator-awards-normalization-2.8.3",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

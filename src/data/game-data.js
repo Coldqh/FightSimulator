@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "engagement-polish-2.8.2",
-  "saveSchemaVersion": 282,
+  "appVersion": "awards-normalization-2.8.3",
+  "saveSchemaVersion": 283,
   "tracks": {
     "amateur": {
       "id": "amateur",
