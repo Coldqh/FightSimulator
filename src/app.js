@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.8&target=2.7.8&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.9&target=2.7.9&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -558,7 +558,11 @@
           fighter.weightClassId === player.weightClassId &&
           fighter.countryId !== player.countryId &&
           (!countries || countries.indexOf(fighter.countryId) !== -1) &&
-          Math.abs(ovr(fighter) - rating) <= 18;
+          Math.abs(ovr(fighter) - rating) <= 10;
+      });
+
+      pool.sort(function (left, right) {
+        return Math.abs(ovr(left) - rating) - Math.abs(ovr(right) - rating);
       });
 
       for (var i = 0; i < Math.min(3, pool.length, targetState.offers.length); i += 1) {

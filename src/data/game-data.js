@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "instant-week-fix-2.7.8",
-  "saveSchemaVersion": 278,
+  "appVersion": "matchmaking-ovr-window-2.7.9",
+  "saveSchemaVersion": 279,
   "tracks": {
     "amateur": {
       "id": "amateur",
