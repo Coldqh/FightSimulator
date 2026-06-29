@@ -279,19 +279,30 @@
 
   function renderFighterAwards(state, fighter) {
     var awards = State.getFighterAwards ? State.getFighterAwards(state, fighter) : (fighter.awards || []);
+
     function medalIcon(award) {
       if (award.medal === "gold") { return "🥇"; }
       if (award.medal === "silver") { return "🥈"; }
       if (award.medal === "bronze") { return "🥉"; }
-      return "🏅";
+      return "";
     }
+
+    function isPodiumAward(award) {
+      var place = String((award && (award.place || (award.meta && award.meta.place))) || "");
+      if (!award) { return false; }
+      if (["gold", "silver", "bronze"].indexOf(award.medal) !== -1) { return true; }
+      return place === "1 место" || place === "2 место" || place === "3 место";
+    }
+
+    awards = (awards || []).filter(isPodiumAward);
 
     if (!awards.length) {
       return "<div class=\"muted small\">Наград пока нет.</div>";
     }
 
     return awards.slice(0, 12).map(function (award) {
-      return "<div class=\"split-row\"><span>" + medalIcon(award) + " " + U.escapeHtml(award.label) + "</span><strong>Неделя " + (award.week || "—") + "</strong></div>";
+      var icon = medalIcon(award);
+      return "<div class=\"split-row\"><span>" + icon + " " + U.escapeHtml(award.label) + "</span><strong>Неделя " + (award.week || "—") + "</strong></div>";
     }).join("");
   }
 
@@ -726,6 +737,20 @@
 
   
 
+  function renderCareerStatsCard(state) {
+    var p = State.player(state);
+    var stats = p && p.careerStats ? p.careerStats : {};
+    var rematchLine = (Number(stats.rematchWins) || 0) + "-" + (Number(stats.rematchLosses) || 0) + "-" + (Number(stats.rematchDraws) || 0);
+    if (!p) { return ""; }
+    return '<div class="content-card"><h3>Мини-статистика</h3>' +
+      '<div class="split-row"><span>Текущая серия побед</span><strong>' + (Number(stats.currentWinStreak) || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Лучшая серия побед</span><strong>' + (Number(stats.bestWinStreak) || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Победы над сильнее себя</span><strong>' + (Number(stats.strongerWins) || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Лучший побеждённый OVR</span><strong>' + (Number(stats.bestDefeatedOvr) || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Реванши</span><strong>' + U.escapeHtml(rematchLine) + '</strong></div>' +
+    '</div>';
+  }
+
   function renderDashboardTab(state) {
     var p = State.player(state);
     var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
@@ -743,6 +768,7 @@
         '<div class="split-row"><span>Ежемесячные расходы</span><strong>$' + (breakdown.total || 0) + '</strong></div>' +
         '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
       '</div>' +
+      renderCareerStatsCard(state) +
     '</div>';
   }
 
@@ -871,16 +897,23 @@
     function fightRow(offer) {
       var opponent = U.getFighterById(state, offer.opponentId);
       var preview = Fight.buildFightPreview(state, offer.id);
+      var metrics;
       if (!opponent || !preview) { return ""; }
+      metrics = ['<span class="f1-metric ovr">OVR ' + U.statAverage(opponent.stats) + '</span>'];
+      if (offer.isRematch || offer.label === "Реванш") {
+        metrics.unshift('<span class="f1-metric gold">Реванш</span>');
+      }
       return f1FighterRow(state, opponent, {
-        className: "f1-driver-row",
+        className: "f1-driver-row" + ((offer.isRematch || offer.label === "Реванш") ? " rematch-row" : ""),
         showWeight: false,
         showStatus: false,
+        metrics: metrics,
         subline: [
           opponent.age ? opponent.age + " лет" : "возраст —",
           f1CountryFull(opponent),
-          U.escapeHtml(U.recordText(opponent.record))
-        ].join(" · "),
+          U.escapeHtml(U.recordText(opponent.record)),
+          (offer.isRematch || offer.label === "Реванш") ? '<span class="pill gold">бой-реванш</span>' : ''
+        ].filter(Boolean).join(" · "),
         money: preview.purse,
         chance: preview.winChance,
         actionHtml: '<button class="f1-fight-btn" data-preview-fight="' + U.escapeHtml(offer.id) + '"' + fatigueDisabled + '>Бой</button>'

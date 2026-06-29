@@ -11,8 +11,14 @@
     var allowed = ["club", "team", "tournament", "medal", "champion", "migration", "fight", "career"];
     var payload;
     var i;
+    var week = Number(state && state.week) || 1;
     if (allowed.indexOf(tone || "") === -1) { return; }
     if (!text) { return; }
+
+    if (week <= 1 && tone === "team" && /тренер/i.test(String(text)) && /сборн/i.test(String(text))) {
+      return;
+    }
+
     state.world = state.world || {};
     state.world.news = state.world.news instanceof Array ? state.world.news : [];
     payload = {

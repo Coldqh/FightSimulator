@@ -752,6 +752,7 @@
     var playerOvr;
     var opponentOvr;
     var note;
+    var wasRematch;
     if (!state || !p || !opponent || opponent.isPlayer) { return; }
 
     state.world = state.world && typeof state.world === "object" ? state.world : {};
@@ -771,6 +772,7 @@
       rematchWeek: 0
     };
 
+    wasRematch = item.fights > 0;
     close = isCloseFight(result, method, scoreLine);
     playerOvr = U.statAverage(p.stats);
     opponentOvr = U.statAverage(opponent.stats);
@@ -782,6 +784,7 @@
     item.lastScoreLine = scoreLine || "";
     item.lastPlayerOvr = playerOvr;
     item.lastOpponentOvr = opponentOvr;
+    item.rematchAnnouncedWeek = 0;
 
     if (result === "Победа") { item.playerWins += 1; }
     else if (result === "Поражение") { item.opponentWins += 1; }
@@ -789,16 +792,16 @@
 
     if (close) { item.closeFights += 1; }
 
-    if ((close || item.fights >= 2) && p.trackId !== "pro") {
+    if ((close || wasRematch) && p.trackId !== "pro") {
       item.rematchWeek = state.week + U.randomInt(4, 8);
     }
 
     rivalries[key] = item;
 
-    if (close || item.fights >= 2) {
-      note = item.fights >= 2 ?
+    if (close || wasRematch) {
+      note = wasRematch ?
         ("Реванш · счёт " + item.playerWins + "-" + item.opponentWins + "-" + item.draws) :
-        ("Близкий бой · реванш возможен");
+        "Близкий бой · реванш возможен";
       if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
         window.FS.Clubs.rememberPlayerRival(state, opponent, note);
       }
@@ -808,7 +811,12 @@
       safeCreateFightNews(state, "Близкий бой: " + p.name + " — " + opponent.name + " · " + result + " (" + (scoreLine || method) + ").", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
     }
 
-    if (item.fights === 2) {
+    if (wasRematch) {
+      if (p.careerStats) {
+        if (result === "Победа") { p.careerStats.rematchWins = (Number(p.careerStats.rematchWins) || 0) + 1; }
+        else if (result === "Поражение") { p.careerStats.rematchLosses = (Number(p.careerStats.rematchLosses) || 0) + 1; }
+        else { p.careerStats.rematchDraws = (Number(p.careerStats.rematchDraws) || 0) + 1; }
+      }
       safeCreateFightNews(state, "Реванш: " + p.name + " снова встретился с " + opponent.name + ". Счёт серии " + item.playerWins + "-" + item.opponentWins + "-" + item.draws + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
     }
 
@@ -827,7 +835,6 @@
   }
 
   function applyFightResult(state, p, opponent, result, method, scoreLine) {
-    var oppLine;
     if (!p || !opponent) { return false; }
     p.record = p.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
     opponent.record = opponent.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
@@ -839,17 +846,14 @@
     if (result === "Ничья") {
       p.record.draws = (Number(p.record.draws) || 0) + 1;
       opponent.record.draws = (Number(opponent.record.draws) || 0) + 1;
-      oppLine = "Ничья с " + p.name + " решением.";
     } else if (result === "Победа") {
       p.record.wins = (Number(p.record.wins) || 0) + 1;
       opponent.record.losses = (Number(opponent.record.losses) || 0) + 1;
       if (method === "KO/TKO") { p.record.kos = (Number(p.record.kos) || 0) + 1; }
-      oppLine = "Поражение от " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     } else {
       p.record.losses = (Number(p.record.losses) || 0) + 1;
       opponent.record.wins = (Number(opponent.record.wins) || 0) + 1;
       if (method === "KO/TKO") { opponent.record.kos = (Number(opponent.record.kos) || 0) + 1; }
-      oppLine = "Победа над " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     }
 
     if (p.trackRecords) { p.trackRecords[p.trackId] = window.FS.State.cloneRecord(p.record); }
@@ -871,7 +875,6 @@
       if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }
       else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
     }
-    if (window.FS.Clubs && window.FS.Clubs.rememberFightRelationship) { window.FS.Clubs.rememberFightRelationship(state, opponent); }
     if (window.FS.Clubs && window.FS.Clubs.syncCoachRecords) { window.FS.Clubs.syncCoachRecords(state); }
     if (State.invalidateCaches) { State.invalidateCaches(state); }
     return true;

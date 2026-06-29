@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "gameplay-engagement-lite-2.8.1",
-  "saveSchemaVersion": 281,
+  "appVersion": "engagement-polish-2.8.2",
+  "saveSchemaVersion": 282,
   "tracks": {
     "amateur": {
       "id": "amateur",
