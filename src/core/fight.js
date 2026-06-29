@@ -835,7 +835,9 @@
   }
 
   function applyFightResult(state, p, opponent, result, method, scoreLine) {
+    var wasRematch;
     if (!p || !opponent) { return false; }
+    wasRematch = p.recentOpponentIds instanceof Array && p.recentOpponentIds.indexOf(opponent.id) !== -1;
     p.record = p.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
     opponent.record = opponent.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
     p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
@@ -870,6 +872,17 @@
     if (opponent.recentOpponentIds.length > 8) { opponent.recentOpponentIds.length = 8; }
 
     recordPlayerEngagement(state, p, opponent, result, method, scoreLine || "");
+    if (State.recordCoachGoalEvent) {
+      State.recordCoachGoalEvent(state, "fight", {
+        result: result,
+        method: method,
+        scoreLine: scoreLine || "",
+        opponentId: opponent.id,
+        playerOvr: U.statAverage(p.stats),
+        opponentOvr: U.statAverage(opponent.stats),
+        isRematch: wasRematch
+      });
+    }
 
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }

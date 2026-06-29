@@ -2880,6 +2880,7 @@
     if (!p || value <= 0) { return false; }
     p.money += value;
     pushFinanceLog(p, state, reason || "Доход", value);
+    recordCoachGoalEvent(state, "money", { amount: value, reason: reason || "Доход" });
     updateDebtStatus(state, "income");
     return true;
   }
@@ -2901,6 +2902,7 @@
     if (reason && p.careerLog) {
       p.careerLog.unshift({ week: state.week, text: reason + ": усталость " + p.fatigue + "/100." });
     }
+    recordCoachGoalEvent(state, "fatigue", { fatigue: p.fatigue, reason: reason || "" });
     return p.fatigue;
   }
 
@@ -3048,6 +3050,155 @@
     return false;
   }
 
+  function goalRewardForWeek(state) {
+    var week = Number(state.week) || 1;
+    return {
+      points: 1,
+      money: 100 + (week % 3) * 75
+    };
+  }
+
+  function coachGoalOptions(state) {
+    var p = player(state);
+    var options = [
+      { type: "win_fight", label: "Выиграй бой", target: 1, unit: "победа" },
+      { type: "train_sessions", label: "Проведи 2 тренировки", target: 2, unit: "тренировки" },
+      { type: "beat_equal_ovr", label: "Победи соперника не слабее себя", target: 1, unit: "победа" },
+      { type: "earn_money", label: "Заработай $500", target: 500, unit: "$" }
+    ];
+
+    if (p && (Number(p.fatigue) || 0) >= 55) {
+      options.push({ type: "low_fatigue", label: "Снизь усталость до 40/100", target: 1, unit: "готовность" });
+    }
+
+    if (state.world && state.world.playerRivalries) {
+      var hasRival = Object.keys(state.world.playerRivalries).some(function (id) {
+        var rivalry = state.world.playerRivalries[id];
+        return rivalry && rivalry.rematchWeek && rivalry.rematchWeek <= state.week;
+      });
+      if (hasRival) {
+        options.push({ type: "win_rematch", label: "Выиграй реванш", target: 1, unit: "реванш" });
+      }
+    }
+
+    return options;
+  }
+
+  function makeCoachGoal(state) {
+    var options = coachGoalOptions(state);
+    var index = options.length ? ((Number(state.week) || 1) + ((player(state) && player(state).id) ? player(state).id.length : 0)) % options.length : 0;
+    var base = options[index] || { type: "win_fight", label: "Выиграй бой", target: 1, unit: "победа" };
+    var reward = goalRewardForWeek(state);
+    return {
+      id: U.uid("goal"),
+      type: base.type,
+      label: base.label,
+      target: base.target,
+      progress: 0,
+      unit: base.unit,
+      rewardPoints: reward.points,
+      rewardMoney: reward.money,
+      startWeek: state.week,
+      dueWeek: (Number(state.week) || 1) + 4,
+      completed: false,
+      completedWeek: 0
+    };
+  }
+
+  function ensureCoachGoal(state) {
+    var p = player(state);
+    var goal;
+    if (!state || !p) { return null; }
+    state.coachGoal = state.coachGoal && typeof state.coachGoal === "object" ? state.coachGoal : null;
+    goal = state.coachGoal;
+
+    if (!goal) {
+      state.coachGoal = makeCoachGoal(state);
+      return state.coachGoal;
+    }
+
+    goal.progress = Number(goal.progress) || 0;
+    goal.target = Math.max(1, Number(goal.target) || 1);
+    goal.rewardPoints = Number(goal.rewardPoints) || 1;
+    goal.rewardMoney = Number(goal.rewardMoney) || 0;
+    goal.startWeek = Number(goal.startWeek) || state.week;
+    goal.dueWeek = Number(goal.dueWeek) || (state.week + 4);
+
+    if (goal.completed) {
+      goal.completedWeek = Number(goal.completedWeek) || state.week;
+      if (state.week >= goal.completedWeek + 4) {
+        state.coachGoal = makeCoachGoal(state);
+      }
+      return state.coachGoal;
+    }
+
+    if (state.week > goal.dueWeek) {
+      p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+      p.careerLog.unshift({ week: state.week, text: "Тренерская цель обновлена: старая задача закрыта без награды." });
+      state.coachGoal = makeCoachGoal(state);
+    }
+
+    return state.coachGoal;
+  }
+
+  function completeCoachGoal(state, goal) {
+    var p = player(state);
+    if (!p || !goal || goal.completed) { return false; }
+
+    goal.progress = goal.target;
+    goal.completed = true;
+    goal.completedWeek = state.week;
+
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + (Number(goal.rewardPoints) || 0);
+    if (Number(goal.rewardMoney) > 0) {
+      p.money = (Number(p.money) || 0) + Number(goal.rewardMoney);
+      pushFinanceLog(p, state, "Награда тренера: " + goal.label, Number(goal.rewardMoney));
+    }
+
+    p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+    p.careerLog.unshift({ week: state.week, text: "Цель тренера выполнена: " + goal.label + ". Награда: +" + (Number(goal.rewardPoints) || 0) + " очко прокачки, $" + (Number(goal.rewardMoney) || 0) + "." });
+
+    state.feed = "Цель тренера выполнена: " + goal.label + ".";
+    if (window.FS.World && window.FS.World.createNews) {
+      window.FS.World.createNews(state, "career", "Цель тренера выполнена: " + p.name + " — " + goal.label + ".", { fighterId: p.id });
+    }
+    updateDebtStatus(state, "coachGoal");
+    return true;
+  }
+
+  function recordCoachGoalEvent(state, eventType, data) {
+    var goal = ensureCoachGoal(state);
+    var payload = data || {};
+    var value;
+    if (!goal || goal.completed) { return false; }
+
+    if (goal.type === "train_sessions" && eventType === "training") {
+      goal.progress += 1;
+    } else if (goal.type === "win_fight" && eventType === "fight" && payload.result === "Победа") {
+      goal.progress = goal.target;
+    } else if (goal.type === "beat_equal_ovr" && eventType === "fight" && payload.result === "Победа" && (Number(payload.opponentOvr) || 0) >= (Number(payload.playerOvr) || 0)) {
+      goal.progress = goal.target;
+    } else if (goal.type === "earn_money" && eventType === "money") {
+      goal.progress += Math.max(0, Number(payload.amount) || 0);
+    } else if (goal.type === "low_fatigue" && eventType === "fatigue" && (Number(payload.fatigue) || 100) <= 40) {
+      goal.progress = goal.target;
+    } else if (goal.type === "win_rematch" && eventType === "fight" && payload.result === "Победа" && payload.isRematch) {
+      goal.progress = goal.target;
+    } else {
+      return false;
+    }
+
+    value = Math.min(goal.target, Math.max(0, Number(goal.progress) || 0));
+    goal.progress = value;
+
+    if (goal.progress >= goal.target) {
+      completeCoachGoal(state, goal);
+      return true;
+    }
+
+    return false;
+  }
+
   function trainPlayer(state, statKey) {
     var p = ensurePlayerSystems(state);
     var keys = ["power", "technique", "speed", "stamina", "defense"];
@@ -3067,6 +3218,7 @@
       adjustFatigue(state, cost, "Тренировка");
       p.careerLog.unshift({ week: state.week, text: "Тренировка: +3 очка характеристик, усталость " + p.fatigue + "/100." });
       state.feed = "Тренировка: +3 очка характеристик. Усталость +" + cost + ".";
+      recordCoachGoalEvent(state, "training", { count: 1 });
       updateDebtStatus(state, "training");
       return;
     }
@@ -3635,6 +3787,8 @@ restPlayer: restPlayer,
     debtWeeksLeft: debtWeeksLeft,
     updateDebtStatus: updateDebtStatus,
     invalidateCaches: invalidateCaches,
-    checkAutomaticProMove: checkAutomaticProMove
+    checkAutomaticProMove: checkAutomaticProMove,
+    ensureCoachGoal: ensureCoachGoal,
+    recordCoachGoalEvent: recordCoachGoalEvent
   };
 }());

@@ -1286,6 +1286,7 @@ function simulateInternationalGymMoves(state) {
 
     if (p && State.checkAutomaticProMove) { State.checkAutomaticProMove(state, p); }
     if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
+    if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
 
     if (p && p.gymId && playerClubBefore && p.gymId !== playerClubBefore) {
       pushNews(state, "club", "Изменения в клубе: состав и тренерский штаб обновлены.", { clubId: p.gymId });
@@ -1334,6 +1335,7 @@ function simulateInternationalGymMoves(state) {
       }
     }
     if (!state.offers || !state.offers.length || state.week % 2 === 0 || state._offersDirty) { refreshOffers(state); state._offersDirty = false; }
+    if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
     buildProContracts(state);
     if (!state.world.news.length) {
       createNews(state, "world", "Мир запущен: клубы, титулы, рейтинги, сборные и расписание боёв сформированы.", { type: "bootstrap" });

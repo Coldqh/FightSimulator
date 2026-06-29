@@ -758,6 +758,30 @@
     '</div>';
   }
 
+  function renderCoachGoalCard(state) {
+    var goal = state.coachGoal || null;
+    var progress;
+    var target;
+    var percent;
+    var reward;
+    var status;
+    if (!goal) {
+      return '<div class="content-card"><h3>Цель тренера</h3><div class="muted small">Цель появится после недельного хода.</div></div>';
+    }
+
+    progress = Math.max(0, Number(goal.progress) || 0);
+    target = Math.max(1, Number(goal.target) || 1);
+    percent = Math.max(0, Math.min(100, Math.round((progress / target) * 100)));
+    reward = '+' + (Number(goal.rewardPoints) || 0) + ' очко, $' + (Number(goal.rewardMoney) || 0);
+    status = goal.completed ? 'Выполнено' : ('до недели ' + (goal.dueWeek || '—'));
+
+    return '<div class="content-card coach-goal-card"><div class="split-row"><h3>Цель тренера</h3><strong>' + U.escapeHtml(status) + '</strong></div>' +
+      '<div class="split-row"><span>' + U.escapeHtml(goal.label || 'Задача') + '</span><strong>' + Math.min(progress, target) + '/' + target + '</strong></div>' +
+      '<div class="progress"><span style="width:' + percent + '%"></span></div>' +
+      '<div class="split-row"><span>Награда</span><strong>' + U.escapeHtml(reward) + '</strong></div>' +
+    '</div>';
+  }
+
   function renderDashboardTab(state) {
     var p = State.player(state);
     var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
@@ -776,6 +800,7 @@
         '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
       '</div>' +
       renderCareerStatsCard(state) +
+      renderCoachGoalCard(state) +
     '</div>';
   }
 

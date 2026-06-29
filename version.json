@@ -1,7 +1,7 @@
 {
-  "version": "stability-core-cleanup-2.8.4",
-  "mode": "stability-core-cleanup",
-  "cacheVersion": "fight-simulator-stability-core-cleanup-2.8.4",
+  "version": "coach-goals-lite-2.8.5",
+  "mode": "coach-goals-lite",
+  "cacheVersion": "fight-simulator-coach-goals-lite-2.8.5",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
