@@ -1,7 +1,7 @@
 /* Fight World service worker - F1 Mobile UI 2.5.0 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-clubs-syntax-rescue-2.7.7.2";
+const CACHE_VERSION = "fight-simulator-instant-week-fix-2.7.8";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

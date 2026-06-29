@@ -347,10 +347,12 @@
       raw = JSON.stringify(safe);
 
       wroteMain = writeRaw(Data.saveKey, raw);
-      if ((Number(state.saveRevision) || 0) % 10 === 0 || (Number(state.week) || 1) % 4 === 0) {
+      if ((Number(state.saveRevision) || 0) % 30 === 0 || (Number(state.week) || 1) % 12 === 0) {
         writeRaw(BACKUP_KEYS[1], raw);
       }
-      saveRawToIdb(raw);
+      if ((Number(state.saveRevision) || 0) % 3 === 0) {
+        saveRawToIdb(raw);
+      }
       return !!wroteMain;
     } catch (error) {
       console.error(error);

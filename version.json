@@ -1,7 +1,7 @@
 {
-  "version": "clubs-syntax-rescue-2.7.7.2",
-  "mode": "clubs-syntax-rescue",
-  "cacheVersion": "fight-simulator-clubs-syntax-rescue-2.7.7.2",
+  "version": "instant-week-fix-2.7.8",
+  "mode": "instant-week-fix",
+  "cacheVersion": "fight-simulator-instant-week-fix-2.7.8",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

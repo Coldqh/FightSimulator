@@ -842,7 +842,7 @@
     var moved = false;
     var changed = false;
     var clubs = state.clubs || [];
-    var maxClubs = clubs.length > 260 ? 60 : clubs.length;
+    var maxClubs = clubs.length > 260 ? 36 : (clubs.length > 120 ? 48 : clubs.length);
     var start = clubs.length > maxClubs ? ((state.week * maxClubs) % clubs.length) : 0;
     var index;
 
@@ -922,11 +922,12 @@
     if (moved && window.FS.World && window.FS.World.createNews) { state.feed = "На тренерском рынке были переходы."; }
 
     if (changed) {
-      assignFightersToClubs(state);
-      state._coachRecordsDirty = false;
-    } else if (state._coachRecordsDirty || state.week % 4 === 1) {
+      state._forceCoachSync = true;
+      flushCoachRecords(state);
+    } else if (state._forceCoachSync || state.week % 8 === 1) {
       syncCoachRecords(state);
       state._coachRecordsDirty = false;
+      state._forceCoachSync = false;
     }
 
     if (typeof maybeAddWeeklyPlayerContact === "function") { maybeAddWeeklyPlayerContact(state); }
@@ -935,8 +936,10 @@
 
   function flushCoachRecords(state) {
     if (!state || !state._coachRecordsDirty) { return; }
+    if (!state._forceCoachSync && state.week % 8 !== 1) { return; }
     syncCoachRecords(state);
     state._coachRecordsDirty = false;
+    state._forceCoachSync = false;
   }
 
   window.FS.Clubs = {

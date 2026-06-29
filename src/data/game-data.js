@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "clubs-syntax-rescue-2.7.7.2",
-  "saveSchemaVersion": 2772,
+  "appVersion": "instant-week-fix-2.7.8",
+  "saveSchemaVersion": 278,
   "tracks": {
     "amateur": {
       "id": "amateur",

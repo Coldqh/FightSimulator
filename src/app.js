@@ -130,9 +130,9 @@
       persistQueued = false;
       render();
       if (shouldPersist) {
-        (window.requestIdleCallback || window.setTimeout)(function () {
+        window.setTimeout(function () {
           persistNow();
-        }, 0);
+        }, 120);
       }
     }, 0);
   }
@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.7.2&target=2.7.7.2&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.8&target=2.7.8&t=" + Date.now());
     }
 
     function clearFightCaches() {

@@ -475,8 +475,8 @@
   function simulateNpcTraining(state) {
     var keys = ["power", "technique", "speed", "stamina", "defense"];
     var roster = state.roster || [];
-    var sampleLimit = roster.length > 8000 ? 1600 : (roster.length > 5000 ? 2200 : roster.length);
-    var start = roster.length > sampleLimit ? ((state.week * sampleLimit) % roster.length) : 0;
+    var sampleLimit = roster.length > 8000 ? 520 : (roster.length > 5000 ? 760 : Math.min(roster.length, 1400));
+    var start = roster.length > sampleLimit ? ((state.week * 997) % roster.length) : 0;
     var i, index, fighter, key, cap, seed, factor, growthChance;
     for (i = 0; i < sampleLimit; i += 1) {
       index = roster.length ? (start + i) % roster.length : 0;
@@ -484,11 +484,8 @@
       if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
       seed = Math.abs((fighter.seed || index * 37) + state.week * 13);
       factor = ageGrowthFactor(fighter);
-      if (factor < 0) {
-        if (seed % 16 === 0) { agingAdjustment(fighter); }
-        continue;
-      }
-      growthChance = factor >= 1.4 ? 4 : (factor >= 1.2 ? 5 : (factor >= 1.0 ? 7 : 11));
+      if (factor < 0) { if (seed % 18 === 0) { agingAdjustment(fighter); } continue; }
+      growthChance = factor >= 1.4 ? 5 : (factor >= 1.2 ? 7 : (factor >= 1.0 ? 9 : 13));
       if (seed % growthChance !== 0) { continue; }
       key = keys[seed % keys.length];
       cap = Math.min(200, U.findTrack(fighter.trackId).maxStat || 200);
@@ -556,16 +553,12 @@
   }
 
   function processProContracts(state) {
-    var pros = [];
-    var proBuckets = {};
-    var report = [];
-    var i, fighter, opponent, result, bucketKey;
-    var scheduled = 0;
+    var pros = [], proBuckets = {}, report = [];
+    var i, fighter, opponent, result, bucketKey, scheduled = 0;
     var roster = state.roster || [];
-    var sampleLimit = roster.length > 8000 ? 2600 : roster.length;
+    var sampleLimit = roster.length > 8000 ? 720 : (roster.length > 5000 ? 980 : Math.min(roster.length, 1800));
     var start = roster.length > sampleLimit ? ((state.week * 977) % roster.length) : 0;
     var index;
-
     for (i = 0; i < sampleLimit; i += 1) {
       index = roster.length ? (start + i) % roster.length : 0;
       fighter = roster[index];
@@ -573,20 +566,13 @@
       pros.push(fighter);
       bucketKey = fighter.weightClassId || "open";
       proBuckets[bucketKey] = proBuckets[bucketKey] || [];
-      proBuckets[bucketKey].push(fighter);
+      if (proBuckets[bucketKey].length < 90) { proBuckets[bucketKey].push(fighter); }
     }
-
-    Object.keys(proBuckets).forEach(function (key) {
-      proBuckets[key].sort(function (a, b) { return U.scoreFighter(a) - U.scoreFighter(b); });
-    });
-
+    Object.keys(proBuckets).forEach(function (key) { proBuckets[key].sort(function (a, b) { return U.scoreFighter(a) - U.scoreFighter(b); }); });
     for (i = 0; i < pros.length; i += 1) {
-      fighter = pros[i];
-      bucketKey = fighter.weightClassId || "open";
+      fighter = pros[i]; bucketKey = fighter.weightClassId || "open";
       if (!fighter.nextFightWeek || !fighter.contractOpponentId) {
-        if (scheduled < 45 && U.randomInt(1, 100) <= 10) {
-          if (scheduleProContract(state, fighter, proBuckets[bucketKey])) { scheduled += 1; }
-        }
+        if (scheduled < 16 && U.randomInt(1, 100) <= 8) { if (scheduleProContract(state, fighter, proBuckets[bucketKey])) { scheduled += 1; } }
         continue;
       }
       if (fighter.nextFightWeek <= state.week) {
@@ -596,9 +582,7 @@
           report.push(result.text);
           if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser); }
         }
-        fighter.contractOpponentId = "";
-        fighter.nextFightWeek = 0;
-        fighter.contractLabel = "";
+        fighter.contractOpponentId = ""; fighter.nextFightWeek = 0; fighter.contractLabel = "";
         scheduleProContract(state, fighter, proBuckets[bucketKey]);
       }
     }
@@ -608,47 +592,32 @@
   function simulateNpcFights(state) {
     var report = [];
     var roster = state.roster || [];
-    var sampleLimit = roster.length > 8000 ? 1200 : (roster.length > 5000 ? 1700 : 2600);
+    var sampleLimit = roster.length > 8000 ? 520 : (roster.length > 5000 ? 760 : Math.min(roster.length, 1400));
     var start = roster.length > sampleLimit ? ((state.week * 1231) % roster.length) : 0;
-    var due = [];
-    var buckets = {};
-    var key;
-    var i;
-    var index;
-    var bucket;
-    var a;
-    var b;
-    var result;
-    var maxPairs = 0;
-    var fighter;
-
+    var due = [], buckets = {}, key, i, index, bucket, a, b, result, maxPairs = 0, fighter;
     for (i = 0; i < sampleLimit; i += 1) {
       index = roster.length ? (start + i) % roster.length : 0;
       fighter = roster[index];
       if (!fighter || fighter.isPlayer || fighter.trackId === "pro" || fighter.retired || state.week - (fighter.lastFightWeek || 0) < 3) { continue; }
       due.push(fighter);
     }
-
     for (i = 0; i < due.length; i += 1) {
       key = due[i].trackId + "|" + due[i].countryId + "|" + (due[i].trackId === "street" ? "open" : due[i].weightClassId);
-      if (!buckets[key]) { buckets[key] = []; }
-      buckets[key].push(due[i]);
+      buckets[key] = buckets[key] || [];
+      if (buckets[key].length < 12) { buckets[key].push(due[i]); }
     }
-
     for (key in buckets) {
       if (!Object.prototype.hasOwnProperty.call(buckets, key)) { continue; }
       bucket = shuffleList(buckets[key]);
-      maxPairs = Math.min(Math.floor(bucket.length / 2), roster.length > 7000 ? 45 : 90);
+      maxPairs = Math.min(Math.floor(bucket.length / 2), roster.length > 7000 ? 12 : 24);
       for (i = 0; i < maxPairs; i += 1) {
-        a = bucket[i * 2];
-        b = bucket[i * 2 + 1];
+        a = bucket[i * 2]; b = bucket[i * 2 + 1];
         if (!a || !b) { continue; }
         result = resolveNpcFight(state, a, b);
         if (result.type === "win" && window.FS.Titles && window.FS.Titles.unifyBeltsAfterFight) { window.FS.Titles.unifyBeltsAfterFight(state, result.winner, result.loser); }
         if (report.length < 8) { report.push(result.text); }
       }
     }
-
     if (state.week % 2 === 0) { report = report.concat(processProContracts(state).slice(0, 8 - report.length)); }
     return report;
   }
@@ -953,113 +922,86 @@
   }
 
   function simulateRetirementsAndNewFighters(state) {
-    var i, fighter, rating, chance, created = 0, parts = State.dateParts(state), needsClubSync = false;
-    for (i = 0; i < state.roster.length; i += 1) {
-      fighter = state.roster[i];
+    var i, fighter, rating, chance, created = 0, parts = State.dateParts(state), needsDirty = false;
+    var roster = state.roster || [];
+    var sampleLimit = roster.length > 8000 ? 900 : (roster.length > 5000 ? 1300 : roster.length);
+    var start = roster.length > sampleLimit ? ((state.week * 883) % roster.length) : 0;
+    var index, young;
+
+    for (i = 0; i < sampleLimit; i += 1) {
+      index = roster.length ? (start + i) % roster.length : 0;
+      fighter = roster[index];
       if (!fighter || fighter.isPlayer || fighter.retired) { continue; }
       if (fighter.birthMonth === parts.month && fighter.birthWeek === parts.weekOfMonth) { fighter.age += 1; }
       rating = U.statAverage(fighter.stats);
       if (fighter.trackId === "amateur" && fighter.age > 30) {
         if (rating >= 90) { tryMoveFighter(state, fighter, "pro", "перерос любители и ушёл в профи"); }
         else { tryMoveFighter(state, fighter, "street", "перерос любители и ушёл на улицу"); }
-        needsClubSync = true;
+        needsDirty = true;
         continue;
       }
       chance = fighter.age >= 40 ? 7 : (fighter.age >= 36 ? 3 : (fighter.age >= 32 ? 1 : 0));
-      if (chance && U.randomInt(1, 1000) <= chance) { retireFighter(state, fighter, "возраст"); needsClubSync = true; }
+      if (chance && U.randomInt(1, 1000) <= chance) { retireFighter(state, fighter, "возраст"); needsDirty = true; }
     }
 
-    /* Пополнение мира идёт пакетно раз в месяц: годовой поток тот же, но неделя не тратит время на полную пересборку клубов каждый тик. */
-    if (parts.weekOfMonth === 1) {
-      for (i = 0; i < Data.countries.length; i += 1) {
-        createYoungFighter(state, Data.countries[i].id, "amateur", created++);
-        createYoungFighter(state, Data.countries[i].id, "street", created++);
+    if (parts.weekOfMonth === 1 && roster.length < 9000) {
+      for (i = 0; i < Data.countries.length; i += 2) {
+        young = createYoungFighter(state, Data.countries[(i + state.week) % Data.countries.length].id, "amateur", created++);
+        young.gymId = "";
+        young = createYoungFighter(state, Data.countries[(i + state.week) % Data.countries.length].id, "street", created++);
+        young.gymId = "";
       }
-      for (i = 0; i < Data.weightClasses.length; i += 1) {
-        createYoungFighter(state, Data.countries[i % Data.countries.length].id, "pro", created++).weightClassId = Data.weightClasses[i].id;
+      for (i = 0; i < Math.min(4, Data.weightClasses.length); i += 1) {
+        young = createYoungFighter(state, Data.countries[(i + state.week) % Data.countries.length].id, "pro", created++);
+        young.weightClassId = Data.weightClasses[(i + state.week) % Data.weightClasses.length].id;
       }
-      needsClubSync = true;
+      needsDirty = true;
     }
 
-    if (needsClubSync && window.FS.Clubs) { window.FS.Clubs.assignFightersToClubs(state); }
+    if (needsDirty) { state._rankingDirty = true; state._coachRecordsDirty = true; }
   }
 
 
 function simulateInternationalGymMoves(state) {
-    var attempts = Math.min(55, Math.max(8, Math.floor((state.roster || []).length / 380)));
-    var clubsByCountry = {};
-    var i;
-    var fighter;
-    var currentCountry;
-    var targetCountries;
-    var targetCountry;
-    var targetClubs;
-    var rating;
-    var club;
-    var oldClub;
-    var oldCountry;
-    var moved = false;
-
-    if (!window.FS.Clubs || !state.clubs || !state.clubs.length) {
-      return;
-    }
-
+    var attempts = Math.min(24, Math.max(4, Math.floor((state.roster || []).length / 700)));
+    var clubsByCountry = {}, i, fighter, currentCountry, targetCountries, targetCountry, targetClubs, rating, club, oldClub, oldCountry, moved = false;
+    if (!window.FS.Clubs || !state.clubs || !state.clubs.length) { return; }
     for (i = 0; i < state.clubs.length; i += 1) {
       club = state.clubs[i];
       clubsByCountry[club.countryId] = clubsByCountry[club.countryId] || [];
       clubsByCountry[club.countryId].push(club);
     }
-
     targetCountries = Data.countries;
-
     for (i = 0; i < attempts; i += 1) {
       fighter = state.roster[U.randomInt(0, state.roster.length - 1)];
-      if (!fighter || fighter.isPlayer || fighter.retired || U.randomInt(1, 1000) > 6) {
-        continue;
-      }
-
+      if (!fighter || fighter.isPlayer || fighter.retired || U.randomInt(1, 1000) > 4) { continue; }
       currentCountry = fighter.countryId;
       targetCountry = targetCountries[U.randomInt(0, targetCountries.length - 1)];
       if (!targetCountry || targetCountry.id === currentCountry) { continue; }
-
       rating = U.statAverage(fighter.stats);
-      targetClubs = (clubsByCountry[targetCountry.id] || []).filter(function (item) {
-        return rating >= item.minOvr && rating <= item.maxOvr;
-      });
-
-      if (!targetClubs.length) {
-        targetClubs = clubsByCountry[targetCountry.id] || [];
-      }
-
+      targetClubs = (clubsByCountry[targetCountry.id] || []).filter(function (item) { return rating >= item.minOvr && rating <= item.maxOvr; });
+      if (!targetClubs.length) { targetClubs = clubsByCountry[targetCountry.id] || []; }
       club = targetClubs[U.randomInt(0, Math.max(0, targetClubs.length - 1))];
-      if (!club) {
-        continue;
-      }
-
+      if (!club) { continue; }
       oldCountry = U.findCountry(currentCountry);
       oldClub = fighter.gymId && window.FS.Clubs ? window.FS.Clubs.findClub(state, fighter.gymId) : null;
-      fighter.countryId = targetCountry.id;
-      fighter.currentCountryId = targetCountry.id;
+      if (oldClub && oldClub.rosterIds instanceof Array) { oldClub.rosterIds = oldClub.rosterIds.filter(function (id) { return id !== fighter.id; }); }
+      fighter.countryId = targetCountry.id; fighter.currentCountryId = targetCountry.id;
       fighter.homeCountryId = fighter.homeCountryId || fighter.originCountryId || currentCountry;
       fighter.originCountryId = fighter.originCountryId || fighter.homeCountryId || currentCountry;
       fighter.gymId = club.id;
+      fighter.coachId = club.coach && club.coach.id ? club.coach.id : ((club.coaches && club.coaches[0]) ? club.coaches[0].id : "");
       fighter.isForeignResident = (fighter.originCountryId || fighter.homeCountryId || currentCountry) !== targetCountry.id;
       fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
-      fighter.careerLog.unshift({
-        week: state.week,
-        text: "Переезд: " + oldCountry.label + " → " + targetCountry.label + ", клуб " + club.name + ".",
-        meta: { fromCountryId: oldCountry.id, toCountryId: targetCountry.id, oldClubId: oldClub ? oldClub.id : "", clubId: club.id }
-      });
+      fighter.careerLog.unshift({ week: state.week, text: "Переезд: " + oldCountry.label + " → " + targetCountry.label + ", клуб " + club.name + ".", meta: { fromCountryId: oldCountry.id, toCountryId: targetCountry.id, oldClubId: oldClub ? oldClub.id : "", clubId: club.id } });
       if (fighter.careerLog.length > 12) { fighter.careerLog.length = 12; }
+      club.rosterIds = club.rosterIds instanceof Array ? club.rosterIds : [];
+      if (club.rosterIds.indexOf(fighter.id) === -1) { club.rosterIds.push(fighter.id); }
       U.pushLimited(state.world.transitionLog, { week: state.week, fighterId: fighter.id, text: fighter.name + " переехал: " + oldCountry.label + " → " + targetCountry.label + "." }, 120);
       migrationNewsForMove(state, fighter, currentCountry, targetCountry.id);
       moved = true;
     }
-
-    if (moved) {
-      state._rankingDirty = true;
-      window.FS.Clubs.assignFightersToClubs(state);
-    }
+    if (moved) { state._rankingDirty = true; state._coachRecordsDirty = true; }
   }
 
   function promoterById(id) {
@@ -1246,7 +1188,7 @@ function simulateInternationalGymMoves(state) {
     playerClubBefore = p ? p.gymId : "";
 
     if (window.FS.Clubs) {
-      needsClubMaintenance = !state.clubs || !state.clubs.length || state._forceClubAssign || state.week % 8 === 1;
+      needsClubMaintenance = !state.clubs || !state.clubs.length || state._forceClubAssign || state.week % 16 === 1;
       if (needsClubMaintenance) { window.FS.Clubs.ensureClubs(state); }
     }
 
@@ -1268,12 +1210,12 @@ function simulateInternationalGymMoves(state) {
     needsNationalTeams = !state.world.teamsByCountry ||
       !Object.keys(state.world.teamsByCountry).length ||
       state._nationalTeamsDirty ||
-      state.week % 8 === 1;
+      state.week % 16 === 1;
 
     if (needsNationalTeams) {
       buildNationalTeams(state);
       state._nationalTeamsDirty = false;
-    } else if (state.world.teamCoaches && state.week % 24 === 1) {
+    } else if (state.world.teamCoaches && state.week % 48 === 1) {
       Object.keys(state.world.teamCoaches).forEach(function (countryId) {
         ensureNationalCoach(state, U.findCountry(countryId));
       });
@@ -1281,15 +1223,15 @@ function simulateInternationalGymMoves(state) {
 
     simulateAutonomousTournaments(state);
 
-    needsTitleUpdate = state._titlesDirty || state.week % 4 === 0;
+    needsTitleUpdate = state._titlesDirty || state.week % 8 === 0;
     if (window.FS.Titles && needsTitleUpdate) {
       window.FS.Titles.updateTitles(state);
       state._titlesDirty = false;
     }
 
-    if (window.FS.Stories) { window.FS.Stories.simulateStories(state); }
+    if (window.FS.Stories && state.week % 2 === 0) { window.FS.Stories.simulateStories(state); }
 
-    refreshOffers(state);
+    if (!state.offers || !state.offers.length || state.week % 2 === 0 || state._offersDirty) { refreshOffers(state); state._offersDirty = false; }
 
     if (!state.modal || state.modal.type !== "proContractPreview") { handleProFightDue(state); }
     if (!state.modal || state.modal.type !== "proContractPreview") { buildProContracts(state); }
@@ -1311,6 +1253,7 @@ function simulateInternationalGymMoves(state) {
     simulateTournamentNews(state);
     handleScheduledTournamentStart(state);
     if (!state.modal) { scheduleTournamentNotice(state); }
+    state.world.lastWeekPerfMs = 0;
   }
 
   function bootstrapWorld(state) {
@@ -1342,7 +1285,7 @@ function simulateInternationalGymMoves(state) {
         window.FS.Titles.normalizeFighterTitles(state);
       }
     }
-    refreshOffers(state);
+    if (!state.offers || !state.offers.length || state.week % 2 === 0 || state._offersDirty) { refreshOffers(state); state._offersDirty = false; }
     buildProContracts(state);
     if (!state.world.news.length) {
       createNews(state, "world", "Мир запущен: клубы, титулы, рейтинги, сборные и расписание боёв сформированы.", { type: "bootstrap" });
