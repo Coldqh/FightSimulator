@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "country-names-db-2.8.0",
-  "saveSchemaVersion": 280,
+  "appVersion": "gameplay-engagement-lite-2.8.1",
+  "saveSchemaVersion": 281,
   "tracks": {
     "amateur": {
       "id": "amateur",

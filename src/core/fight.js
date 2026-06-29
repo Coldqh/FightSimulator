@@ -685,7 +685,148 @@
     return true;
   }
 
-  function applyFightResult(state, p, opponent, result, method) {
+  function decisionMargin(scoreLine) {
+    var match;
+    if (!scoreLine) { return 99; }
+    match = String(scoreLine).match(/(\d+)\s*:\s*(\d+)/);
+    if (!match) { return 99; }
+    return Math.abs((Number(match[1]) || 0) - (Number(match[2]) || 0));
+  }
+
+  function isCloseFight(result, method, scoreLine) {
+    if (result === "Ничья") { return true; }
+    if (method === "KO/TKO") { return false; }
+    return decisionMargin(scoreLine) <= 2;
+  }
+
+  function safeCreateFightNews(state, text, meta) {
+    if (window.FS.World && window.FS.World.createNews) {
+      window.FS.World.createNews(state, "fight", text, meta || {});
+    }
+  }
+
+  function updatePlayerCareerStats(state, p, opponent, result, method) {
+    var stats;
+    var playerOvr;
+    var opponentOvr;
+    if (!p || !opponent) { return; }
+    p.careerStats = p.careerStats && typeof p.careerStats === "object" ? p.careerStats : {};
+    stats = p.careerStats;
+    playerOvr = U.statAverage(p.stats);
+    opponentOvr = U.statAverage(opponent.stats);
+
+    stats.bestWinStreak = Number(stats.bestWinStreak) || 0;
+    stats.currentWinStreak = Number(stats.currentWinStreak) || 0;
+    stats.currentLossStreak = Number(stats.currentLossStreak) || 0;
+    stats.rematchWins = Number(stats.rematchWins) || 0;
+    stats.rematchLosses = Number(stats.rematchLosses) || 0;
+    stats.rematchDraws = Number(stats.rematchDraws) || 0;
+    stats.strongerWins = Number(stats.strongerWins) || 0;
+    stats.bestDefeatedOvr = Number(stats.bestDefeatedOvr) || 0;
+    stats.lastFightResult = result;
+    stats.lastFightMethod = method;
+    stats.lastFightWeek = state.week;
+
+    if (result === "Победа") {
+      stats.currentWinStreak += 1;
+      stats.currentLossStreak = 0;
+      stats.bestWinStreak = Math.max(stats.bestWinStreak, stats.currentWinStreak);
+      if (opponentOvr > playerOvr) {
+        stats.strongerWins += 1;
+        stats.bestDefeatedOvr = Math.max(stats.bestDefeatedOvr, opponentOvr);
+      }
+    } else if (result === "Поражение") {
+      stats.currentLossStreak += 1;
+      stats.currentWinStreak = 0;
+    } else {
+      stats.currentWinStreak = 0;
+      stats.currentLossStreak = 0;
+    }
+  }
+
+  function updatePlayerRivalry(state, p, opponent, result, method, scoreLine) {
+    var rivalries;
+    var key;
+    var item;
+    var close;
+    var playerOvr;
+    var opponentOvr;
+    var note;
+    if (!state || !p || !opponent || opponent.isPlayer) { return; }
+
+    state.world = state.world && typeof state.world === "object" ? state.world : {};
+    rivalries = state.world.playerRivalries && typeof state.world.playerRivalries === "object" ? state.world.playerRivalries : {};
+    state.world.playerRivalries = rivalries;
+
+    key = opponent.id;
+    item = rivalries[key] || {
+      opponentId: opponent.id,
+      trackId: opponent.trackId,
+      firstWeek: state.week,
+      fights: 0,
+      playerWins: 0,
+      opponentWins: 0,
+      draws: 0,
+      closeFights: 0,
+      rematchWeek: 0
+    };
+
+    close = isCloseFight(result, method, scoreLine);
+    playerOvr = U.statAverage(p.stats);
+    opponentOvr = U.statAverage(opponent.stats);
+
+    item.fights += 1;
+    item.lastWeek = state.week;
+    item.lastResult = result;
+    item.lastMethod = method;
+    item.lastScoreLine = scoreLine || "";
+    item.lastPlayerOvr = playerOvr;
+    item.lastOpponentOvr = opponentOvr;
+
+    if (result === "Победа") { item.playerWins += 1; }
+    else if (result === "Поражение") { item.opponentWins += 1; }
+    else { item.draws += 1; }
+
+    if (close) { item.closeFights += 1; }
+
+    if ((close || item.fights >= 2) && p.trackId !== "pro") {
+      item.rematchWeek = state.week + U.randomInt(4, 8);
+    }
+
+    rivalries[key] = item;
+
+    if (close || item.fights >= 2) {
+      note = item.fights >= 2 ?
+        ("Реванш · счёт " + item.playerWins + "-" + item.opponentWins + "-" + item.draws) :
+        ("Близкий бой · реванш возможен");
+      if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
+        window.FS.Clubs.rememberPlayerRival(state, opponent, note);
+      }
+    }
+
+    if (close) {
+      safeCreateFightNews(state, "Близкий бой: " + p.name + " — " + opponent.name + " · " + result + " (" + (scoreLine || method) + ").", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
+    }
+
+    if (item.fights === 2) {
+      safeCreateFightNews(state, "Реванш: " + p.name + " снова встретился с " + opponent.name + ". Счёт серии " + item.playerWins + "-" + item.opponentWins + "-" + item.draws + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
+    }
+
+    if (result === "Победа" && opponentOvr >= playerOvr + 6) {
+      safeCreateFightNews(state, "Апсет: " + p.name + " победил соперника выше себя — " + opponent.name + " · OVR " + opponentOvr + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
+    }
+
+    if (p.careerStats && p.careerStats.currentWinStreak && p.careerStats.currentWinStreak >= 3 && [3, 5, 8, 12].indexOf(p.careerStats.currentWinStreak) !== -1) {
+      safeCreateFightNews(state, "Серия побед: " + p.name + " выиграл " + p.careerStats.currentWinStreak + " боя подряд.", { fighterId: p.id });
+    }
+  }
+
+  function recordPlayerEngagement(state, p, opponent, result, method, scoreLine) {
+    updatePlayerCareerStats(state, p, opponent, result, method);
+    updatePlayerRivalry(state, p, opponent, result, method, scoreLine);
+  }
+
+  function applyFightResult(state, p, opponent, result, method, scoreLine) {
     var oppLine;
     if (!p || !opponent) { return false; }
     p.record = p.record || { wins: 0, losses: 0, draws: 0, kos: 0 };
@@ -710,15 +851,22 @@
       if (method === "KO/TKO") { opponent.record.kos = (Number(opponent.record.kos) || 0) + 1; }
       oppLine = "Победа над " + p.name + " " + (method === "KO/TKO" ? "KO/TKO." : "решением.");
     }
+
     if (p.trackRecords) { p.trackRecords[p.trackId] = window.FS.State.cloneRecord(p.record); }
     if (opponent.trackRecords) { opponent.trackRecords[opponent.trackId] = window.FS.State.cloneRecord(opponent.record); }
+
     State.updateDerivedFighterFields(p);
     State.updateDerivedFighterFields(opponent);
+
     p.recentOpponentIds = p.recentOpponentIds instanceof Array ? p.recentOpponentIds : [];
     opponent.recentOpponentIds = opponent.recentOpponentIds instanceof Array ? opponent.recentOpponentIds : [];
-    p.recentOpponentIds.unshift(opponent.id); opponent.recentOpponentIds.unshift(p.id);
+    p.recentOpponentIds.unshift(opponent.id);
+    opponent.recentOpponentIds.unshift(p.id);
     if (p.recentOpponentIds.length > 8) { p.recentOpponentIds.length = 8; }
     if (opponent.recentOpponentIds.length > 8) { opponent.recentOpponentIds.length = 8; }
+
+    recordPlayerEngagement(state, p, opponent, result, method, scoreLine || "");
+
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
       if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, p, opponent, true); }
       else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? p : opponent, result === "Победа" ? opponent : p, false); }
@@ -816,7 +964,7 @@
       return true;
     }
 
-    applyFightResult(state, p, opponent, result, method);
+    applyFightResult(state, p, opponent, result, method, scoreLine);
     completeFightEconomy(state, p, opponent, result, session.purse || (p.contractPurse || 0));
     if (p.contractOpponentId === opponent.id) {
       state.world.proContractHistory = state.world.proContractHistory instanceof Array ? state.world.proContractHistory : [];
@@ -967,7 +1115,7 @@
     rounds = offer.rounds || U.findTrack(p.trackId).rounds;
     scoreLine = method === "KO/TKO" ? ("KO/TKO, раунд " + U.randomInt(1, Math.max(1, rounds))) : ("решение " + autoDecisionScore(result, rounds));
     purse = computePurse(p, opponent);
-    applyFightResult(state, p, opponent, result, method);
+    applyFightResult(state, p, opponent, result, method, scoreLine);
     completeFightEconomy(state, p, opponent, result, purse, Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.fight) || 25) : 25);
     state.offers = state.offers.filter(function (existingOffer) { return existingOffer.id !== offer.id; });
     advanceAfterFight(state);

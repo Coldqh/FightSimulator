@@ -8,7 +8,7 @@
   var State = window.FS.State;
 
   function createNews(state, tone, text, meta) {
-    var allowed = ["club", "team", "tournament", "medal", "champion", "migration"];
+    var allowed = ["club", "team", "tournament", "medal", "champion", "migration", "fight", "career"];
     var payload;
     var i;
     if (allowed.indexOf(tone || "") === -1) { return; }

@@ -731,6 +731,12 @@
     state._coachRecordsDirty = true;
   }
 
+  function rememberPlayerRival(state, opponent, note) {
+    if (!state || !opponent || opponent.isPlayer) { return false; }
+    rememberFighterPerson(state, opponent, "formerOpponent", note || ("Бывший соперник · " + U.findTrack(opponent.trackId).label));
+    return true;
+  }
+
   function rememberFightRelationship(state, opponent) {
     if (!opponent || opponent.isPlayer) { return false; }
     if (U.randomInt(1, 100) > 12) { return false; }
@@ -961,6 +967,7 @@
     flushCoachRecords: flushCoachRecords,
     selectPlayerCoach: selectPlayerCoach,
     rememberFightRelationship: rememberFightRelationship,
+    rememberPlayerRival: rememberPlayerRival,
     eligibleClubsForFighter: eligibleClubsForFighter,
     maybeMoveNpcClubs: maybeMoveNpcClubs,
     levelBand: levelBand,

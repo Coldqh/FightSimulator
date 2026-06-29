@@ -288,6 +288,35 @@
     return "Бой";
   }
 
+  function findDueRematchOpponent(state, player, used) {
+    var rivalries = state.world && state.world.playerRivalries ? state.world.playerRivalries : {};
+    var playerOvr = U.statAverage(player.stats);
+    var entries = [];
+    var key;
+    var item;
+    var opponent;
+    for (key in rivalries) {
+      if (!Object.prototype.hasOwnProperty.call(rivalries, key)) { continue; }
+      item = rivalries[key];
+      if (!item || !item.opponentId || used[item.opponentId]) { continue; }
+      if (item.trackId !== player.trackId) { continue; }
+      if (!item.rematchWeek || item.rematchWeek > state.week) { continue; }
+      opponent = U.getFighterById(state, item.opponentId);
+      if (!opponent || opponent.retired || opponent.trackId !== player.trackId) { continue; }
+      if (player.trackId !== "street" && opponent.weightClassId !== player.weightClassId) { continue; }
+      if ((player.trackId === "amateur" || player.trackId === "street") && Math.abs(U.statAverage(opponent.stats) - playerOvr) > 10) { continue; }
+      if (opponent.lastFightWeek && state.week - opponent.lastFightWeek < 3) { continue; }
+      entries.push({ opponent: opponent, rivalry: item });
+    }
+
+    entries.sort(function (left, right) {
+      return (Number(right.rivalry.closeFights) || 0) - (Number(left.rivalry.closeFights) || 0) ||
+        (Number(right.rivalry.lastWeek) || 0) - (Number(left.rivalry.lastWeek) || 0);
+    });
+
+    return entries.length ? entries[0].opponent : null;
+  }
+
   function buildPlayerOffers(state) {
     var player = State.player(state);
     var track = U.findTrack(player.trackId);
@@ -295,12 +324,30 @@
     var used = {};
     var i;
     var opponent;
+    var rematch;
 
     if (player.trackId === "pro") {
       return [];
     }
 
-    for (i = 0; i < 10; i += 1) {
+    rematch = findDueRematchOpponent(state, player, used);
+    if (rematch) {
+      used[rematch.id] = true;
+      offers.push({
+        id: U.uid("offer"),
+        label: "Реванш",
+        difficultyId: "even",
+        opponentId: rematch.id,
+        rounds: track.rounds,
+        purse: window.FS.Fight && window.FS.Fight.computePurse ? window.FS.Fight.computePurse(player, rematch) : Math.max(25, U.statAverage(rematch.stats) * 5),
+        opponentTier: careerTier(rematch).label,
+        opponentStage: careerStage(rematch).label,
+        risk: Math.max(1, U.statAverage(rematch.stats) - U.statAverage(player.stats) + 50),
+        isRematch: true
+      });
+    }
+
+    for (i = offers.length; i < 10; i += 1) {
       opponent = findOpponent(state, "even", i, used);
 
       offers.push({

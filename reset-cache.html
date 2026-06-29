@@ -21,7 +21,7 @@
     <h1>Fight World reset</h1>
     <p>Clearing old cache. Career save is not touched.</p>
     <pre id="log">start</pre>
-    <a id="go" href="index.html?cacheReset=2.8.0">Open game</a>
+    <a id="go" href="index.html?cacheReset=2.8.1">Open game</a>
   </main>
   <script>
     const log = document.getElementById("log");
@@ -49,7 +49,7 @@
         line("error: " + error.message);
       }
       line("done");
-      setTimeout(() => { location.href = "index.html?cacheReset=2.8.0&t=" + Date.now(); }, 700);
+      setTimeout(() => { location.href = "index.html?cacheReset=2.8.1&t=" + Date.now(); }, 700);
     }
     clean();
   </script>
