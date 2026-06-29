@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "career-milestones-hotfix-2.8.7.1",
-  "saveSchemaVersion": 2871,
+  "appVersion": "career-milestones-repair-2.8.7.2",
+  "saveSchemaVersion": 2872,
   "tracks": {
     "amateur": {
       "id": "amateur",

@@ -779,13 +779,29 @@
     var p = State.player(state);
     var stats = p && p.careerStats ? p.careerStats : {};
     var rematchLine = (Number(stats.rematchWins) || 0) + "-" + (Number(stats.rematchLosses) || 0) + "-" + (Number(stats.rematchDraws) || 0);
+    var tournamentLine = (Number(stats.tournamentWins) || 0) + "-" + (Number(stats.tournamentLosses) || 0) + "-" + (Number(stats.tournamentDraws) || 0);
     if (!p) { return ""; }
     return '<div class="content-card"><h3>Мини-статистика</h3>' +
       '<div class="split-row"><span>Текущая серия побед</span><strong>' + (Number(stats.currentWinStreak) || 0) + '</strong></div>' +
       '<div class="split-row"><span>Лучшая серия побед</span><strong>' + (Number(stats.bestWinStreak) || 0) + '</strong></div>' +
       '<div class="split-row"><span>Победы над сильнее себя</span><strong>' + (Number(stats.strongerWins) || 0) + '</strong></div>' +
       '<div class="split-row"><span>Лучший побеждённый OVR</span><strong>' + (Number(stats.bestDefeatedOvr) || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Турнирные бои</span><strong>' + U.escapeHtml(tournamentLine) + '</strong></div>' +
+      '<div class="split-row"><span>Всего турнирных боёв</span><strong>' + (Number(stats.totalTournamentFights) || 0) + '</strong></div>' +
       '<div class="split-row"><span>Реванши</span><strong>' + U.escapeHtml(rematchLine) + '</strong></div>' +
+    '</div>';
+  }
+
+  function renderCareerMilestonesCard(state) {
+    var list = State.careerMilestones ? State.careerMilestones(state) : [];
+    var done = list.filter(function (item) { return item.done; }).length;
+    var rows = list.slice(0, 8).map(function (item) {
+      return '<div class="split-row"><span>' + (item.done ? '✓ ' : '· ') + U.escapeHtml(item.label) + '</span><strong>' + (item.done ? ('нед. ' + item.week) : '—') + '</strong></div>';
+    }).join("");
+    return '<div class="content-card"><h3>Карьерные вехи</h3>' +
+      '<div class="split-row"><span>Выполнено</span><strong>' + done + '/' + list.length + '</strong></div>' +
+      rows +
+      (list.length > 8 ? '<div class="muted small">+ ещё ' + (list.length - 8) + ' целей</div>' : '') +
     '</div>';
   }
 
@@ -832,6 +848,7 @@
         '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
       '</div>' +
       renderCareerStatsCard(state) +
+      renderCareerMilestonesCard(state) +
       renderCoachGoalCard(state) +
     '</div>';
   }

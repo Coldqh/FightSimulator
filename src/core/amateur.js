@@ -372,10 +372,13 @@
       player.record.wins += 1;
       opponent.record.losses += 1;
       if (method === "KO/TKO") { player.record.kos += 1; }
-    } else {
+    } else if (result === "Поражение") {
       player.record.losses += 1;
       opponent.record.wins += 1;
       if (method === "KO/TKO") { opponent.record.kos += 1; }
+    } else {
+      player.record.draws = (Number(player.record.draws) || 0) + 1;
+      opponent.record.draws = (Number(opponent.record.draws) || 0) + 1;
     }
 
     player.trackRecords[player.trackId] = State.cloneRecord(player.record);
@@ -385,8 +388,35 @@
     State.updateDerivedFighterFields(player);
     State.updateDerivedFighterFields(opponent);
 
+    if (State.recordPlayerFightStats) {
+      State.recordPlayerFightStats(state, opponent, result, method, {
+        isTournament: true,
+        isRematch: false,
+        playerOvr: U.statAverage(player.stats),
+        opponentOvr: U.statAverage(opponent.stats)
+      });
+    }
+
+    if (State.recordFighterFormEvent) {
+      State.recordFighterFormEvent(player, result, state.week);
+      State.recordFighterFormEvent(opponent, result === "Победа" ? "Поражение" : (result === "Поражение" ? "Победа" : "Ничья"), state.week);
+    }
+
+    if (State.recordCoachGoalEvent) {
+      State.recordCoachGoalEvent(state, "fight", {
+        result: result,
+        method: method,
+        opponentId: opponent.id,
+        playerOvr: U.statAverage(player.stats),
+        opponentOvr: U.statAverage(opponent.stats),
+        isRematch: false,
+        isTournament: true
+      });
+    }
+
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) {
-      window.FS.Clubs.recordClubFight(state, result === "Победа" ? player : opponent, result === "Победа" ? opponent : player, false);
+      if (result === "Ничья") { window.FS.Clubs.recordClubFight(state, player, opponent, true); }
+      else { window.FS.Clubs.recordClubFight(state, result === "Победа" ? player : opponent, result === "Победа" ? opponent : player, false); }
     }
   }
 
@@ -687,6 +717,8 @@
     if (State.addFighterAward) {
       State.addFighterAward(state, p, awardLabel, "amateur", { medal: medal, competitionId: comp.id, place: place });
     }
+    if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
+    if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
 
     if (p && p.careerLog) {
       p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + ", $" + moneyReward + ", +" + xpReward + " опыта.", meta: { competitionId: comp.id, place: place } });

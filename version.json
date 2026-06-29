@@ -1,7 +1,7 @@
 {
-  "version": "career-milestones-hotfix-2.8.7.1",
-  "mode": "career-milestones-hotfix",
-  "cacheVersion": "fight-simulator-career-milestones-hotfix-2.8.7.1",
+  "version": "career-milestones-repair-2.8.7.2",
+  "mode": "career-milestones-repair",
+  "cacheVersion": "fight-simulator-career-milestones-repair-2.8.7.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
