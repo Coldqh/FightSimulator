@@ -260,7 +260,6 @@
     fighter.trainingPoints = Number(fighter.trainingPoints) || 0;
     fighter.money = Number(fighter.money) || 0;
     fighter.fatigue = clamp(Number(fighter.fatigue) || 0, 0, 100);
-    fighter.equipment = fighter.equipment && typeof fighter.equipment === "object" ? fighter.equipment : {};
     fighter.financeLog = fighter.financeLog instanceof Array ? fighter.financeLog : [];
     fighter.monthlyExpenseLog = fighter.monthlyExpenseLog instanceof Array ? fighter.monthlyExpenseLog : [];
     fighter.lastExpenseWeek = Number(fighter.lastExpenseWeek) || 1;
@@ -324,7 +323,6 @@
     var state = raw ? migrate(parse(raw)) : null;
 
     if (state) {
-      save(state);
       return state;
     }
 

@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "awards-normalization-2.8.3",
-  "saveSchemaVersion": 283,
+  "appVersion": "stability-core-cleanup-2.8.4",
+  "saveSchemaVersion": 284,
   "tracks": {
     "amateur": {
       "id": "amateur",

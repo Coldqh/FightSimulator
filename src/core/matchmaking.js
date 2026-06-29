@@ -325,7 +325,6 @@
     var i;
     var opponent;
     var rematch;
-    var rivalry;
 
     if (player.trackId === "pro") {
       return [];
@@ -334,17 +333,6 @@
     rematch = findDueRematchOpponent(state, player, used);
     if (rematch) {
       used[rematch.id] = true;
-      rivalry = state.world && state.world.playerRivalries ? state.world.playerRivalries[rematch.id] : null;
-
-      if (rivalry && rivalry.rematchAnnouncedWeek !== state.week) {
-        rivalry.rematchAnnouncedWeek = state.week;
-        if (window.FS.World && window.FS.World.createNews) {
-          window.FS.World.createNews(state, "fight", "Доступен реванш: " + player.name + " — " + rematch.name + ". Счёт серии " + (rivalry.playerWins || 0) + "-" + (rivalry.opponentWins || 0) + "-" + (rivalry.draws || 0) + ".", { fighterId: player.id, opponentId: rematch.id, firstId: player.id, secondId: rematch.id });
-        }
-        if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
-          window.FS.Clubs.rememberPlayerRival(state, rematch, "Реванш доступен · счёт " + (rivalry.playerWins || 0) + "-" + (rivalry.opponentWins || 0) + "-" + (rivalry.draws || 0));
-        }
-      }
 
       offers.push({
         id: U.uid("offer"),

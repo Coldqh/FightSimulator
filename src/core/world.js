@@ -171,12 +171,17 @@
       key = fighter.countryId + "|" + fighter.weightClassId;
       buckets[key] = buckets[key] || [];
       buckets[key].push(fighter);
+      if (buckets[key].length > 52) {
+        buckets[key].sort(function (left, right) { return U.statAverage(right.stats) - U.statAverage(left.stats); });
+        buckets[key].length = 40;
+      }
     }
 
     Object.keys(buckets).forEach(function (bucketKey) {
       buckets[bucketKey].sort(function (left, right) {
         return U.statAverage(right.stats) - U.statAverage(left.stats) + U.randomInt(-2, 2);
       });
+      if (buckets[bucketKey].length > 40) { buckets[bucketKey].length = 40; }
     });
 
     function awardAndNews(comp, country, weight, candidates) {
@@ -655,7 +660,7 @@
       text: fighter.name + ": " + reason
     }, 70);
 
-    createNews(state, "move", fighter.name + ": " + reason, { type: "track_move" });
+    createNews(state, "migration", fighter.name + ": " + reason, { type: "track_move" });
     return true;
   }
 
@@ -869,6 +874,41 @@
     return candidates[index];
   }
 
+  function announceRematchOffers(state) {
+    var offers = state.offers instanceof Array ? state.offers : [];
+    var p = State.player(state);
+    var rivalries = state.world && state.world.playerRivalries ? state.world.playerRivalries : {};
+    var i;
+    var offer;
+    var opponent;
+    var rivalry;
+
+    if (!p || !window.FS.Matchmaking) { return; }
+
+    for (i = 0; i < offers.length; i += 1) {
+      offer = offers[i];
+      if (!offer || !offer.isRematch || !offer.opponentId) { continue; }
+
+      rivalry = rivalries[offer.opponentId];
+      if (!rivalry || rivalry.rematchAnnouncedWeek === state.week) { continue; }
+
+      opponent = U.getFighterById(state, offer.opponentId);
+      if (!opponent) { continue; }
+
+      rivalry.rematchAnnouncedWeek = state.week;
+      createNews(state, "fight", "Доступен реванш: " + p.name + " — " + opponent.name + ". Счёт серии " + (rivalry.playerWins || 0) + "-" + (rivalry.opponentWins || 0) + "-" + (rivalry.draws || 0) + ".", {
+        fighterId: p.id,
+        opponentId: opponent.id,
+        firstId: p.id,
+        secondId: opponent.id
+      });
+
+      if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
+        window.FS.Clubs.rememberPlayerRival(state, opponent, "Реванш доступен · счёт " + (rivalry.playerWins || 0) + "-" + (rivalry.opponentWins || 0) + "-" + (rivalry.draws || 0));
+      }
+    }
+  }
+
   function refreshOffers(state) {
     var competitionOffers = (state.offers || []).filter(function (offer) {
       return offer.isCompetition;
@@ -876,6 +916,7 @@
 
     if (window.FS.Matchmaking && window.FS.Matchmaking.buildPlayerOffers) {
       state.offers = window.FS.Matchmaking.buildPlayerOffers(state).concat(competitionOffers);
+      announceRematchOffers(state);
       return;
     }
 
@@ -907,6 +948,7 @@
     }
 
     state.offers = normalOffers.concat(competitionOffers);
+    announceRematchOffers(state);
   }
 
   function retireFighter(state, fighter, reason) {

@@ -2860,7 +2860,6 @@
     p.money = Number(p.money);
     if (!isFinite(p.money)) { p.money = Data.economy ? Data.economy.startingMoney : 650; }
     p.fatigue = U.clamp(Number(p.fatigue) || 0, 0, 100);
-    p.equipment = p.equipment && typeof p.equipment === "object" ? p.equipment : {};
     p.financeLog = p.financeLog instanceof Array ? p.financeLog : [];
     p.monthlyExpenseLog = p.monthlyExpenseLog instanceof Array ? p.monthlyExpenseLog : [];
     p.lastExpenseWeek = Number(p.lastExpenseWeek) || 1;
@@ -2967,24 +2966,7 @@
     }
   }
 
-  function equipmentSummary(state) {
-    var p = ensurePlayerSystems(state);
-    var items = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
-    var owned = [];
-    var trainingBonus = 0;
-    var fatigueReduction = 0;
-    var upkeep = 0;
-    if (!p) { return { owned: owned, trainingBonus: 0, fatigueReduction: 0, upkeep: 0 }; }
-    items.forEach(function (item) {
-      if (p.equipment[item.id]) {
-        owned.push(item);
-        trainingBonus += Number(item.trainingBonus) || 0;
-        fatigueReduction += Number(item.fatigueReduction) || 0;
-        upkeep += Number(item.upkeep) || 0;
-      }
-    });
-    return { owned: owned, trainingBonus: trainingBonus, fatigueReduction: fatigueReduction, upkeep: upkeep };
-  }
+  
 
   function clubMonthlyFee(state) {
     var club = window.FS.Clubs && window.FS.Clubs.playerClub ? window.FS.Clubs.playerClub(state) : null;
@@ -2999,7 +2981,6 @@
     var food;
     var medical;
     var clubFee;
-    var equipment = 0;
     var multiplier;
     var total;
 
@@ -3012,7 +2993,7 @@
     medical = Number(econ.medicalReserveCost) || 45;
     clubFee = clubMonthlyFee(state);
     multiplier = Number(p.expenseMultiplier) || 1;
-    total = Math.round((trackCost + food + medical + clubFee + equipment) * multiplier);
+    total = Math.round((trackCost + food + medical + clubFee) * multiplier);
     return { trackCost: Math.round(trackCost * multiplier), food: Math.round(food * multiplier), medical: Math.round(medical * multiplier), clubFee: Math.round(clubFee * multiplier), equipment: 0, total: total, multiplier: multiplier };
   }
 
@@ -3038,26 +3019,9 @@
     return true;
   }
 
-  function buyEquipment(state, itemId) {
-    var p = ensurePlayerSystems(state);
-    var items = Data.economy && Data.economy.equipment ? Data.economy.equipment : [];
-    var item = items.find(function (entry) { return entry.id === itemId; });
-    if (!p || !item) { return false; }
-    if (p.equipment[item.id]) { state.feed = "Эта экипировка уже куплена."; return false; }
-    if (!spendMoney(state, item.cost, "Покупка: " + item.label)) { return false; }
-    p.equipment[item.id] = true;
-    state.feed = "Куплено: " + item.label + ".";
-    return true;
-  }
+  
 
-  function buyMedicalService(state, serviceId) {
-    var service = Data.economy && Data.economy.medicalServices ? Data.economy.medicalServices.find(function (entry) { return entry.id === serviceId; }) : null;
-    if (!service) { return false; }
-    if (!spendMoney(state, service.cost, service.label)) { return false; }
-    adjustFatigue(state, service.fatigue, service.label);
-    state.feed = service.label + ": усталость снижена.";
-    return true;
-  }
+  
 
   function restPlayer(state) {
     var reduction = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.restWeek) || 20) : 20;
@@ -3516,12 +3480,6 @@
       state.roster[i].recentOpponentIds = state.roster[i].recentOpponentIds instanceof Array ? state.roster[i].recentOpponentIds : [];
       state.roster[i].money = Number(state.roster[i].money) || 0;
       state.roster[i].fatigue = U.clamp(Number(state.roster[i].fatigue) || 0, 0, 100);
-      state.roster[i].equipment = state.roster[i].equipment && typeof state.roster[i].equipment === "object" ? state.roster[i].equipment : {};
-      state.roster[i].financeLog = state.roster[i].financeLog instanceof Array ? state.roster[i].financeLog : [];
-      state.roster[i].monthlyExpenseLog = state.roster[i].monthlyExpenseLog instanceof Array ? state.roster[i].monthlyExpenseLog : [];
-      state.roster[i].lastExpenseWeek = Number(state.roster[i].lastExpenseWeek) || 1;
-      state.roster[i].fatigue = U.clamp(Number(state.roster[i].fatigue) || 0, 0, 100);
-      state.roster[i].equipment = state.roster[i].equipment && typeof state.roster[i].equipment === "object" ? state.roster[i].equipment : {};
       state.roster[i].financeLog = state.roster[i].financeLog instanceof Array ? state.roster[i].financeLog : [];
       state.roster[i].monthlyExpenseLog = state.roster[i].monthlyExpenseLog instanceof Array ? state.roster[i].monthlyExpenseLog : [];
       state.roster[i].lastExpenseWeek = Number(state.roster[i].lastExpenseWeek) || 1;
@@ -3671,10 +3629,7 @@
     adjustFatigue: adjustFatigue,
     monthlyExpenseBreakdown: monthlyExpenseBreakdown,
     applyMonthlyExpenses: applyMonthlyExpenses,
-    equipmentSummary: equipmentSummary,
-    buyEquipment: buyEquipment,
-    buyMedicalService: buyMedicalService,
-    restPlayer: restPlayer,
+restPlayer: restPlayer,
     isLockedByFatigue: isLockedByFatigue,
     fatigueLockedModal: fatigueLockedModal,
     debtWeeksLeft: debtWeeksLeft,

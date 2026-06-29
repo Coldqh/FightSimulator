@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.3&target=2.8.3&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.4&target=2.8.4&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -412,187 +412,13 @@
 
 
   function applyIntegratedGameplayFixes(targetState) {
-    var U = window.FS && window.FS.Utils ? window.FS.Utils : {};
-    var D = window.FS && window.FS.Data ? window.FS.Data : {};
-    var T = window.FS && window.FS.Titles ? window.FS.Titles : {};
-
-    function byId(id) {
-      if (!targetState || !id) { return null; }
-      if (U.getFighterById) { return U.getFighterById(targetState, id); }
-      return (targetState.roster || []).find(function (fighter) { return fighter && fighter.id === id; }) || null;
-    }
-
-    function ovr(fighter) {
-      if (!fighter) { return 0; }
-      if (U.statAverage) { return U.statAverage(fighter.stats || fighter); }
-      return Math.round(Number(fighter.ovr || fighter.rating || 0));
-    }
-
-    function ensureAges() {
-      if (!targetState || !targetState.roster) { return; }
-      var week = Number(targetState.week) || 1;
-      targetState.roster.forEach(function (fighter, index) {
-        var seed;
-        var rating;
-        var baseAge;
-        var elapsedYears;
-        if (!fighter) { return; }
-        seed = Math.abs(Number(fighter.seed) || index + 1);
-        rating = ovr(fighter);
-
-        if (!fighter.ageBaseWeek || Number(fighter.age) <= 15 || fighter.__ageSchemaVersion !== "age-v2") {
-          if (fighter.isPlayer) {
-            if (Number(fighter.age) > 15) { baseAge = Number(fighter.age); }
-            else if (fighter.trackId === "pro") { baseAge = 20; }
-            else { baseAge = 18; }
-          } else if (fighter.trackId === "pro") {
-            baseAge = Math.max(20, Math.min(41, 20 + (seed % 19) + (rating >= 170 ? 3 : 0)));
-          } else if (fighter.trackId === "street") {
-            baseAge = Math.max(18, Math.min(45, 18 + (seed % 24)));
-          } else {
-            baseAge = Math.max(16, Math.min(31, 16 + (seed % 15)));
-          }
-          fighter.baseAge = baseAge;
-          fighter.ageBaseWeek = week;
-          fighter.__ageSchemaVersion = "age-v2";
-          fighter.__ageBugRepaired260 = true;
-        }
-
-        elapsedYears = Math.max(0, Math.floor((week - (Number(fighter.ageBaseWeek) || week)) / 48));
-        fighter.age = Math.max(14, Math.min(60, (Number(fighter.baseAge) || Number(fighter.age) || 18) + elapsedYears));
-        fighter.birthMonth = Number(fighter.birthMonth) || U.randomInt(1, 12);
-        fighter.birthWeek = Number(fighter.birthWeek) || U.randomInt(1, 4);
-        fighter.birthdayLabel = "месяц " + fighter.birthMonth + ", " + fighter.birthWeek + " неделя";
-      });
-    }
-
-    function updateStreetRating() {
-      if (!targetState || !targetState.roster) { return; }
-      targetState.roster.forEach(function (fighter) {
-        var record;
-        var total;
-        var winRate;
-        if (!fighter || fighter.trackId !== "street") { return; }
-        record = fighter.record || {};
-        total = (record.wins || 0) + (record.losses || 0) + (record.draws || 0);
-        winRate = total ? ((record.wins || 0) + 0.5 * (record.draws || 0)) / total : 0.5;
-        fighter.streetRating = Math.round(ovr(fighter) * 0.8 + Math.round(winRate * 150) * 0.2);
-      });
-    }
-
-    function updateProCadence() {
-      var list;
-      if (!targetState || !targetState.roster) { return; }
-      list = targetState.roster.filter(function (fighter) {
-        return fighter && fighter.trackId === "pro" && !fighter.retired;
-      }).sort(function (a, b) {
-        return (ovr(b) + ((b.record && b.record.wins) || 0)) - (ovr(a) + ((a.record && a.record.wins) || 0));
-      });
-
-      list.forEach(function (fighter, index) {
-        var total = Math.max(1, list.length - 1);
-        var t = index / total;
-        var wait = Math.round(20 - t * 10);
-        if (index < 4) { wait = 20; }
-        else if (index < 25) { wait = 15; }
-        else if (wait < 10) { wait = 10; }
-        fighter.proFightIntervalWeeks = wait;
-        if (!fighter.contractOpponentId && !fighter.nextFightWeek) {
-          fighter.nextFightWeek = (Number(targetState.week) || 1) + wait;
-        }
-      });
-    }
-
-    function repairProTitles() {
-      if (!targetState || !targetState.roster) { return; }
-      if (!targetState.titles || typeof targetState.titles !== "object") { targetState.titles = {}; }
-      Object.keys(targetState.titles).forEach(function (key) {
-        var title = targetState.titles[key];
-        if (!title) { delete targetState.titles[key]; return; }
-        if (title.trackId === "pro" && key.indexOf("|") === -1) { delete targetState.titles[key]; }
-        if (title.trackId === "amateur") { delete targetState.titles[key]; }
-      });
-      targetState.roster.forEach(function (fighter) {
-        if (!fighter) { return; }
-        fighter.titles = fighter.titles instanceof Array ? fighter.titles.filter(function (titleId, index, list) {
-          return titleId && list.indexOf(titleId) === index && targetState.titles[titleId] && targetState.titles[titleId].championId === fighter.id;
-        }) : [];
-      });
-      if (window.FS.Titles && window.FS.Titles.ensureTitles) {
-        window.FS.Titles.ensureTitles(targetState);
-      }
-      if (window.FS.Titles && window.FS.Titles.normalizeFighterTitles) {
-        window.FS.Titles.normalizeFighterTitles(targetState);
-      }
-    }
-
-    function addForeignAmateurOffers() {
-      var player;
-      var rank;
-      var rating;
-      var pool;
-      var countries = null;
-      if (!targetState || !targetState.offers) { return; }
-      player = State.player(targetState);
-      if (!player || player.trackId !== "amateur") { return; }
-      rank = State.rankForFighter ? State.rankForFighter(player) : null;
-      rating = ovr(player);
-
-      if (rating >= 100 || (rank && (rank.id === "ms" || rank.id === "msmk"))) {
-        countries = null;
-      } else if (rank && rank.id === "kms") {
-        var home = U.findCountry(player.countryId);
-        countries = (D.countries || []).filter(function (country) { return country.continentId === home.continentId; }).map(function (country) { return country.id; });
-      } else {
-        return;
-      }
-
-      if (targetState.offers.some(function (offer) {
-        var fighter = byId(offer.opponentId);
-        return fighter && fighter.countryId !== player.countryId;
-      })) { return; }
-
-      pool = (targetState.roster || []).filter(function (fighter) {
-        return fighter &&
-          fighter.trackId === "amateur" &&
-          fighter.weightClassId === player.weightClassId &&
-          fighter.countryId !== player.countryId &&
-          (!countries || countries.indexOf(fighter.countryId) !== -1) &&
-          Math.abs(ovr(fighter) - rating) <= 10;
-      });
-
-      pool.sort(function (left, right) {
-        return Math.abs(ovr(left) - rating) - Math.abs(ovr(right) - rating);
-      });
-
-      for (var i = 0; i < Math.min(3, pool.length, targetState.offers.length); i += 1) {
-        targetState.offers[i].opponentId = pool[i].id;
-      }
-    }
-
-    function tournamentXp() {
-      var modal = targetState && targetState.modal;
-      var player;
-      var key;
-      var opponentRating;
-      var gain;
-      if (!modal || modal.type !== "tournamentResult" || !modal.session) { return; }
-      player = State.player(targetState);
-      if (!player) { return; }
-      key = [targetState.week, modal.label, modal.roundLabel, modal.opponentName, modal.result].join("|");
-      if (targetState.__lastTournamentXpKey === key) { return; }
-      targetState.__lastTournamentXpKey = key;
-      opponentRating = Number(modal.opponentRating) || 0;
-      gain = modal.result === "Победа" ? Math.max(3, Math.round(3 + (opponentRating - ovr(player)) / 12)) : 2;
-      player.trainingPoints = (Number(player.trainingPoints) || 0) + gain;
-    }
-
-    ensureAges();
-    updateStreetRating();
-    updateProCadence();
-    repairProTitles();
-    addForeignAmateurOffers();
-    tournamentXp();
+    if (!targetState) { return; }
+    targetState.roster = targetState.roster instanceof Array ? targetState.roster : [];
+    targetState.offers = targetState.offers instanceof Array ? targetState.offers : [];
+    targetState.people = targetState.people instanceof Array ? targetState.people : [];
+    targetState.world = targetState.world && typeof targetState.world === "object" ? targetState.world : {};
+    targetState.world.news = targetState.world.news instanceof Array ? targetState.world.news : [];
+    targetState.world.weekReports = targetState.world.weekReports instanceof Array ? targetState.world.weekReports : [];
   }
 
   function render() {
