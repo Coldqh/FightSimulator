@@ -277,6 +277,24 @@
     }).join('') + '</div>';
   }
 
+  function fighterFormInfo(fighter) {
+    if (State.formForFighter) { return State.formForFighter(fighter); }
+    return { label: "ровная", bonus: 0, status: "neutral" };
+  }
+
+  function fighterFormText(fighter) {
+    var form = fighterFormInfo(fighter);
+    var bonus = Number(form.bonus) || 0;
+    return U.escapeHtml((form.label || "ровная") + (bonus ? " " + (bonus > 0 ? "+" : "") + bonus + "%" : ""));
+  }
+
+  function fighterFormMetric(fighter) {
+    var form = fighterFormInfo(fighter);
+    var bonus = Number(form.bonus) || 0;
+    var cls = bonus > 0 ? "green" : (bonus < 0 ? "red" : "");
+    return '<span class="f1-metric ' + cls + '">Форма ' + fighterFormText(fighter) + '</span>';
+  }
+
   function renderFighterAwards(state, fighter) {
     var awards = State.getFighterAwards ? State.getFighterAwards(state, fighter) : (fighter.awards || []);
     var total;
@@ -794,6 +812,7 @@
         '<div class="split-row"><span>Вес</span><strong>' + (p.trackId === 'street' ? 'Без весовых категорий' : U.escapeHtml(U.findWeightClass(p.weightClassId).label)) + '</strong></div>' +
         '<div class="split-row"><span>Клуб</span><strong>' + U.escapeHtml(club ? club.name : 'Без клуба') + '</strong></div>' +
         '<div class="split-row"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(p.record)) + '</strong></div>' +
+        '<div class="split-row"><span>Форма</span><strong>' + fighterFormText(p) + '</strong></div>' +
         '<div class="split-row"><span>Баланс</span><strong>$' + (p.money || 0) + '</strong></div>' +
         '<div class="split-row"><span>Очки прокачки</span><strong>' + (p.trainingPoints || 0) + '</strong></div>' +
         '<div class="split-row"><span>Ежемесячные расходы</span><strong>$' + (breakdown.total || 0) + '</strong></div>' +
@@ -824,6 +843,7 @@
         '</div>' +
         '<div class="f1-profile-grid">' +
           '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(p.record)) + '</strong></div>' +
+          '<div class="f1-profile-stat"><span>Форма</span><strong>' + fighterFormText(p) + '</strong></div>' +
           '<div class="f1-profile-stat"><span>Возраст</span><strong>' + p.age + '</strong></div>' +
           '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryRouteBright(p) + '</strong></div>' +
           '<div class="f1-profile-stat"><span>Тренер</span><strong>' + f1CoachButton(state, p) + '</strong></div>' +
@@ -932,6 +952,9 @@
       var metrics;
       if (!opponent || !preview) { return ""; }
       metrics = ['<span class="f1-metric ovr">OVR ' + U.statAverage(opponent.stats) + '</span>'];
+      if (State.formForFighter && State.formChanceBonus && State.formChanceBonus(opponent)) {
+        metrics.push(fighterFormMetric(opponent));
+      }
       if (offer.isRematch || offer.label === "Реванш") {
         metrics.unshift('<span class="f1-metric gold">Реванш</span>');
       }
@@ -1522,6 +1545,7 @@
           '</div>' +
           '<div class="f1-profile-grid">' +
             '<div class="f1-profile-stat"><span>Рекорд</span><strong>' + U.escapeHtml(U.recordText(fighter.record)) + '</strong></div>' +
+            '<div class="f1-profile-stat"><span>Форма</span><strong>' + fighterFormText(fighter) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Возраст</span><strong>' + fighter.age + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Страна</span><strong>' + f1CountryRouteBright(fighter) + '</strong></div>' +
             '<div class="f1-profile-stat"><span>Тренер</span><strong>' + f1CoachButton(state, fighter) + '</strong></div>' +

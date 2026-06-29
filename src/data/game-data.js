@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "coach-goals-lite-2.8.5",
-  "saveSchemaVersion": 285,
+  "appVersion": "form-system-lite-2.8.6",
+  "saveSchemaVersion": 286,
   "tracks": {
     "amateur": {
       "id": "amateur",

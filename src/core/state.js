@@ -3050,6 +3050,99 @@
     return false;
   }
 
+  function inferFormFromCareerLog(fighter) {
+    var log = fighter && fighter.careerLog instanceof Array ? fighter.careerLog : [];
+    var wins = 0;
+    var losses = 0;
+    var i;
+    var text;
+    for (i = 0; i < Math.min(6, log.length); i += 1) {
+      text = String((log[i] && log[i].text) || "");
+      if (text.indexOf("Победа") === 0 || text.indexOf("Турнир:") === 0 || text.indexOf("Победитель") === 0) {
+        if (losses > 0) { break; }
+        wins += 1;
+      } else if (text.indexOf("Поражение") === 0) {
+        if (wins > 0) { break; }
+        losses += 1;
+      } else if (text.indexOf("Ничья") === 0) {
+        break;
+      } else if (text) {
+        break;
+      }
+    }
+    return { currentWinStreak: wins, currentLossStreak: losses };
+  }
+
+  function normalizeFighterForm(fighter) {
+    var inferred;
+    if (!fighter) {
+      return { status: "neutral", label: "ровная", bonus: 0, currentWinStreak: 0, currentLossStreak: 0 };
+    }
+
+    fighter.form = fighter.form && typeof fighter.form === "object" ? fighter.form : {};
+    if (!fighter.form.initialized) {
+      inferred = inferFormFromCareerLog(fighter);
+      fighter.form.currentWinStreak = Number(fighter.form.currentWinStreak) || inferred.currentWinStreak || 0;
+      fighter.form.currentLossStreak = Number(fighter.form.currentLossStreak) || inferred.currentLossStreak || 0;
+      fighter.form.initialized = true;
+    }
+
+    fighter.form.currentWinStreak = Math.max(0, Number(fighter.form.currentWinStreak) || 0);
+    fighter.form.currentLossStreak = Math.max(0, Number(fighter.form.currentLossStreak) || 0);
+    fighter.form.lastResult = fighter.form.lastResult || "";
+    fighter.form.lastWeek = Number(fighter.form.lastWeek) || 0;
+
+    if (fighter.form.currentWinStreak >= 3) {
+      fighter.form.status = "excellent";
+      fighter.form.label = "отличная";
+      fighter.form.bonus = 4;
+    } else if (fighter.form.currentWinStreak >= 2) {
+      fighter.form.status = "good";
+      fighter.form.label = "хорошая";
+      fighter.form.bonus = 2;
+    } else if (fighter.form.currentLossStreak >= 2) {
+      fighter.form.status = "poor";
+      fighter.form.label = "плохая";
+      fighter.form.bonus = -2;
+    } else {
+      fighter.form.status = "neutral";
+      fighter.form.label = "ровная";
+      fighter.form.bonus = 0;
+    }
+
+    return fighter.form;
+  }
+
+  function formForFighter(fighter) {
+    return normalizeFighterForm(fighter);
+  }
+
+  function formChanceBonus(fighter) {
+    var form = normalizeFighterForm(fighter);
+    return Number(form.bonus) || 0;
+  }
+
+  function recordFighterFormEvent(fighter, result, week) {
+    var form;
+    if (!fighter || !result) { return null; }
+    form = normalizeFighterForm(fighter);
+
+    if (result === "Победа") {
+      form.currentWinStreak = (Number(form.currentWinStreak) || 0) + 1;
+      form.currentLossStreak = 0;
+    } else if (result === "Поражение") {
+      form.currentLossStreak = (Number(form.currentLossStreak) || 0) + 1;
+      form.currentWinStreak = 0;
+    } else {
+      form.currentWinStreak = 0;
+      form.currentLossStreak = 0;
+    }
+
+    form.lastResult = result;
+    form.lastWeek = Number(week) || 0;
+    return normalizeFighterForm(fighter);
+  }
+
   function goalRewardForWeek(state) {
     var week = Number(state.week) || 1;
     return {
@@ -3789,6 +3882,9 @@ restPlayer: restPlayer,
     invalidateCaches: invalidateCaches,
     checkAutomaticProMove: checkAutomaticProMove,
     ensureCoachGoal: ensureCoachGoal,
-    recordCoachGoalEvent: recordCoachGoalEvent
+    recordCoachGoalEvent: recordCoachGoalEvent,
+    formForFighter: formForFighter,
+    formChanceBonus: formChanceBonus,
+    recordFighterFormEvent: recordFighterFormEvent
   };
 }());

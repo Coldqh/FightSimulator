@@ -104,7 +104,9 @@
     var fatiguePenalty = Math.round((Number(player.fatigue) || 0) / 8);
     var underdogHelp = diff < 0 ? Math.min(8, Math.round(Math.abs(diff) * 0.22)) : 0;
     var favoriteHelp = diff > 0 ? Math.min(6, Math.round(diff * 0.15)) : 0;
-    return U.clamp(54 + Math.round(diff * 2.05) + underdogHelp + favoriteHelp - fatiguePenalty, 12, 94);
+    var playerForm = State.formChanceBonus ? State.formChanceBonus(player) : 0;
+    var opponentForm = State.formChanceBonus ? State.formChanceBonus(opponent) : 0;
+    return U.clamp(54 + Math.round(diff * 2.05) + underdogHelp + favoriteHelp - fatiguePenalty + playerForm - opponentForm, 12, 94);
   }
 
   function estimateWinChance(player, opponent) {
@@ -872,6 +874,10 @@
     if (opponent.recentOpponentIds.length > 8) { opponent.recentOpponentIds.length = 8; }
 
     recordPlayerEngagement(state, p, opponent, result, method, scoreLine || "");
+    if (State.recordFighterFormEvent) {
+      State.recordFighterFormEvent(p, result, state.week);
+      State.recordFighterFormEvent(opponent, result === "Победа" ? "Поражение" : (result === "Поражение" ? "Победа" : "Ничья"), state.week);
+    }
     if (State.recordCoachGoalEvent) {
       State.recordCoachGoalEvent(state, "fight", {
         result: result,

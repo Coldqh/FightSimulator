@@ -459,6 +459,10 @@
       logNpcCareer(b, "Ничья с " + a.name + " решением.", state.week, { fighterId: a.id });
       a.lastFightWeek = state.week;
       b.lastFightWeek = state.week;
+      if (State.recordFighterFormEvent) {
+        State.recordFighterFormEvent(a, "Ничья", state.week);
+        State.recordFighterFormEvent(b, "Ничья", state.week);
+      }
       if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
       state._rankingDirty = true;
       return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью.", fighterIds: [a.id, b.id] };
@@ -474,6 +478,10 @@
     logNpcCareer(loser, "Поражение от " + winner.name + (ko ? " KO/TKO." : " решением."), state.week, { fighterId: winner.id });
     winner.lastFightWeek = state.week;
     loser.lastFightWeek = state.week;
+    if (State.recordFighterFormEvent) {
+      State.recordFighterFormEvent(winner, "Победа", state.week);
+      State.recordFighterFormEvent(loser, "Поражение", state.week);
+    }
     if (winner.trackRecords) { winner.trackRecords[winner.trackId] = State.cloneRecord(winner.record); }
     if (loser.trackRecords) { loser.trackRecords[loser.trackId] = State.cloneRecord(loser.record); }
     State.updateDerivedFighterFields(winner);

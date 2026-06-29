@@ -1,7 +1,7 @@
 {
-  "version": "coach-goals-lite-2.8.5",
-  "mode": "coach-goals-lite",
-  "cacheVersion": "fight-simulator-coach-goals-lite-2.8.5",
+  "version": "form-system-lite-2.8.6",
+  "mode": "form-system-lite",
+  "cacheVersion": "fight-simulator-form-system-lite-2.8.6",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
