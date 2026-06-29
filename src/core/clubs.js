@@ -40,7 +40,7 @@
 
   function clubLabel(country, index) {
     var cities = country.cities || citiesByCountry[country.id] || [country.city || country.label];
-    var names = country.gymNames || namesByCountry[country.id] || namesByCountry.usa;
+    var names = namesByCountry[country.id] || country.gymNames || namesByCountry.usa;
     var suffixes = ["Academy","Club","Gym","Boxing","Ring","Fight House","Boxing Hall","Training Center","Combat Club","Glove School","Corner Club","Punch Lab","Athletic Club","Fight Camp","Boxing Works","Ring School","Champions Room","Boxing Society","Fight Studio","Boxing Yard","Boxing House","Boxing Project","Ring Lab","Boxing Union","Boxing Base","Sports Club","Fight Center","Boxing Studio","Boxing Circle","Boxing League"];
     var districts = ["North","South","East","West","Central","Old Town","Harbor","Market","Station","River","Hill","Park","Garden","Industrial","University","Downtown","Uptown","Lakeside","Seaside","Valley","Capital","Metro","Olympic","Victory","Liberty","Union","Crown","Lion","Eagle","Falcon"];
     var city = String(cities[index % cities.length] || country.label).trim();

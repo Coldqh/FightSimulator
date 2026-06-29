@@ -1,7 +1,7 @@
 {
-  "version": "matchmaking-ovr-window-2.7.9",
-  "mode": "matchmaking-ovr-window",
-  "cacheVersion": "fight-simulator-matchmaking-ovr-window-2.7.9",
+  "version": "country-names-db-2.8.0",
+  "mode": "country-names-db",
+  "cacheVersion": "fight-simulator-country-names-db-2.8.0",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
