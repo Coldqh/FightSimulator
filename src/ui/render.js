@@ -295,6 +295,19 @@
     return '<span class="f1-metric ' + cls + '">Форма ' + fighterFormText(fighter) + '</span>';
   }
 
+  function fighterFormText(fighter) {
+    var form = fighterFormInfo(fighter);
+    var bonus = Number(form.bonus) || 0;
+    return U.escapeHtml((form.label || "ровная") + (bonus ? " " + (bonus > 0 ? "+" : "") + bonus + "%" : ""));
+  }
+
+  function fighterFormMetric(fighter) {
+    var form = fighterFormInfo(fighter);
+    var bonus = Number(form.bonus) || 0;
+    var cls = bonus > 0 ? "green" : (bonus < 0 ? "red" : "");
+    return '<span class="f1-metric ' + cls + '">Форма ' + fighterFormText(fighter) + '</span>';
+  }
+
   function renderFighterAwards(state, fighter) {
     var awards = State.getFighterAwards ? State.getFighterAwards(state, fighter) : (fighter.awards || []);
     var total;
@@ -952,6 +965,9 @@
       var metrics;
       if (!opponent || !preview) { return ""; }
       metrics = ['<span class="f1-metric ovr">OVR ' + U.statAverage(opponent.stats) + '</span>'];
+      if (State.formForFighter && State.formChanceBonus && State.formChanceBonus(opponent)) {
+        metrics.push(fighterFormMetric(opponent));
+      }
       if (State.formForFighter && State.formChanceBonus && State.formChanceBonus(opponent)) {
         metrics.push(fighterFormMetric(opponent));
       }
