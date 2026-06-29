@@ -125,12 +125,15 @@
     persistQueued = true;
     renderQueued = true;
     (window.requestAnimationFrame || window.setTimeout)(function () {
+      var shouldPersist = persistQueued;
       renderQueued = false;
-      if (persistQueued) {
-        persistQueued = false;
-        persistNow();
-      }
+      persistQueued = false;
       render();
+      if (shouldPersist) {
+        (window.requestIdleCallback || window.setTimeout)(function () {
+          persistNow();
+        }, 0);
+      }
     }, 0);
   }
 
@@ -259,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.6&target=2.7.6&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.7.7.2&target=2.7.7.2&t=" + Date.now());
     }
 
     function clearFightCaches() {

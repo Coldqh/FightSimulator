@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "awards-teamcoach-performance-2.7.6",
-  "saveSchemaVersion": 276,
+  "appVersion": "clubs-syntax-rescue-2.7.7.2",
+  "saveSchemaVersion": 2772,
   "tracks": {
     "amateur": {
       "id": "amateur",

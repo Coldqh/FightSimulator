@@ -1,7 +1,7 @@
 {
-  "version": "awards-teamcoach-performance-2.7.6",
-  "mode": "awards-teamcoach-performance",
-  "cacheVersion": "fight-simulator-awards-teamcoach-performance-2.7.6",
+  "version": "clubs-syntax-rescue-2.7.7.2",
+  "mode": "clubs-syntax-rescue",
+  "cacheVersion": "fight-simulator-clubs-syntax-rescue-2.7.7.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

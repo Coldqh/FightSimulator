@@ -347,7 +347,9 @@
       raw = JSON.stringify(safe);
 
       wroteMain = writeRaw(Data.saveKey, raw);
-      writeRaw(BACKUP_KEYS[1], raw);
+      if ((Number(state.saveRevision) || 0) % 10 === 0 || (Number(state.week) || 1) % 4 === 0) {
+        writeRaw(BACKUP_KEYS[1], raw);
+      }
       saveRawToIdb(raw);
       return !!wroteMain;
     } catch (error) {

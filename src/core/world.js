@@ -449,7 +449,7 @@
       a.lastFightWeek = state.week;
       b.lastFightWeek = state.week;
       if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, a, b, true); }
-      if (State.invalidateCaches) { State.invalidateCaches(state); }
+      state._rankingDirty = true;
       return { type: "draw", text: a.name + " и " + b.name + " завершили бой вничью.", fighterIds: [a.id, b.id] };
     }
     if (roll <= aChance) { winner = a; loser = b; } else { winner = b; loser = a; }
@@ -468,7 +468,7 @@
     State.updateDerivedFighterFields(winner);
     State.updateDerivedFighterFields(loser);
     if (window.FS.Clubs && window.FS.Clubs.recordClubFight) { window.FS.Clubs.recordClubFight(state, winner, loser, false); }
-    if (State.invalidateCaches) { State.invalidateCaches(state); }
+    state._rankingDirty = true;
     return { type: "win", winner: winner.id, loser: loser.id, text: winner.name + " победил " + loser.name + (ko ? " KO/TKO." : " решением судей."), fighterIds: [winner.id, loser.id] };
   }
 
@@ -1057,7 +1057,7 @@ function simulateInternationalGymMoves(state) {
     }
 
     if (moved) {
-      if (State.invalidateCaches) { State.invalidateCaches(state); }
+      state._rankingDirty = true;
       window.FS.Clubs.assignFightersToClubs(state);
     }
   }
@@ -1228,9 +1228,12 @@ function simulateInternationalGymMoves(state) {
     var playerClubBefore;
     var p = State.player(state);
     var fatigueRecovery;
+    var needsClubMaintenance;
+    var needsNationalTeams;
+    var needsTitleUpdate;
 
     state.week += 1;
-    if (State.invalidateCaches) { State.invalidateCaches(state); }
+    state._rankingDirty = true;
     if (State.applyMonthlyExpenses) { State.applyMonthlyExpenses(state); }
 
     if (action === "rest" && State.restPlayer) {
@@ -1241,34 +1244,56 @@ function simulateInternationalGymMoves(state) {
     }
 
     playerClubBefore = p ? p.gymId : "";
+
     if (window.FS.Clubs) {
-      window.FS.Clubs.ensureClubs(state);
+      needsClubMaintenance = !state.clubs || !state.clubs.length || state._forceClubAssign || state.week % 8 === 1;
+      if (needsClubMaintenance) { window.FS.Clubs.ensureClubs(state); }
     }
 
     simulateRetirementsAndNewFighters(state);
     simulateNpcTraining(state);
     npcReport = simulateNpcFights(state);
     simulateTransitions(state);
+
     if (window.FS.Clubs && window.FS.Clubs.maybeMoveNpcClubs) { window.FS.Clubs.maybeMoveNpcClubs(state); }
     simulateInternationalGymMoves(state);
     if (window.FS.Clubs && window.FS.Clubs.simulateCoachLife) { window.FS.Clubs.simulateCoachLife(state); }
-    if (!state.world.teamsByCountry || !Object.keys(state.world.teamsByCountry).length || state.week % 4 === 1) {
+    if (window.FS.Clubs && window.FS.Clubs.flushCoachRecords) { window.FS.Clubs.flushCoachRecords(state); }
+
+    if (state._rankingDirty && State.invalidateCaches) {
+      State.invalidateCaches(state);
+      state._rankingDirty = false;
+    }
+
+    needsNationalTeams = !state.world.teamsByCountry ||
+      !Object.keys(state.world.teamsByCountry).length ||
+      state._nationalTeamsDirty ||
+      state.week % 8 === 1;
+
+    if (needsNationalTeams) {
       buildNationalTeams(state);
-    } else if (state.world.teamCoaches) {
+      state._nationalTeamsDirty = false;
+    } else if (state.world.teamCoaches && state.week % 24 === 1) {
       Object.keys(state.world.teamCoaches).forEach(function (countryId) {
         ensureNationalCoach(state, U.findCountry(countryId));
       });
     }
+
     simulateAutonomousTournaments(state);
-    if (window.FS.Titles) {
+
+    needsTitleUpdate = state._titlesDirty || state.week % 4 === 0;
+    if (window.FS.Titles && needsTitleUpdate) {
       window.FS.Titles.updateTitles(state);
+      state._titlesDirty = false;
     }
-    if (window.FS.Stories) {
-      window.FS.Stories.simulateStories(state);
-    }
+
+    if (window.FS.Stories) { window.FS.Stories.simulateStories(state); }
+
     refreshOffers(state);
-    handleProFightDue(state);
+
+    if (!state.modal || state.modal.type !== "proContractPreview") { handleProFightDue(state); }
     if (!state.modal || state.modal.type !== "proContractPreview") { buildProContracts(state); }
+
     if (p && State.checkAutomaticProMove) { State.checkAutomaticProMove(state, p); }
     if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
 
@@ -1285,7 +1310,6 @@ function simulateInternationalGymMoves(state) {
 
     simulateTournamentNews(state);
     handleScheduledTournamentStart(state);
-    if (!state.modal) { handleProFightDue(state); }
     if (!state.modal) { scheduleTournamentNotice(state); }
   }
 
