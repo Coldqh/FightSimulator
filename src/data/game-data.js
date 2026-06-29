@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "form-system-lite-2.8.6",
-  "saveSchemaVersion": 286,
+  "appVersion": "career-milestones-hotfix-2.8.7.1",
+  "saveSchemaVersion": 2871,
   "tracks": {
     "amateur": {
       "id": "amateur",

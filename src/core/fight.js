@@ -708,42 +708,15 @@
   }
 
   function updatePlayerCareerStats(state, p, opponent, result, method) {
-    var stats;
-    var playerOvr;
-    var opponentOvr;
-    if (!p || !opponent) { return; }
-    p.careerStats = p.careerStats && typeof p.careerStats === "object" ? p.careerStats : {};
-    stats = p.careerStats;
-    playerOvr = U.statAverage(p.stats);
-    opponentOvr = U.statAverage(opponent.stats);
-
-    stats.bestWinStreak = Number(stats.bestWinStreak) || 0;
-    stats.currentWinStreak = Number(stats.currentWinStreak) || 0;
-    stats.currentLossStreak = Number(stats.currentLossStreak) || 0;
-    stats.rematchWins = Number(stats.rematchWins) || 0;
-    stats.rematchLosses = Number(stats.rematchLosses) || 0;
-    stats.rematchDraws = Number(stats.rematchDraws) || 0;
-    stats.strongerWins = Number(stats.strongerWins) || 0;
-    stats.bestDefeatedOvr = Number(stats.bestDefeatedOvr) || 0;
-    stats.lastFightResult = result;
-    stats.lastFightMethod = method;
-    stats.lastFightWeek = state.week;
-
-    if (result === "Победа") {
-      stats.currentWinStreak += 1;
-      stats.currentLossStreak = 0;
-      stats.bestWinStreak = Math.max(stats.bestWinStreak, stats.currentWinStreak);
-      if (opponentOvr > playerOvr) {
-        stats.strongerWins += 1;
-        stats.bestDefeatedOvr = Math.max(stats.bestDefeatedOvr, opponentOvr);
-      }
-    } else if (result === "Поражение") {
-      stats.currentLossStreak += 1;
-      stats.currentWinStreak = 0;
-    } else {
-      stats.currentWinStreak = 0;
-      stats.currentLossStreak = 0;
+    if (State.recordPlayerFightStats) {
+      return State.recordPlayerFightStats(state, opponent, result, method, {
+        isTournament: false,
+        isRematch: false,
+        playerOvr: U.statAverage(p.stats),
+        opponentOvr: U.statAverage(opponent.stats)
+      });
     }
+    return null;
   }
 
   function updatePlayerRivalry(state, p, opponent, result, method, scoreLine) {
@@ -819,6 +792,7 @@
         else if (result === "Поражение") { p.careerStats.rematchLosses = (Number(p.careerStats.rematchLosses) || 0) + 1; }
         else { p.careerStats.rematchDraws = (Number(p.careerStats.rematchDraws) || 0) + 1; }
       }
+      if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
       safeCreateFightNews(state, "Реванш: " + p.name + " снова встретился с " + opponent.name + ". Счёт серии " + item.playerWins + "-" + item.opponentWins + "-" + item.draws + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
     }
 

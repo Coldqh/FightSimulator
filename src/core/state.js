@@ -3050,6 +3050,206 @@
     return false;
   }
 
+  function normalizeCareerStatsForPlayer(state) {
+    var p = player(state);
+    var stats;
+    if (!p) { return {}; }
+    p.careerStats = p.careerStats && typeof p.careerStats === "object" ? p.careerStats : {};
+    stats = p.careerStats;
+
+    stats.bestWinStreak = Number(stats.bestWinStreak) || 0;
+    stats.currentWinStreak = Number(stats.currentWinStreak) || 0;
+    stats.currentLossStreak = Number(stats.currentLossStreak) || 0;
+    stats.rematchWins = Number(stats.rematchWins) || 0;
+    stats.rematchLosses = Number(stats.rematchLosses) || 0;
+    stats.rematchDraws = Number(stats.rematchDraws) || 0;
+    stats.strongerWins = Number(stats.strongerWins) || 0;
+    stats.bestDefeatedOvr = Number(stats.bestDefeatedOvr) || 0;
+    stats.totalFights = Number(stats.totalFights) || 0;
+    stats.totalWins = Number(stats.totalWins) || 0;
+    stats.totalLosses = Number(stats.totalLosses) || 0;
+    stats.totalDraws = Number(stats.totalDraws) || 0;
+    stats.totalTournamentFights = Number(stats.totalTournamentFights) || 0;
+    stats.tournamentWins = Number(stats.tournamentWins) || 0;
+    stats.tournamentLosses = Number(stats.tournamentLosses) || 0;
+    stats.tournamentDraws = Number(stats.tournamentDraws) || 0;
+    stats.koWins = Number(stats.koWins) || 0;
+    stats.lastFightResult = stats.lastFightResult || "";
+    stats.lastFightMethod = stats.lastFightMethod || "";
+    stats.lastFightWeek = Number(stats.lastFightWeek) || 0;
+
+    return stats;
+  }
+
+  function milestoneDefs() {
+    return [
+      { id: "first_win", label: "Первая победа" },
+      { id: "first_ko", label: "Первый нокаут" },
+      { id: "wins_5", label: "5 побед" },
+      { id: "wins_10", label: "10 побед" },
+      { id: "wins_25", label: "25 побед" },
+      { id: "streak_5", label: "Серия 5 побед" },
+      { id: "first_stronger_win", label: "Победа над более сильным" },
+      { id: "first_medal", label: "Первая медаль" },
+      { id: "first_rematch", label: "Первый реванш" },
+      { id: "top_10", label: "Топ-10 рейтинга" },
+      { id: "pro_debut", label: "Переход в профи" }
+    ];
+  }
+
+  function milestoneReward(id) {
+    if (id === "wins_25") { return { points: 2, money: 300 }; }
+    if (id === "wins_10" || id === "streak_5" || id === "first_medal") { return { points: 1, money: 225 }; }
+    return { points: 1, money: 150 };
+  }
+
+  function awardCareerMilestone(state, id, label) {
+    var p = player(state);
+    var reward;
+    if (!p || !id || !label) { return false; }
+    p.careerMilestones = p.careerMilestones && typeof p.careerMilestones === "object" ? p.careerMilestones : {};
+    if (p.careerMilestones[id]) { return false; }
+
+    reward = milestoneReward(id);
+    p.careerMilestones[id] = {
+      id: id,
+      label: label,
+      week: state.week,
+      rewardPoints: reward.points,
+      rewardMoney: reward.money
+    };
+
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + reward.points;
+    if (reward.money > 0) {
+      p.money = (Number(p.money) || 0) + reward.money;
+      pushFinanceLog(p, state, "Карьерная веха: " + label, reward.money);
+    }
+
+    p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+    p.careerLog.unshift({ week: state.week, text: "Карьерная веха: " + label + ". Награда: +" + reward.points + " очко прокачки, $" + reward.money + "." });
+    if (p.careerLog.length > 60) { p.careerLog.length = 60; }
+
+    if (window.FS.World && window.FS.World.createNews) {
+      window.FS.World.createNews(state, "career", "Карьерная веха: " + p.name + " — " + label + ".", { fighterId: p.id, milestoneId: id });
+    }
+
+    state.feed = "Карьерная веха: " + label + ".";
+    updateDebtStatus(state, "milestone");
+    return true;
+  }
+
+  function hasPodiumAward(state, p) {
+    var awards = getFighterAwards ? getFighterAwards(state, p) : (p.awards || []);
+    return (awards || []).some(function (award) {
+      return award && (award.medal === "gold" || award.medal === "silver" || award.medal === "bronze" || award.place === "1 место" || award.place === "2 место" || award.place === "3 место");
+    });
+  }
+
+  function checkCareerMilestones(state) {
+    var p = player(state);
+    var stats;
+    var rank;
+    var totalWins;
+    var totalKos;
+    if (!p) { return []; }
+    stats = normalizeCareerStatsForPlayer(state);
+    p.careerMilestones = p.careerMilestones && typeof p.careerMilestones === "object" ? p.careerMilestones : {};
+
+    totalWins = Math.max(Number(p.record && p.record.wins) || 0, Number(stats.totalWins) || 0, Number(stats.currentWinStreak) || 0);
+    totalKos = Math.max(Number(p.record && p.record.kos) || 0, Number(stats.koWins) || 0);
+
+    if (totalWins >= 1) { awardCareerMilestone(state, "first_win", "Первая победа"); }
+    if (totalKos >= 1) { awardCareerMilestone(state, "first_ko", "Первый нокаут"); }
+    if (totalWins >= 5) { awardCareerMilestone(state, "wins_5", "5 побед"); }
+    if (totalWins >= 10) { awardCareerMilestone(state, "wins_10", "10 побед"); }
+    if (totalWins >= 25) { awardCareerMilestone(state, "wins_25", "25 побед"); }
+    if (stats.bestWinStreak >= 5) { awardCareerMilestone(state, "streak_5", "Серия 5 побед"); }
+    if (stats.strongerWins >= 1) { awardCareerMilestone(state, "first_stronger_win", "Победа над более сильным"); }
+    if (hasPodiumAward(state, p)) { awardCareerMilestone(state, "first_medal", "Первая медаль"); }
+    if ((stats.rematchWins + stats.rematchLosses + stats.rematchDraws) >= 1) { awardCareerMilestone(state, "first_rematch", "Первый реванш"); }
+    if (p.trackId === "pro") { awardCareerMilestone(state, "pro_debut", "Переход в профи"); }
+
+    rank = playerRank(state, p.trackId === "pro" ? "world" : p.countryId, p.trackId, p.trackId === "street" ? "" : p.weightClassId);
+    if (rank && rank <= 10) { awardCareerMilestone(state, "top_10", "Топ-10 рейтинга"); }
+
+    return careerMilestones(state);
+  }
+
+  function careerMilestones(state) {
+    var p = player(state);
+    var earned = p && p.careerMilestones && typeof p.careerMilestones === "object" ? p.careerMilestones : {};
+    return milestoneDefs().map(function (def) {
+      var item = earned[def.id];
+      return {
+        id: def.id,
+        label: def.label,
+        done: !!item,
+        week: item ? item.week : 0,
+        rewardPoints: item ? item.rewardPoints : 0,
+        rewardMoney: item ? item.rewardMoney : 0
+      };
+    });
+  }
+
+  function recordPlayerFightStats(state, opponent, result, method, meta) {
+    var p = player(state);
+    var stats;
+    var payload = meta || {};
+    var playerOvr;
+    var opponentOvr;
+    if (!p || !opponent || !result) { return null; }
+
+    stats = normalizeCareerStatsForPlayer(state);
+    playerOvr = Number(payload.playerOvr);
+    opponentOvr = Number(payload.opponentOvr);
+    if (!playerOvr) { playerOvr = U.statAverage(p.stats); }
+    if (!opponentOvr) { opponentOvr = U.statAverage(opponent.stats); }
+
+    stats.totalFights += 1;
+    stats.lastFightResult = result;
+    stats.lastFightMethod = method || "";
+    stats.lastFightWeek = state.week;
+
+    if (result === "Победа") { stats.totalWins += 1; }
+    else if (result === "Поражение") { stats.totalLosses += 1; }
+    else { stats.totalDraws += 1; }
+
+    if (payload.isTournament) {
+      stats.totalTournamentFights += 1;
+      if (result === "Победа") { stats.tournamentWins += 1; }
+      else if (result === "Поражение") { stats.tournamentLosses += 1; }
+      else { stats.tournamentDraws += 1; }
+    }
+
+    if (result === "Победа") {
+      stats.currentWinStreak += 1;
+      stats.currentLossStreak = 0;
+      stats.bestWinStreak = Math.max(stats.bestWinStreak, stats.currentWinStreak);
+      if (String(method || "").toLowerCase().indexOf("ko") !== -1 || String(method || "").indexOf("KO") !== -1) {
+        stats.koWins += 1;
+      }
+      if (opponentOvr > playerOvr) {
+        stats.strongerWins += 1;
+        stats.bestDefeatedOvr = Math.max(stats.bestDefeatedOvr, opponentOvr);
+      }
+    } else if (result === "Поражение") {
+      stats.currentLossStreak += 1;
+      stats.currentWinStreak = 0;
+    } else {
+      stats.currentWinStreak = 0;
+      stats.currentLossStreak = 0;
+    }
+
+    if (payload.isRematch) {
+      if (result === "Победа") { stats.rematchWins += 1; }
+      else if (result === "Поражение") { stats.rematchLosses += 1; }
+      else { stats.rematchDraws += 1; }
+    }
+
+    checkCareerMilestones(state);
+    return stats;
+  }
+
   function inferFormFromCareerLog(fighter) {
     var log = fighter && fighter.careerLog instanceof Array ? fighter.careerLog : [];
     var wins = 0;
@@ -3955,6 +4155,9 @@ restPlayer: restPlayer,
     recordCoachGoalEvent: recordCoachGoalEvent,
     formForFighter: formForFighter,
     formChanceBonus: formChanceBonus,
-    recordFighterFormEvent: recordFighterFormEvent
+    recordFighterFormEvent: recordFighterFormEvent,
+    recordPlayerFightStats: recordPlayerFightStats,
+    checkCareerMilestones: checkCareerMilestones,
+    careerMilestones: careerMilestones
   };
 }());
