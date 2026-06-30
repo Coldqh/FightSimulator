@@ -3307,7 +3307,10 @@
 
   function normalizeRelationships(state) {
     var i;
+    var validPeopleFilters = { all: true, coaches: true, rivals: true, clubmates: true, team: true };
+    if (!state) { return []; }
     state.people = state.people instanceof Array ? state.people : [];
+    state.peopleFilter = validPeopleFilters[state.peopleFilter || "all"] ? (state.peopleFilter || "all") : "all";
     for (i = 0; i < state.people.length; i += 1) { normalizePersonRelationship(state, state.people[i]); }
     state.relationshipEvent = state.relationshipEvent && typeof state.relationshipEvent === "object" ? state.relationshipEvent : null;
     state.nextRelationshipEventWeek = Number(state.nextRelationshipEventWeek) || ((Number(state.week) || 1) + U.randomInt(5, 10));
@@ -3331,16 +3334,72 @@
     return person.relationship;
   }
 
+  function ensureRelationshipSeedPeople(state) {
+    var p = player(state);
+    var people;
+    var coachName;
+    var countryId;
+    var club;
+    var coach;
+    var candidate;
+    if (!state || !p) { return []; }
+
+    state.people = state.people instanceof Array ? state.people : [];
+    people = state.people.filter(function (person) {
+      return person && person.id && person.name && person.personType && ["coach", "fighter"].indexOf(person.personType) !== -1;
+    });
+    if (people.length) { return state.people; }
+
+    countryId = p.countryId || p.homeCountryId || p.currentCountryId || "";
+    coachName = "Тренер зала";
+
+    if (window.FS.Clubs && window.FS.Clubs.playerClub) {
+      club = window.FS.Clubs.playerClub(state);
+      if (club && club.coaches instanceof Array && club.coaches.length) {
+        coach = club.coaches.find(function (item) { return item && item.id === p.coachId; }) || club.coaches[0];
+      }
+    }
+
+    if (!coach && state.world && state.world.teamCoaches) {
+      candidate = state.world.teamCoaches[countryId];
+      if (candidate) { coach = candidate; }
+    }
+
+    if (coach) {
+      coachName = coach.name || coach.label || coachName;
+      countryId = coach.countryId || coach.homeCountryId || countryId;
+    }
+
+    state.people.unshift({
+      id: "person_player_coach_seed",
+      personType: "coach",
+      role: "playerCoach",
+      coachId: coach && coach.id ? coach.id : (p.coachId || ""),
+      clubId: club && club.id ? club.id : (p.gymId || ""),
+      name: coachName,
+      countryId: countryId,
+      relationship: 0,
+      lastInteractionWeek: Number(state.week) || 1,
+      lastInteraction: "",
+      note: "Тренер"
+    });
+
+    normalizePersonRelationship(state, state.people[0]);
+    return state.people;
+  }
+
   function relationshipEventPeople(state) {
-    var people = normalizeRelationships(state).filter(function (person) {
+    var people;
+    ensureRelationshipSeedPeople(state);
+    people = normalizeRelationships(state).filter(function (person) {
       return person && person.id && person.name && person.personType && ["coach", "fighter"].indexOf(person.personType) !== -1;
     });
     people.sort(function (left, right) {
       function weight(person) {
         if (person.role === "playerCoach") { return 100; }
         if (person.role === "formerOpponent") { return 85; }
-        if (person.role === "clubmate") { return 65; }
         if (person.role === "teamCoach") { return 70; }
+        if (person.role === "clubmate") { return 65; }
         return 40;
       }
       return weight(right) - weight(left) || (Number(right.lastInteractionWeek) || 0) - (Number(left.lastInteractionWeek) || 0);
@@ -3390,18 +3449,38 @@
   function maybeCreateRelationshipEvent(state) {
     var people;
     var person;
+    var event;
+    var dueWeek;
     if (!state) { return null; }
+
     normalizeRelationships(state);
-    if (state.relationshipEvent) { return state.relationshipEvent; }
-    if (Number(state.week) < Number(state.nextRelationshipEventWeek || 0)) { return null; }
+
+    if (state.relationshipEvent) {
+      if (!state.modal || state.modal.type === "relationshipEvent") {
+        state.modal = { type: "relationshipEvent", eventId: state.relationshipEvent.id || "" };
+      }
+      return state.relationshipEvent;
+    }
+
+    dueWeek = Number(state.nextRelationshipEventWeek) || ((Number(state.week) || 1) + U.randomInt(5, 10));
+    state.nextRelationshipEventWeek = dueWeek;
+    if ((Number(state.week) || 1) < dueWeek) { return null; }
+
     people = relationshipEventPeople(state);
     if (!people.length) {
       state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
       return null;
     }
+
     person = people[U.randomInt(0, Math.max(0, people.length - 1))];
-    state.relationshipEvent = makeRelationshipEventForPerson(state, person);
+    event = makeRelationshipEventForPerson(state, person);
+    state.relationshipEvent = event;
     state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
+
+    if (!state.modal || state.modal.type === "relationshipEvent") {
+      state.modal = { type: "relationshipEvent", eventId: event.id };
+    }
+
     return state.relationshipEvent;
   }
 
@@ -3433,6 +3512,7 @@
     if (window.FS.World && window.FS.World.createNews) { window.FS.World.createNews(state, "career", "Выбор недели: " + event.title + " · " + option.label + ".", { personId: event.personId }); }
     state.feed = "Выбор применён: " + option.label + ".";
     state.relationshipEvent = null;
+    if (state.modal && state.modal.type === "relationshipEvent") { state.modal = null; }
     state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
     updateDebtStatus(state, "relationshipChoice");
     return true;
@@ -4453,6 +4533,8 @@
     state.clubs = state.clubs instanceof Array ? state.clubs : [];
     state.titles = state.titles && typeof state.titles === "object" ? state.titles : {};
     state.people = state.people instanceof Array ? state.people : [];
+    state.peopleFilter = state.peopleFilter || "all";
+    normalizeRelationships(state);
     state.roster = state.roster instanceof Array ? state.roster : [];
     if (!state.world) {
       state.world = { news: [], weekReports: [], teamsByCountry: {}, transitionLog: [], stories: [] };
@@ -4654,6 +4736,7 @@ restPlayer: restPlayer,
     maybeCreateRelationshipEvent: maybeCreateRelationshipEvent,
     adjustRelationship: adjustRelationship,
     normalizeRelationships: normalizeRelationships,
+    ensureRelationshipSeedPeople: ensureRelationshipSeedPeople,
     normalizeGoalSystems: normalizeGoalSystems,
     recordPlayerFightHistory: recordPlayerFightHistory,
     normalizeFightHistory: normalizeFightHistory,

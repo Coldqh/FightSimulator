@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.13.2&target=2.8.13.2&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.14.2&target=2.8.14.2&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -652,6 +652,11 @@
     } else if (button.dataset.action === "close-modal") {
       state.modal = null;
       saveAndRender();
+    } else if (button.dataset.peopleFilter) {
+      var validPeopleFilters = { all: true, coaches: true, rivals: true, clubmates: true, team: true };
+      state.peopleFilter = validPeopleFilters[button.dataset.peopleFilter] ? button.dataset.peopleFilter : "all";
+      state.selectedTab = "people";
+      saveAndRender();
     } else if (button.dataset.historyFilter) {
       var validHistoryFilters = { all: true, regular: true, tournaments: true, wins: true, losses: true, stronger: true, rematches: true, ko: true };
       state.historyFilter = validHistoryFilters[button.dataset.historyFilter] ? button.dataset.historyFilter : "all";
@@ -733,6 +738,7 @@
       saveAndRender();
     } else if (button.dataset.relationshipChoice) {
       if (State.applyRelationshipChoice) { State.applyRelationshipChoice(state, button.dataset.relationshipChoice); }
+      if (state.modal && state.modal.type === "relationshipEvent") { state.modal = null; }
       saveAndRender();
     } else if (button.dataset.action === "refresh-offers") {
       state.offerRefreshSalt = (Number(state.offerRefreshSalt) || 0) + 1;

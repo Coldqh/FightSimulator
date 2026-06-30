@@ -1294,10 +1294,15 @@ function simulateInternationalGymMoves(state) {
 
     if (p && State.checkAutomaticProMove) { State.checkAutomaticProMove(state, p); }
     if (State.updateDebtStatus) { State.updateDebtStatus(state, "week"); }
+    if (State.normalizeGoalSystems) { State.normalizeGoalSystems(state); }
     if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
 
     if (p && p.gymId && playerClubBefore && p.gymId !== playerClubBefore) {
       pushNews(state, "club", "Изменения в клубе: состав и тренерский штаб обновлены.", { clubId: p.gymId });
+    }
+
+    if (State.maybeCreateRelationshipEvent && (!state.modal || state.modal.type === "relationshipEvent")) {
+      State.maybeCreateRelationshipEvent(state);
     }
 
     U.pushLimited(state.world.weekReports, {
@@ -1343,7 +1348,9 @@ function simulateInternationalGymMoves(state) {
       }
     }
     if (!state.offers || !state.offers.length || state.week % 2 === 0 || state._offersDirty) { refreshOffers(state); state._offersDirty = false; }
+    if (State.normalizeGoalSystems) { State.normalizeGoalSystems(state); }
     if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
+    if (State.normalizeRelationships) { State.normalizeRelationships(state); }
     buildProContracts(state);
     if (!state.world.news.length) {
       createNews(state, "world", "Мир запущен: клубы, титулы, рейтинги, сборные и расписание боёв сформированы.", { type: "bootstrap" });
