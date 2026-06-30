@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.9.3.1&target=2.8.9.3.1&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.10.1&target=2.8.10.1&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -568,6 +568,8 @@
       return;
     }
 
+    if (State.normalizeGoalSystems) { State.normalizeGoalSystems(state); }
+
     if (button.dataset.mobileMore) {
       state.mobileMoreOpen = !state.mobileMoreOpen;
       saveAndRender();
@@ -651,11 +653,12 @@
       state.modal = null;
       saveAndRender();
     } else if (button.dataset.goalsSubtab) {
-      state.goalsSubTab = button.dataset.goalsSubtab;
+      state.goalsSubTab = ["active", "completed", "coach"].indexOf(button.dataset.goalsSubtab) === -1 ? "active" : button.dataset.goalsSubtab;
       state.selectedTab = "goals";
       saveAndRender();
     } else if (button.dataset.tab) {
       state.selectedTab = button.dataset.tab;
+      if (state.selectedTab === "goals" && ["active", "completed", "coach"].indexOf(state.goalsSubTab || "active") === -1) { state.goalsSubTab = "active"; }
       state.mobileMoreOpen = false;
       saveAndRender();
     } else if (button.dataset.teamList) {
