@@ -1,7 +1,7 @@
 {
-  "version": "2.8.12",
-  "mode": "history-tab-polish",
-  "cacheVersion": "fight-simulator-history-tab-polish-2.8.12",
+  "version": "2.8.13",
+  "mode": "rivalry-lite",
+  "cacheVersion": "fight-simulator-rivalry-lite-2.8.13",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

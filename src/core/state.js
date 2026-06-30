@@ -2852,6 +2852,105 @@
   }
 
 
+  function rivalrySeriesText(rivalry) {
+    if (!rivalry) { return "0-0-0"; }
+    return (Number(rivalry.wins) || 0) + "-" + (Number(rivalry.losses) || 0) + "-" + (Number(rivalry.draws) || 0);
+  }
+
+  function rivalryStatus(rivalry) {
+    if (!rivalry) { return "соперник"; }
+    if ((Number(rivalry.wins) || 0) === (Number(rivalry.losses) || 0) && ((Number(rivalry.wins) || 0) + (Number(rivalry.losses) || 0)) > 0) { return "равная серия"; }
+    if ((Number(rivalry.losses) || 0) > (Number(rivalry.wins) || 0)) { return "должок"; }
+    if ((Number(rivalry.rematches) || 0) > 0) { return "реванш"; }
+    if ((Number(rivalry.strongerWins) || 0) > 0) { return "взял сильного"; }
+    return "соперник";
+  }
+
+  function syncRivalryPerson(state, rivalry) {
+    var people, personId, person, fighter;
+    if (!state || !rivalry || !rivalry.opponentId) { return; }
+    state.people = state.people instanceof Array ? state.people : [];
+    people = state.people;
+    personId = "person_" + rivalry.opponentId;
+    person = people.find(function (item) { return item && item.id === personId; });
+    fighter = U.getFighterById(state, rivalry.opponentId);
+
+    if (!person) {
+      person = { id: personId, personType: "fighter", role: "formerOpponent", fighterId: rivalry.opponentId, name: rivalry.opponentName || (fighter ? fighter.name : "Соперник"), relationship: 0, lastInteractionWeek: rivalry.lastWeek || state.week, lastInteraction: "серия " + rivalrySeriesText(rivalry), note: "Бывший соперник · серия " + rivalrySeriesText(rivalry) };
+      people.unshift(person);
+    } else {
+      person.personType = person.personType || "fighter";
+      if (person.role !== "playerCoach" && person.role !== "teamCoach") { person.role = "formerOpponent"; }
+      person.fighterId = person.fighterId || rivalry.opponentId;
+      person.name = person.name || rivalry.opponentName || (fighter ? fighter.name : "Соперник");
+      person.relationship = isFinite(Number(person.relationship)) ? Number(person.relationship) : 0;
+      person.lastInteractionWeek = Math.max(Number(person.lastInteractionWeek) || 0, Number(rivalry.lastWeek) || 0);
+      person.lastInteraction = "серия " + rivalrySeriesText(rivalry);
+      person.note = "Бывший соперник · серия " + rivalrySeriesText(rivalry);
+    }
+
+    person.rivalry = { opponentId: rivalry.opponentId, series: rivalrySeriesText(rivalry), status: rivalryStatus(rivalry), fights: rivalry.fights, wins: rivalry.wins, losses: rivalry.losses, draws: rivalry.draws };
+  }
+
+  function normalizeRivalries(state, currentPlayer) {
+    var p = currentPlayer || player(state);
+    var grouped = {};
+    var output;
+    if (!state || !p) { return []; }
+
+    p.fightHistory = p.fightHistory instanceof Array ? p.fightHistory : [];
+    p.fightHistory.forEach(function (entry) {
+      var key, item, opponent, method;
+      if (!entry || !entry.opponentId || !entry.result) { return; }
+      key = entry.opponentId;
+      item = grouped[key];
+      if (!item) {
+        opponent = U.getFighterById(state, key);
+        item = grouped[key] = { opponentId: key, opponentName: entry.opponentName || (opponent ? opponent.name : "Соперник"), fights: 0, wins: 0, losses: 0, draws: 0, kos: 0, tournamentFights: 0, strongerWins: 0, rematches: 0, lastResult: "", lastMethod: "", lastWeek: 0, lastTournamentName: "", importantScore: 0 };
+      }
+
+      item.fights += 1;
+      if (entry.result === "Победа") { item.wins += 1; }
+      else if (entry.result === "Поражение") { item.losses += 1; }
+      else { item.draws += 1; }
+
+      method = String(entry.method || "");
+      if (method.toLowerCase().indexOf("ko") !== -1 || method.indexOf("KO") !== -1) { item.kos += 1; }
+      if (entry.isTournament) { item.tournamentFights += 1; }
+      if (entry.strongerWin) { item.strongerWins += 1; }
+      if (entry.isRematch) { item.rematches += 1; }
+
+      if ((Number(entry.week) || 0) >= item.lastWeek) {
+        item.lastResult = entry.result;
+        item.lastMethod = entry.method || "";
+        item.lastWeek = Number(entry.week) || 0;
+        item.lastTournamentName = entry.tournamentName || "";
+      }
+    });
+
+    output = Object.keys(grouped).map(function (key) {
+      var item = grouped[key];
+      item.series = rivalrySeriesText(item);
+      item.status = rivalryStatus(item);
+      item.importantScore = item.fights * 2 + item.losses * 3 + item.rematches * 4 + item.strongerWins * 4 + item.tournamentFights + (item.wins === item.losses && item.fights > 1 ? 3 : 0);
+      item.qualified = item.fights >= 2 || item.losses >= 1 || item.rematches >= 1 || item.strongerWins >= 1 || item.tournamentFights >= 2;
+      return item;
+    }).filter(function (item) { return item.qualified; }).sort(function (left, right) {
+      return (right.importantScore - left.importantScore) || (right.lastWeek - left.lastWeek) || (right.fights - left.fights);
+    }).slice(0, 30);
+
+    p.rivalries = output;
+    output.forEach(function (rivalry) { syncRivalryPerson(state, rivalry); });
+    if (state.people.length > 120) { state.people.length = 120; }
+    return p.rivalries;
+  }
+
+  function rivalryForFighter(state, fighterId) {
+    var p = player(state);
+    var list = normalizeRivalries(state, p);
+    return list.find(function (rivalry) { return rivalry && rivalry.opponentId === fighterId; }) || null;
+  }
+
   function normalizeFightHistory(state, currentPlayer) {
     var p = currentPlayer || player(state);
     var seen = {};
@@ -2945,6 +3044,7 @@
     };
     history.unshift(entry);
     if (history.length > 100) { history.length = 100; }
+    normalizeRivalries(state, p);
     return entry;
   }
 
@@ -4556,6 +4656,9 @@ restPlayer: restPlayer,
     normalizeRelationships: normalizeRelationships,
     normalizeGoalSystems: normalizeGoalSystems,
     recordPlayerFightHistory: recordPlayerFightHistory,
-    normalizeFightHistory: normalizeFightHistory
+    normalizeFightHistory: normalizeFightHistory,
+    rivalrySeriesText: rivalrySeriesText,
+    rivalryForFighter: rivalryForFighter,
+    normalizeRivalries: normalizeRivalries
   };
 }());

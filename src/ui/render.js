@@ -1061,11 +1061,43 @@
     '</div></div>';
   }
 
+  function renderRivalriesCard(state, fighter) {
+    var rivalries = State.normalizeRivalries ? State.normalizeRivalries(state, fighter) : ((fighter && fighter.rivalries) || []);
+    if (!rivalries.length) {
+      return '<div class="content-card rivalry-card"><h3>Соперничества</h3><div class="muted small">Пока нет устойчивых соперничеств. Они появятся после повторных или важных боёв.</div></div>';
+    }
+
+    function row(rivalry) {
+      var fighter = U.getFighterById(state, rivalry.opponentId);
+      var name = rivalry.opponentName || (fighter ? fighter.name : "Соперник");
+      var last = rivalry.lastTournamentName ? (' · ' + rivalry.lastTournamentName) : '';
+      return '<div class="split-row rivalry-row"><div><button class="small-btn" data-fighter="' + U.escapeHtml(rivalry.opponentId) + '">' + U.escapeHtml(name) + '</button>' +
+        '<div class="muted small">последний бой: ' + U.escapeHtml(rivalry.lastResult || "—") + last + '</div></div>' +
+        '<span><span class="pill gold">серия ' + U.escapeHtml(rivalry.series || "0-0-0") + '</span><span class="pill">' + U.escapeHtml(rivalry.status || "соперник") + '</span></span></div>';
+    }
+
+    return '<div class="content-card rivalry-card"><div class="split-row"><h3>Соперничества</h3><strong>' + rivalries.length + '</strong></div>' + rivalries.slice(0, 8).map(row).join('') + '</div>';
+  }
+
+  function renderFighterRivalryCard(state, fighter) {
+    var rivalry;
+    if (!fighter || fighter.isPlayer || !State.rivalryForFighter) { return ""; }
+    rivalry = State.rivalryForFighter(state, fighter.id);
+    if (!rivalry) { return ""; }
+
+    return '<div class="content-card rivalry-card" style="margin-top:12px"><h3>Серия с игроком</h3>' +
+      '<div class="split-row"><span>Счёт серии</span><strong>' + U.escapeHtml(rivalry.series || "0-0-0") + '</strong></div>' +
+      '<div class="split-row"><span>Статус</span><strong>' + U.escapeHtml(rivalry.status || "соперник") + '</strong></div>' +
+      '<div class="split-row"><span>Последний бой</span><strong>Неделя ' + (rivalry.lastWeek || "—") + ' · ' + U.escapeHtml(rivalry.lastResult || "—") + '</strong></div>' +
+    '</div>';
+  }
+
   function renderHistoryTab(state) {
     var p = State.player(state);
     return '<div class="grid two history-tab-grid">' +
       renderHistoryFilters(state) +
       renderFightHistoryStatsCard(state, p) +
+      renderRivalriesCard(state, p) +
       renderFightHistoryCard(state, p, 80) +
     '</div>';
   }
@@ -1775,6 +1807,7 @@
           '</div>' +
           '<div class="row">' + (!fighter.isPlayer ? favoriteButton(state, fighter.id) : '') + '</div>' +
         '</div>' +
+        renderFighterRivalryCard(state, fighter) +
         '<div class="content-card f1-gym-card" style="margin-top:12px"><h3>Зал</h3>' + (club ? '<button class="f1-gym-button" data-club="' + U.escapeHtml(club.id) + '">' + U.escapeHtml(club.name) + '</button>' : '<div class="f1-gym-name">Без клуба</div>') + '</div>' +
         '<div class="skills" style="margin-top:12px"><div class="label">Навыки</div>' + renderStatProgressRows(fighter) + '</div>' +
         '<div class="content-card" style="margin-top:12px"><h3>Награды</h3>' + renderFighterAwards(state, fighter) + '</div>' +

@@ -1,7 +1,7 @@
 /* Fight World service worker - F1 Mobile UI 2.5.0 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-history-tab-polish-2.8.12";
+const CACHE_VERSION = "fight-simulator-rivalry-lite-2.8.13";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
