@@ -1,7 +1,7 @@
 /* Fight World service worker - F1 Mobile UI 2.5.0 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-career-milestones-repair-2.8.7.2";
+const CACHE_VERSION = "fight-simulator-relationship-choice-events-hotfix-2.8.9.1";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

@@ -1,7 +1,7 @@
 {
-  "version": "career-milestones-repair-2.8.7.2",
-  "mode": "career-milestones-repair",
-  "cacheVersion": "fight-simulator-career-milestones-repair-2.8.7.2",
+  "version": "relationship-choice-events-hotfix-2.8.9.1",
+  "mode": "relationship-choice-events-hotfix",
+  "cacheVersion": "fight-simulator-relationship-choice-events-hotfix-2.8.9.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

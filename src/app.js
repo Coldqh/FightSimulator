@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.7.2&target=2.8.7.2&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.9.1&target=2.8.9.1&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -718,6 +718,9 @@
       if (window.FS.Amateur && window.FS.Amateur.continueTournament) {
         state.modal = window.FS.Amateur.continueTournament(state, state.modal);
       }
+      saveAndRender();
+    } else if (button.dataset.relationshipChoice) {
+      if (State.applyRelationshipChoice) { State.applyRelationshipChoice(state, button.dataset.relationshipChoice); }
       saveAndRender();
     } else if (button.dataset.action === "refresh-offers") {
       state.offerRefreshSalt = (Number(state.offerRefreshSalt) || 0) + 1;

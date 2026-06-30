@@ -775,6 +775,49 @@
 
   
 
+  function relationshipEffectHtml(effect) {
+    var value = Number(effect && effect.value) || 0;
+    var label = effect && effect.label ? effect.label : effect.type;
+    var good;
+    var text;
+    if (!value) { return ""; }
+    good = (effect.type === "fatigue" || effect.type === "money") ? value < 0 : value > 0;
+    text = (value > 0 ? "+" : "") + value + " " + label;
+    return '<span class="f1-metric ' + (good ? 'green' : 'red') + '">' + U.escapeHtml(text) + '</span>';
+  }
+
+  function relationshipScoreText(person) {
+    var score = Number(person && person.relationship) || 0;
+    return 'Отношение: ' + score + '/100';
+  }
+
+  function renderRelationshipEventCard(state) {
+    var event = state.relationshipEvent || null;
+    if (!event) {
+      return '<div class="content-card"><h3>Событие недели</h3><div class="muted small">Новых личных событий нет. Они появляются редко, раз в несколько недель.</div></div>';
+    }
+
+    function optionHtml(option) {
+      var effects = (option.effects || []).map(relationshipEffectHtml).filter(Boolean).join('');
+      return '<button class="relationship-choice-btn" data-relationship-choice="' + U.escapeHtml(option.id) + '"><span>' + U.escapeHtml(option.label) + '</span><small>' + effects + '</small></button>';
+    }
+
+    return '<div class="content-card relationship-event-card"><div class="split-row"><h3>Событие недели</h3><strong>' + U.escapeHtml(event.personName || '') + '</strong></div>' +
+      '<div class="name-line">' + U.escapeHtml(event.title || 'Событие') + '</div>' +
+      '<div class="muted small">' + U.escapeHtml(event.text || '') + '</div>' +
+      '<div class="relationship-choice-list">' + (event.options || []).map(optionHtml).join('') + '</div>' +
+    '</div>';
+  }
+
+  function renderRelationshipSummaryCard(state) {
+    var summary = State.relationshipSummary ? State.relationshipSummary(state) : { count: (state.people || []).length, coach: null, rival: null };
+    return '<div class="content-card"><h3>Связи</h3>' +
+      '<div class="split-row"><span>Людей</span><strong>' + (summary.count || 0) + '</strong></div>' +
+      '<div class="split-row"><span>Тренер</span><strong>' + (summary.coach ? U.escapeHtml(relationshipScoreText(summary.coach)) : '—') + '</strong></div>' +
+      '<div class="split-row"><span>Главный соперник</span><strong>' + (summary.rival ? U.escapeHtml(relationshipScoreText(summary.rival)) : '—') + '</strong></div>' +
+    '</div>';
+  }
+
   function renderCareerStatsCard(state) {
     var p = State.player(state);
     var stats = p && p.careerStats ? p.careerStats : {};
@@ -850,6 +893,8 @@
       renderCareerStatsCard(state) +
       renderCareerMilestonesCard(state) +
       renderCoachGoalCard(state) +
+      renderRelationshipEventCard(state) +
+      renderRelationshipSummaryCard(state) +
     '</div>';
   }
 
@@ -1406,13 +1451,16 @@
 
   function renderPeopleTab(state) {
     var people = state.people instanceof Array ? state.people.filter(function (person) { return person && person.id; }) : [];
-    var roleLabels = Data.peopleRoles || { coach: "Тренер", clubmate: "Одноклубник", rival: "Соперник", promoter: "Промоутер" };
+    var roleLabels = Data.peopleRoles || { coach: "Тренер", playerCoach: "Тренер", clubmate: "Одноклубник", formerOpponent: "Бывший соперник", rival: "Соперник", promoter: "Промоутер", teamCoach: "Тренер сборной" };
+    if (State.normalizeRelationships) { State.normalizeRelationships(state); }
     if (!people.length) {
-      return "<div class=\"content-card\"><h3>Люди</h3><div class=\"muted small\">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>";
+      return '<div class="content-card"><h3>Люди</h3><div class="muted small">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>';
     }
-    return "<div class=\"content-card\"><h3>Люди</h3><div class=\"people-list\">" + people.map(function (person) {
-      return "<div class=\"split-row\"><div><button class=\"small-btn\" data-person=\"" + U.escapeHtml(person.id) + "\">" + U.escapeHtml(person.name || "Без имени") + "</button><div class=\"muted small\">" + U.escapeHtml(person.note || "") + "</div></div><span class=\"pill\">" + U.escapeHtml(roleLabels[person.role] || person.role || "Контакт") + "</span></div>";
-    }).join("") + "</div></div>";
+    return '<div class="content-card"><h3>Люди</h3><div class="people-list">' + people.map(function (person) {
+      var relation = Number(person.relationship) || 0;
+      var last = person.lastInteraction ? '<div class="muted small">Последнее: ' + U.escapeHtml(person.lastInteraction) + '</div>' : '';
+      return '<div class="split-row"><div><button class="small-btn" data-person="' + U.escapeHtml(person.id) + '">' + U.escapeHtml(person.name || 'Без имени') + '</button><div class="muted small">' + U.escapeHtml(person.note || '') + '</div>' + last + '</div><span><span class="pill">' + U.escapeHtml(roleLabels[person.role] || person.role || 'Контакт') + '</span><span class="pill">Отношение ' + relation + '/100</span></span></div>';
+    }).join('') + '</div></div>';
   }
 
   function renderSettingsTab(state) {
