@@ -1,7 +1,7 @@
 {
-  "version": "2.8.14.2",
-  "mode": "relationship-event-seed-hotfix",
-  "cacheVersion": "fight-simulator-relationship-event-seed-hotfix-2.8.14.2",
+  "version": "2.8.14.3",
+  "mode": "people-events-full-repair",
+  "cacheVersion": "fight-simulator-people-events-full-repair-2.8.14.3",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

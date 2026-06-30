@@ -1646,18 +1646,115 @@
     }).join('') + '</div></div>';
   }
 
-  function renderPeopleTab(state) {
-    var people = state.people instanceof Array ? state.people.filter(function (person) { return person && person.id; }) : [];
-    var roleLabels = Data.peopleRoles || { coach: "Тренер", playerCoach: "Тренер", clubmate: "Одноклубник", formerOpponent: "Бывший соперник", rival: "Соперник", promoter: "Промоутер", teamCoach: "Тренер сборной" };
-    if (State.normalizeRelationships) { State.normalizeRelationships(state); }
-    if (!people.length) {
-      return renderRelationshipEventCard(state) + "<div class=\"content-card\"><h3>Люди</h3><div class=\"muted small\">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>";
+  function personCountryInline(state, person) {
+    var fighter;
+    var countryId = person && (person.countryId || person.homeCountryId || person.originCountryId);
+    if (!countryId && person && person.fighterId) {
+      fighter = U.getFighterById(state, person.fighterId);
+      countryId = fighter && (fighter.countryId || fighter.homeCountryId || fighter.originCountryId);
     }
-    return renderRelationshipEventCard(state) + "<div class=\"content-card\"><h3>Люди</h3><div class=\"people-list\">" + people.map(function (person) {
+    if (!countryId) { return ""; }
+    return f1CountryFull(countryId);
+  }
+
+  function relationshipToneClass(value) {
+    value = Number(value) || 0;
+    if (value > 0) { return "green"; }
+    if (value < 0) { return "red"; }
+    return "";
+  }
+
+  function renderRelationshipEventModal(state) {
+    var event = state.relationshipEvent || null;
+    if (!event) {
+      return '<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>Событие общения</h2></div><div class="modal-body"><div class="content-card">Событие уже закрыто.</div></div><div class="modal-actions"><button class="primary" data-action="close-modal">Закрыть</button></div></div></div>';
+    }
+
+    function optionHtml(option) {
+      var effects = (option.effects || []).map(relationshipEffectHtml).filter(Boolean).join('');
+      return '<button class="relationship-choice-btn" data-relationship-choice="' + U.escapeHtml(option.id) + '"><span>' + U.escapeHtml(option.label) + '</span><small>' + effects + '</small></button>';
+    }
+
+    return '<div class="modal-backdrop"><div class="modal relationship-event-modal"><div class="modal-head"><h2>' + U.escapeHtml(event.title || "Событие общения") + '</h2><div class="muted small">' + U.escapeHtml(event.personName || "") + '</div></div>' +
+      '<div class="modal-body"><div class="content-card">' + U.escapeHtml(event.text || "") + '</div><div class="relationship-choice-list">' + (event.options || []).map(optionHtml).join('') + '</div></div>' +
+      '<div class="modal-actions"><button data-action="close-modal">Позже</button></div></div></div>';
+  }
+
+  function renderPeopleTab(state) {
+    var allPeople;
+    var people;
+    var roleLabels = Data.peopleRoles || { coach: "Тренер", playerCoach: "Тренер", clubmate: "Одноклубник", formerOpponent: "Бывший соперник", rival: "Соперник", promoter: "Промоутер", teamCoach: "Тренер сборной" };
+    var filter = state.peopleFilter || "all";
+
+    if (State.normalizeRelationships) { State.normalizeRelationships(state); }
+    allPeople = state.people instanceof Array ? state.people.filter(function (person) { return person && person.id; }) : [];
+
+    function matchesFilter(person) {
+      if (filter === "coaches") { return person.personType === "coach" || person.role === "playerCoach" || person.role === "coach"; }
+      if (filter === "rivals") { return person.role === "formerOpponent" || person.role === "rival"; }
+      if (filter === "clubmates") { return person.role === "clubmate"; }
+      if (filter === "team") { return person.role === "teamCoach"; }
+      return true;
+    }
+
+    function filterButton(id, label) {
+      return '<button class="small-btn ' + (filter === id ? 'primary' : '') + '" data-people-filter="' + id + '">' + label + '</button>';
+    }
+
+    function seriesText(person) {
+      if (person.rivalry && person.rivalry.series) { return 'серия ' + person.rivalry.series; }
+      if (person.note && String(person.note).indexOf('серия') !== -1) { return person.note.replace('Бывший соперник · ', ''); }
+      return "";
+    }
+
+    function clubText(person) {
+      var club;
+      if (person.clubId && window.FS.Clubs && window.FS.Clubs.findClub) {
+        club = window.FS.Clubs.findClub(state, person.clubId);
+      }
+      if (!club && person.gymId && window.FS.Clubs && window.FS.Clubs.findClub) {
+        club = window.FS.Clubs.findClub(state, person.gymId);
+      }
+      return club ? club.name : "";
+    }
+
+    function row(person) {
       var relation = Number(person.relationship) || 0;
-      var last = person.lastInteraction ? '<div class=\"muted small\">Последнее: ' + U.escapeHtml(person.lastInteraction) + '</div>' : '';
-      return "<div class=\"split-row\"><div><button class=\"small-btn\" data-person=\"" + U.escapeHtml(person.id) + "\">" + U.escapeHtml(person.name || "Без имени") + "</button><div class=\"muted small\">" + U.escapeHtml(person.note || "") + "</div>" + last + "</div><span><span class=\"pill\">" + U.escapeHtml(roleLabels[person.role] || person.role || "Контакт") + "</span><span class=\"pill\">Отношение " + relation + "/100</span></span></div>";
-    }).join("") + "</div></div>";
+      var relationClass = relationshipToneClass(relation);
+      var role = roleLabels[person.role] || person.role || "Контакт";
+      var country = personCountryInline(state, person);
+      var series = seriesText(person);
+      var club = clubText(person);
+      var last = person.lastInteraction ? 'последнее: ' + person.lastInteraction : '';
+      var bits = [
+        country,
+        role,
+        series,
+        club ? 'клуб ' + club : '',
+        last
+      ].filter(Boolean);
+
+      return '<div class="people-compact-row" style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap">' +
+        '<button class="small-btn" data-person="' + U.escapeHtml(person.id) + '">' + U.escapeHtml(person.name || "Без имени") + '</button>' +
+        '<span class="muted small" style="min-width:0;overflow:hidden;text-overflow:ellipsis">' + bits.map(U.escapeHtml).join(' · ') + '</span>' +
+        '<span class="pill ' + relationClass + '">отношение ' + (relation > 0 ? '+' : '') + relation + '</span>' +
+      '</div>';
+    }
+
+    people = allPeople.filter(matchesFilter);
+
+    return '<div class="content-card people-filter-card"><div class="split-row"><h3>Люди</h3><strong>' + people.length + '/' + allPeople.length + '</strong></div>' +
+      '<div class="row people-filter-row">' +
+        filterButton("all", "Все") +
+        filterButton("coaches", "Тренеры") +
+        filterButton("rivals", "Соперники") +
+        filterButton("clubmates", "Одноклубники") +
+        filterButton("team", "Сборная") +
+      '</div></div>' +
+      renderRelationshipEventCard(state) +
+      '<div class="content-card"><div class="f1-row-list people-compact-list">' +
+        (people.length ? people.map(row).join("") : '<div class="muted small">По этому фильтру никого нет.</div>') +
+      '</div></div>';
   }
 
   function renderSettingsTab(state) {
@@ -1978,6 +2075,8 @@
     }
 
     if (!modal) { return ""; }
+
+    if (modal.type === "relationshipEvent") { return renderRelationshipEventModal(state); }
 
     if (modal.type === "gameOver") {
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Игра окончена") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "Карьера завершена.") + "</div><div class=\"pill red\">Баланс $" + (modal.money || 0) + "</div></div><div class=\"modal-actions\"><button class=\"danger\" data-action=\"reset-career\">Начать заново</button></div></div></div>";

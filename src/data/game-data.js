@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "2.8.14.2",
-  "saveSchemaVersion": 281402,
+  "appVersion": "2.8.14.3",
+  "saveSchemaVersion": 281403,
   "tracks": {
     "amateur": {
       "id": "amateur",
