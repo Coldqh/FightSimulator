@@ -252,6 +252,7 @@
     var tabs = [
       ["dashboard", "🏠 Обзор"],
       ["profile", "🥊 Профиль"],
+      ["history", "📜 История"],
       ["goals", "🎯 Цели"],
       ["favorites", "⭐ Избранные"],
       ["news", "📰 Новости"],
@@ -955,17 +956,87 @@
       '<div class="content-card"><h3>' + (p.trackId === 'amateur' ? 'Награды' : 'Титулы') + '</h3>' + (p.trackId === 'amateur' ? renderFighterAwards(state, p) : renderFighterTitles(state, p)) + '</div>' +
       '<div class="skills" style="grid-column:1/-1"><div class="label">Навыки</div>' + renderStatProgressRows(p) + '</div>' +
       renderTrackRecords(p) +
-      renderFightHistoryCard(state, p, 12) +
       '<div class="content-card profile-actions-card" style="grid-column:1/-1"><h3>Управление карьерой</h3><div class="row"><button class="primary" data-profile-modal="travel">Перелёт</button><button data-profile-modal="weight">Смена веса</button><button data-profile-modal="path">Смена пути</button></div></div>' +
     '</div>';
   }
 
-  function renderFightHistoryCard(state, fighter, limit) {
+  function historyFilterOptions() {
+    return [
+      ["all", "Все"],
+      ["regular", "Обычные"],
+      ["tournaments", "Турниры"],
+      ["wins", "Победы"],
+      ["losses", "Поражения"],
+      ["stronger", "Над сильнее"],
+      ["rematches", "Реванши"],
+      ["ko", "KO/TKO"]
+    ];
+  }
+
+  function filteredFightHistory(state, fighter) {
+    var filter = state.historyFilter || "all";
     var history;
     if (State.normalizeFightHistory) { State.normalizeFightHistory(state, fighter); }
     history = fighter && fighter.fightHistory instanceof Array ? fighter.fightHistory : [];
+
+    return history.filter(function (entry) {
+      if (!entry) { return false; }
+      if (filter === "regular") { return !entry.isTournament; }
+      if (filter === "tournaments") { return !!entry.isTournament; }
+      if (filter === "wins") { return entry.result === "Победа"; }
+      if (filter === "losses") { return entry.result === "Поражение"; }
+      if (filter === "stronger") { return !!entry.strongerWin; }
+      if (filter === "rematches") { return !!entry.isRematch; }
+      if (filter === "ko") { return String(entry.method || "").toLowerCase().indexOf("ko") !== -1 || String(entry.method || "").indexOf("KO") !== -1; }
+      return true;
+    });
+  }
+
+  function renderHistoryFilters(state) {
+    var current = state.historyFilter || "all";
+    return '<div class="content-card history-filter-card"><h3>Фильтр</h3><div class="row history-filter-row">' +
+      historyFilterOptions().map(function (item) {
+        return '<button class="small-btn ' + (current === item[0] ? 'primary' : '') + '" data-history-filter="' + item[0] + '">' + item[1] + '</button>';
+      }).join('') +
+    '</div></div>';
+  }
+
+  function renderFightHistoryStatsCard(state, fighter) {
+    var history;
+    var total;
+    var tournament;
+    var stronger;
+    var ko;
+    var lastFive;
+    if (State.normalizeFightHistory) { State.normalizeFightHistory(state, fighter); }
+    history = fighter && fighter.fightHistory instanceof Array ? fighter.fightHistory : [];
+    total = history.length;
+    tournament = history.filter(function (entry) { return entry && entry.isTournament; }).length;
+    stronger = history.filter(function (entry) { return entry && entry.strongerWin; }).length;
+    ko = history.filter(function (entry) {
+      return entry && (String(entry.method || "").toLowerCase().indexOf("ko") !== -1 || String(entry.method || "").indexOf("KO") !== -1);
+    }).length;
+    lastFive = history.slice(0, 5).map(function (entry) {
+      if (entry.result === "Победа") { return "В"; }
+      if (entry.result === "Поражение") { return "П"; }
+      return "Н";
+    }).join("-") || "—";
+
+    return '<div class="content-card history-stats-card"><h3>Сводка истории</h3>' +
+      '<div class="split-row"><span>Всего боёв</span><strong>' + total + '</strong></div>' +
+      '<div class="split-row"><span>Турнирные</span><strong>' + tournament + '</strong></div>' +
+      '<div class="split-row"><span>Победы над сильнее</span><strong>' + stronger + '</strong></div>' +
+      '<div class="split-row"><span>KO/TKO</span><strong>' + ko + '</strong></div>' +
+      '<div class="split-row"><span>Последние 5</span><strong>' + U.escapeHtml(lastFive) + '</strong></div>' +
+    '</div>';
+  }
+
+  function renderFightHistoryCard(state, fighter, limit) {
+    var history = filteredFightHistory(state, fighter);
+    var filterLabel = (historyFilterOptions().find(function (item) { return item[0] === (state.historyFilter || "all"); }) || ["all", "Все"])[1];
+
     if (!history.length) {
-      return '<div class="content-card" style="grid-column:1/-1"><h3>История боёв</h3><div class="muted small">Пока нет записанных боёв.</div></div>';
+      return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + U.escapeHtml(filterLabel) + '</strong></div><div class="muted small">По этому фильтру боёв нет.</div></div>';
     }
 
     function row(entry) {
@@ -985,9 +1056,18 @@
       '</div>';
     }
 
-    return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + history.length + '</strong></div><div class="f1-history-list">' +
-      history.slice(0, limit || 12).map(row).join('') +
+    return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + history.length + ' · ' + U.escapeHtml(filterLabel) + '</strong></div><div class="f1-history-list">' +
+      history.slice(0, limit || 80).map(row).join('') +
     '</div></div>';
+  }
+
+  function renderHistoryTab(state) {
+    var p = State.player(state);
+    return '<div class="grid two history-tab-grid">' +
+      renderHistoryFilters(state) +
+      renderFightHistoryStatsCard(state, p) +
+      renderFightHistoryCard(state, p, 80) +
+    '</div>';
   }
 
   function renderTrackRecords(fighter) {
@@ -1540,6 +1620,7 @@
 
     if (tab === "dashboard") { content = renderDashboardTab(state); }
     else if (tab === "profile") { content = renderProfileTab(state); }
+    else if (tab === "history") { content = renderHistoryTab(state); }
     else if (tab === "goals") { content = renderGoalsTab(state); }
     else if (tab === "fights") { content = renderFightsTab(state); }
     else if (tab === "favorites") { content = renderFavoritesTab(state); }
@@ -1585,6 +1666,7 @@
             (p.trackId === 'amateur' ? moreItem('world', '🌍', 'Люб. путь') : '') +
             (p.trackId === 'pro' ? moreItem('pro', '💼', 'Профи') : '') +
             moreItem('goals', '🎯', 'Цели') +
+            moreItem('history', '📜', 'История') +
             moreItem('training', '📈', 'Статы') +
             moreItem('ranking', '🏆', 'Рейтинг') +
             moreItem('myclub', '🏟️', 'Мой клуб') +

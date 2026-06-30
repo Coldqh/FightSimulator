@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.11.1&target=2.8.11.1&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.12&target=2.8.12&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -651,6 +651,11 @@
       importSave();
     } else if (button.dataset.action === "close-modal") {
       state.modal = null;
+      saveAndRender();
+    } else if (button.dataset.historyFilter) {
+      var validHistoryFilters = { all: true, regular: true, tournaments: true, wins: true, losses: true, stronger: true, rematches: true, ko: true };
+      state.historyFilter = validHistoryFilters[button.dataset.historyFilter] ? button.dataset.historyFilter : "all";
+      state.selectedTab = "history";
       saveAndRender();
     } else if (button.dataset.goalsSubtab) {
       state.goalsSubTab = ["active", "completed", "coach"].indexOf(button.dataset.goalsSubtab) === -1 ? "active" : button.dataset.goalsSubtab;

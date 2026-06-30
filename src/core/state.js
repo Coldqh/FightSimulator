@@ -2852,6 +2852,102 @@
   }
 
 
+  function normalizeFightHistory(state, currentPlayer) {
+    var p = currentPlayer || player(state);
+    var seen = {};
+    if (!p) { return []; }
+    p.fightHistory = p.fightHistory instanceof Array ? p.fightHistory : [];
+    p.fightHistory = p.fightHistory.filter(function (entry) {
+      var key;
+      if (!entry || !entry.opponentId || !entry.result) { return false; }
+      entry.id = entry.id || U.uid("fight_history");
+      entry.week = Number(entry.week) || Number(state.week) || 1;
+      entry.opponentName = entry.opponentName || "Соперник";
+      entry.method = entry.method || "";
+      entry.trackId = entry.trackId || p.trackId || "";
+      entry.source = entry.source || (entry.isTournament ? "tournament" : "fight");
+      entry.isTournament = !!entry.isTournament;
+      entry.tournamentName = entry.tournamentName || "";
+      entry.roundLabel = entry.roundLabel || "";
+      entry.playerOvr = Math.max(0, Math.round(Number(entry.playerOvr) || 0));
+      entry.opponentOvr = Math.max(0, Math.round(Number(entry.opponentOvr) || 0));
+      entry.strongerWin = !!entry.strongerWin;
+      entry.isRematch = !!entry.isRematch;
+      key = entry.historyKey || [entry.week, entry.opponentId, entry.result, entry.method, entry.source, entry.tournamentName, entry.roundLabel].join("|");
+      if (seen[key]) { return false; }
+      seen[key] = true;
+      entry.historyKey = key;
+      return true;
+    });
+    p.fightHistory.sort(function (left, right) { return (Number(right.week) || 0) - (Number(left.week) || 0); });
+    if (p.fightHistory.length > 100) { p.fightHistory.length = 100; }
+    return p.fightHistory;
+  }
+
+  function tournamentNameFromContext(state, payload) {
+    var name = payload.tournamentName || payload.competitionLabel || payload.label || "";
+    var compId = payload.competitionId || "";
+    var comp;
+    if (name) { return name; }
+    if (compId && window.FS.Amateur && window.FS.Amateur.getCompetition) {
+      comp = window.FS.Amateur.getCompetition(compId);
+      if (comp && comp.label) { return comp.label; }
+    }
+    if (state.modal && state.modal.session && state.modal.session.competitionId && window.FS.Amateur && window.FS.Amateur.getCompetition) {
+      comp = window.FS.Amateur.getCompetition(state.modal.session.competitionId);
+      if (comp && comp.label) { return comp.label; }
+    }
+    return "";
+  }
+
+  function recordPlayerFightHistory(state, opponent, result, method, meta) {
+    var p = player(state);
+    var payload = meta || {};
+    var history;
+    var playerOvr;
+    var opponentOvr;
+    var source;
+    var tournamentName;
+    var roundLabel;
+    var key;
+    var entry;
+    if (!p || !opponent || !opponent.id || !result) { return null; }
+
+    history = normalizeFightHistory(state, p);
+    playerOvr = Math.round(Number(payload.playerOvr) || U.statAverage(p.stats));
+    opponentOvr = Math.round(Number(payload.opponentOvr) || U.statAverage(opponent.stats));
+    source = payload.source || (payload.isTournament ? "tournament" : (payload.isContract ? "contract" : "fight"));
+    tournamentName = payload.isTournament ? tournamentNameFromContext(state, payload) : "";
+    roundLabel = payload.roundLabel || "";
+    key = [Number(state.week) || 1, opponent.id, result, method || "", source, tournamentName, roundLabel].join("|");
+    if (history.some(function (item) { return item && item.historyKey === key; })) { return null; }
+
+    entry = {
+      id: U.uid("fight_history"),
+      historyKey: key,
+      week: Number(state.week) || 1,
+      opponentId: opponent.id,
+      opponentName: opponent.name || "Соперник",
+      result: result,
+      method: method || "",
+      trackId: p.trackId,
+      source: source,
+      isTournament: !!payload.isTournament,
+      tournamentName: tournamentName,
+      competitionId: payload.competitionId || "",
+      roundLabel: roundLabel,
+      playerOvr: playerOvr,
+      opponentOvr: opponentOvr,
+      strongerWin: result === "Победа" && opponentOvr > playerOvr,
+      isRematch: !!payload.isRematch,
+      scoreLine: payload.scoreLine || "",
+      place: payload.place || ""
+    };
+    history.unshift(entry);
+    if (history.length > 100) { history.length = 100; }
+    return entry;
+  }
+
   function normalizeGoalSystems(state, currentPlayer) {
     var p = currentPlayer || player(state);
     var validGoalTabs = { active: true, completed: true, coach: true };
@@ -2863,6 +2959,10 @@
     if (!state) { return null; }
 
     if (!validMainTabs[state.selectedTab || "dashboard"]) { state.selectedTab = "dashboard"; }
+    if (!validMainTabs.history) { validMainTabs.history = true; }
+    state.historyFilter = state.historyFilter || "all";
+    var validHistoryFilters = { all: true, regular: true, tournaments: true, wins: true, losses: true, stronger: true, rematches: true, ko: true };
+    if (!validHistoryFilters[state.historyFilter]) { state.historyFilter = "all"; }
     if (!validGoalTabs[state.goalsSubTab || "active"]) { state.goalsSubTab = "active"; }
     state.nextCoachGoalWeek = Math.max(0, Number(state.nextCoachGoalWeek) || 0);
 
@@ -3446,9 +3546,7 @@
       stats.currentWinStreak += 1;
       stats.currentLossStreak = 0;
       stats.bestWinStreak = Math.max(stats.bestWinStreak, stats.currentWinStreak);
-      if (String(method || "").toLowerCase().indexOf("ko") !== -1 || String(method || "").indexOf("KO") !== -1) {
-        stats.koWins += 1;
-      }
+      if (String(method || "").toLowerCase().indexOf("ko") !== -1 || String(method || "").indexOf("KO") !== -1) { stats.koWins += 1; }
       if (opponentOvr > playerOvr) {
         stats.strongerWins += 1;
         stats.bestDefeatedOvr = Math.max(stats.bestDefeatedOvr, opponentOvr);
@@ -3468,6 +3566,20 @@
       else { stats.rematchDraws += 1; }
       adjustRelationship(state, "person_" + opponent.id, 3, "реванш");
     }
+
+    recordPlayerFightHistory(state, opponent, result, method, {
+      isTournament: !!payload.isTournament,
+      isContract: !!payload.isContract,
+      isRematch: !!payload.isRematch,
+      source: payload.source || "",
+      playerOvr: Math.round(playerOvr),
+      opponentOvr: Math.round(opponentOvr),
+      tournamentName: payload.tournamentName || payload.competitionLabel || payload.label || "",
+      competitionId: payload.competitionId || "",
+      roundLabel: payload.roundLabel || "",
+      scoreLine: payload.scoreLine || "",
+      place: payload.place || ""
+    });
 
     checkCareerMilestones(state);
     return stats;
@@ -4442,6 +4554,8 @@ restPlayer: restPlayer,
     maybeCreateRelationshipEvent: maybeCreateRelationshipEvent,
     adjustRelationship: adjustRelationship,
     normalizeRelationships: normalizeRelationships,
-    normalizeGoalSystems: normalizeGoalSystems
+    normalizeGoalSystems: normalizeGoalSystems,
+    recordPlayerFightHistory: recordPlayerFightHistory,
+    normalizeFightHistory: normalizeFightHistory
   };
 }());
