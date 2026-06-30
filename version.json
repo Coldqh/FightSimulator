@@ -1,7 +1,7 @@
 {
-  "version": "stability-ux-polish-hotfix-2.8.10.1",
-  "mode": "stability-ux-polish-hotfix",
-  "cacheVersion": "fight-simulator-stability-ux-polish-hotfix-2.8.10.1",
+  "version": "2.8.10.2",
+  "mode": "version-sync-fix",
+  "cacheVersion": "fight-simulator-version-sync-2.8.10.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
