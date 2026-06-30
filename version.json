@@ -1,7 +1,7 @@
 {
-  "version": "2.8.13",
-  "mode": "rivalry-lite",
-  "cacheVersion": "fight-simulator-rivalry-lite-2.8.13",
+  "version": "2.8.13.1",
+  "mode": "history-rivalry-compact",
+  "cacheVersion": "fight-simulator-history-rivalry-compact-2.8.13.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

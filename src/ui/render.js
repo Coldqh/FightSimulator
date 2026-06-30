@@ -1040,23 +1040,26 @@
     }
 
     function row(entry) {
-      var opponentButton = entry.opponentId ? '<button class="small-btn" data-fighter="' + U.escapeHtml(entry.opponentId) + '">' + U.escapeHtml(entry.opponentName || "Соперник") + '</button>' : U.escapeHtml(entry.opponentName || "Соперник");
+      var opponentButton = entry.opponentId ? '<button class="small-btn" data-fighter="' + U.escapeHtml(entry.opponentId) + '">' + U.escapeHtml(entry.opponentName || "Соперник") + '</button>' : '<span class="pill">' + U.escapeHtml(entry.opponentName || "Соперник") + '</span>';
       var context = entry.isTournament ? ('Турнир: ' + (entry.tournamentName || 'турнир') + (entry.roundLabel ? ' · ' + entry.roundLabel : '')) : (entry.source === "contract" ? "Контрактный бой" : "Обычный бой");
       var ovrLine = 'OVR ' + (Number(entry.playerOvr) || 0) + ' vs ' + (Number(entry.opponentOvr) || 0);
-      var tags = [];
-      if (entry.strongerWin) { tags.push('<span class="pill gold">победа над сильнее</span>'); }
-      if (entry.isRematch) { tags.push('<span class="pill blue">реванш</span>'); }
-      if (entry.method) { tags.push('<span class="pill">' + U.escapeHtml(entry.method) + '</span>'); }
+      var method = entry.method ? '<span class="pill">' + U.escapeHtml(entry.method) + '</span>' : '';
+      var stronger = entry.strongerWin ? '<span class="pill gold">над сильнее</span>' : '';
+      var rematch = entry.isRematch ? '<span class="pill blue">реванш</span>' : '';
 
-      return '<div class="f1-history-row fight-history-row">' +
-        '<div class="f1-history-week">Неделя ' + (entry.week || '—') + '</div>' +
-        '<div class="f1-history-text"><div class="split-row"><span><strong>' + U.escapeHtml(entry.result || '—') + '</strong> · ' + opponentButton + '</span><strong>' + U.escapeHtml(ovrLine) + '</strong></div>' +
-        '<div class="muted small">' + U.escapeHtml(context) + '</div>' +
-        '<div class="row">' + tags.join('') + '</div></div>' +
+      return '<div class="compact-fight-info history-compact-line" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap">' +
+        '<span class="pill">Неделя ' + (entry.week || '—') + '</span>' +
+        '<strong>' + U.escapeHtml(entry.result || '—') + '</strong>' +
+        opponentButton +
+        '<span class="pill ovr">' + U.escapeHtml(ovrLine) + '</span>' +
+        method +
+        stronger +
+        rematch +
+        '<span class="muted small">' + U.escapeHtml(context) + '</span>' +
       '</div>';
     }
 
-    return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + history.length + ' · ' + U.escapeHtml(filterLabel) + '</strong></div><div class="f1-history-list">' +
+    return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + history.length + ' · ' + U.escapeHtml(filterLabel) + '</strong></div><div class="f1-row-list history-compact-list">' +
       history.slice(0, limit || 80).map(row).join('') +
     '</div></div>';
   }
@@ -1070,13 +1073,19 @@
     function row(rivalry) {
       var fighter = U.getFighterById(state, rivalry.opponentId);
       var name = rivalry.opponentName || (fighter ? fighter.name : "Соперник");
-      var last = rivalry.lastTournamentName ? (' · ' + rivalry.lastTournamentName) : '';
-      return '<div class="split-row rivalry-row"><div><button class="small-btn" data-fighter="' + U.escapeHtml(rivalry.opponentId) + '">' + U.escapeHtml(name) + '</button>' +
-        '<div class="muted small">последний бой: ' + U.escapeHtml(rivalry.lastResult || "—") + last + '</div></div>' +
-        '<span><span class="pill gold">серия ' + U.escapeHtml(rivalry.series || "0-0-0") + '</span><span class="pill">' + U.escapeHtml(rivalry.status || "соперник") + '</span></span></div>';
+      var last = (rivalry.lastResult || "—") + (rivalry.lastTournamentName ? " · " + rivalry.lastTournamentName : "");
+      return '<div class="compact-fight-info rivalry-compact-line" style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap">' +
+        '<button class="small-btn" data-fighter="' + U.escapeHtml(rivalry.opponentId) + '">' + U.escapeHtml(name) + '</button>' +
+        '<span class="pill gold">серия ' + U.escapeHtml(rivalry.series || "0-0-0") + '</span>' +
+        '<span class="pill">' + U.escapeHtml(rivalry.status || "соперник") + '</span>' +
+        '<span class="pill">боёв ' + (Number(rivalry.fights) || 0) + '</span>' +
+        '<span class="pill">последний: ' + U.escapeHtml(last) + '</span>' +
+      '</div>';
     }
 
-    return '<div class="content-card rivalry-card"><div class="split-row"><h3>Соперничества</h3><strong>' + rivalries.length + '</strong></div>' + rivalries.slice(0, 8).map(row).join('') + '</div>';
+    return '<div class="content-card rivalry-card"><div class="split-row"><h3>Соперничества</h3><strong>' + rivalries.length + '</strong></div>' +
+      '<div class="f1-row-list">' + rivalries.slice(0, 8).map(row).join('') + '</div>' +
+    '</div>';
   }
 
   function renderFighterRivalryCard(state, fighter) {
@@ -1196,12 +1205,6 @@
       var metrics;
       if (!opponent || !preview) { return ""; }
       metrics = ['<span class="f1-metric ovr">OVR ' + U.statAverage(opponent.stats) + '</span>'];
-      if (State.formForFighter && State.formChanceBonus && State.formChanceBonus(opponent)) {
-        metrics.push(fighterFormMetric(opponent));
-      }
-      if (State.formForFighter && State.formChanceBonus && State.formChanceBonus(opponent)) {
-        metrics.push(fighterFormMetric(opponent));
-      }
       if (offer.isRematch || offer.label === "Реванш") {
         metrics.unshift('<span class="f1-metric gold">Реванш</span>');
       }
