@@ -2852,6 +2852,73 @@
   }
 
 
+  function normalizeGoalSystems(state, currentPlayer) {
+    var p = currentPlayer || player(state);
+    var validGoalTabs = { active: true, completed: true, coach: true };
+    var validMainTabs = { dashboard: true, profile: true, goals: true, fights: true, favorites: true, news: true, pro: true, training: true, economy: true, ranking: true, myclub: true, clubs: true, world: true, settings: true, people: true };
+    var goal;
+    var event;
+    var earned;
+    var defs;
+    if (!state) { return null; }
+
+    if (!validMainTabs[state.selectedTab || "dashboard"]) { state.selectedTab = "dashboard"; }
+    if (!validGoalTabs[state.goalsSubTab || "active"]) { state.goalsSubTab = "active"; }
+    state.nextCoachGoalWeek = Math.max(0, Number(state.nextCoachGoalWeek) || 0);
+
+    if (p) {
+      p.careerStats = p.careerStats && typeof p.careerStats === "object" ? p.careerStats : {};
+      p.careerMilestones = p.careerMilestones && typeof p.careerMilestones === "object" ? p.careerMilestones : {};
+      earned = p.careerMilestones;
+      defs = typeof milestoneDefs === "function" ? milestoneDefs() : [];
+      defs.forEach(function (def) {
+        var item = earned[def.id];
+        var reward = milestoneReward(def.id);
+        if (!item) { return; }
+        item.id = item.id || def.id;
+        item.label = item.label || def.label;
+        item.week = Number(item.week) || Number(state.week) || 1;
+        item.rewardPoints = Number(item.rewardPoints) || reward.points;
+        item.rewardMoney = Number(item.rewardMoney) || reward.money;
+      });
+    }
+
+    goal = state.coachGoal;
+    if (goal && typeof goal === "object") {
+      goal.progress = Math.max(0, Number(goal.progress) || 0);
+      goal.target = Math.max(1, Number(goal.target) || 1);
+      goal.rewardPoints = Number(goal.rewardPoints) || 1;
+      goal.rewardMoney = Number(goal.rewardMoney) || 0;
+      goal.startWeek = Number(goal.startWeek) || Number(state.week) || 1;
+      goal.dueWeek = Number(goal.dueWeek) || (goal.startWeek + 4);
+      if (goal.completed || goal.progress >= goal.target) {
+        goal.completedWeek = Number(goal.completedWeek) || Number(state.week) || 1;
+        state.nextCoachGoalWeek = Math.max(Number(state.nextCoachGoalWeek) || 0, goal.completedWeek + 4);
+        state.coachGoal = null;
+      }
+    } else {
+      state.coachGoal = null;
+    }
+
+    state.people = state.people instanceof Array ? state.people : [];
+    if (typeof normalizeRelationships === "function") { normalizeRelationships(state); }
+
+    event = state.relationshipEvent;
+    if (event && typeof event === "object") {
+      event.options = event.options instanceof Array ? event.options.filter(function (option) {
+        option.effects = option && option.effects instanceof Array ? option.effects.filter(function (effect) {
+          return effect && effect.type && isFinite(Number(effect.value));
+        }) : [];
+        return option && option.id && option.label && option.effects.length;
+      }) : [];
+      if (!event.id || !event.options.length) { state.relationshipEvent = null; }
+    } else {
+      state.relationshipEvent = null;
+    }
+
+    return state;
+  }
+
   function ensurePlayerSystems(state) {
     var p = player(state);
     if (!p) { return null; }
@@ -2865,6 +2932,7 @@
     p.lastExpenseWeek = Number(p.lastExpenseWeek) || 1;
     p.debtStartWeek = Number(p.debtStartWeek) || 0;
     p.debtDeadlineWeek = Number(p.debtDeadlineWeek) || 0;
+    normalizeGoalSystems(state, p);
     return p;
   }
 
@@ -3337,9 +3405,9 @@
         id: def.id,
         label: def.label,
         done: !!item,
-        week: item ? item.week : 0,
-        rewardPoints: item ? item.rewardPoints : reward.points,
-        rewardMoney: item ? item.rewardMoney : reward.money
+        week: item ? (Number(item.week) || 0) : 0,
+        rewardPoints: item ? (Number(item.rewardPoints) || reward.points) : reward.points,
+        rewardMoney: item ? (Number(item.rewardMoney) || reward.money) : reward.money
       };
     });
   }
@@ -3698,6 +3766,115 @@
     state.feed = "Потрачено 1 очко. Улучшен навык: " + U.getStatLabel(statKey) + ".";
   }
 
+  function isPodiumAwardPlace(place) {
+    return place === "1 место" || place === "2 место" || place === "3 место";
+  }
+
+  function normalizeAwardPlaceStrict(value, label, medal) {
+    var place = String(value || "").trim();
+    var text = (String(label || "") + " " + String(medal || "")).toLowerCase();
+    if (place === "1 место" || place === "2 место" || place === "3 место") { return place; }
+    if (/^(1|2|3)\s*мест/.test(place)) { return place.slice(0, 1) + " место"; }
+    if (place && !isPodiumAwardPlace(place)) { return ""; }
+    if (/победитель|gold|золото|🥇/.test(text) && text.indexOf("место ·") === -1 && text.indexOf("место ") === -1) { return "1 место"; }
+    if (/серебро|silver|🥈/.test(text)) { return "2 место"; }
+    if (/бронза|bronze|🥉/.test(text)) { return "3 место"; }
+    return "";
+  }
+
+  function podiumMedalFromPlaceStrict(place) {
+    if (place === "1 место") { return "gold"; }
+    if (place === "2 место") { return "silver"; }
+    if (place === "3 место") { return "bronze"; }
+    return "";
+  }
+
+  function podiumPrefixFromPlaceStrict(place) {
+    if (place === "1 место") { return "Победитель"; }
+    if (place === "2 место") { return "Серебро"; }
+    if (place === "3 место") { return "Бронза"; }
+    return "";
+  }
+
+  function cleanTournamentAwardLabelStrict(label, place) {
+    var text = String(label || "").trim();
+    var title = text.replace(/^(🥇|🥈|🥉)\s*/, "").trim();
+    title = title.replace(/^(Победитель|Серебро|Бронза|1 место|2 место|3 место)\s*·\s*/i, "").trim();
+    title = title.replace(/^Турнир:\s*/i, "").trim();
+    title = title.replace(/^Место\s*·\s*/i, "").trim();
+    title = title.replace(/\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место).*$/i, "").trim();
+    title = title.replace(/,\s*\$.*$/i, "").trim();
+    if (!title) { title = "Турнир"; }
+    return podiumPrefixFromPlaceStrict(place) + " · " + title;
+  }
+
+  function isBrokenTournamentAwardStrict(award) {
+    var label = String((award && (award.label || award.awardLabel)) || "");
+    var text = label.toLowerCase();
+    if (!award) { return true; }
+    if (/^\s*место\s*·/i.test(label)) { return true; }
+    if (text.indexOf("· место ·") !== -1) { return true; }
+    if (text.indexOf("турнир:") !== -1 && text.indexOf("место") !== -1 && text.indexOf("1 место") === -1 && text.indexOf("2 место") === -1 && text.indexOf("3 место") === -1) { return true; }
+    return false;
+  }
+
+  function cleanAmateurAwardList(list) {
+    var seen = {};
+    return (list instanceof Array ? list : []).filter(function (award) {
+      var place;
+      var isAmateur;
+      var key;
+      if (!award) { return false; }
+      isAmateur = award.source === "amateur" || !!award.competitionId || !!award.place || !!award.medal;
+      if (isAmateur) {
+        place = normalizeAwardPlaceStrict(award.place || "", award.label || award.awardLabel || "", award.medal || "");
+        if (!isPodiumAwardPlace(place)) { return false; }
+        if (isBrokenTournamentAwardStrict(award)) { return false; }
+        award.place = place;
+        award.medal = podiumMedalFromPlaceStrict(place);
+        award.label = cleanTournamentAwardLabelStrict(award.label || award.awardLabel || "", place);
+      }
+      key = [award.source || "", award.competitionId || "", award.place || "", award.label || "", Number(award.week) || 0].join("|");
+      if (seen[key]) { return false; }
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function cleanAmateurMedalList(list) {
+    return (list instanceof Array ? list : []).filter(function (medal) {
+      var place = normalizeAwardPlaceStrict(medal && medal.place, medal && (medal.awardLabel || medal.label), medal && medal.medal);
+      if (!isPodiumAwardPlace(place)) { return false; }
+      if (isBrokenTournamentAwardStrict(medal)) { return false; }
+      medal.place = place;
+      medal.medal = podiumMedalFromPlaceStrict(place);
+      medal.awardLabel = cleanTournamentAwardLabelStrict(medal.awardLabel || medal.label || "", place);
+      return true;
+    });
+  }
+
+  function cleanBadTournamentCareerLog(list) {
+    return (list instanceof Array ? list : []).filter(function (entry) {
+      var text = String((entry && entry.text) || "");
+      var meta = entry && entry.meta ? entry.meta : {};
+      var place = normalizeAwardPlaceStrict(meta.place || "", text, "");
+      if (meta.competitionId && /Турнир:/i.test(text) && !isPodiumAwardPlace(place)) { return false; }
+      if (/Турнир:/i.test(text) && /·\s*Место\s*·/i.test(text)) { return false; }
+      return true;
+    });
+  }
+
+  function normalizeTournamentAwards(state) {
+    var roster = state && state.roster instanceof Array ? state.roster : [];
+    var i;
+    if (state && state.amateurPath) { state.amateurPath.medals = cleanAmateurMedalList(state.amateurPath.medals); }
+    for (i = 0; i < roster.length; i += 1) {
+      if (!roster[i]) { continue; }
+      roster[i].awards = cleanAmateurAwardList(roster[i].awards);
+      roster[i].careerLog = cleanBadTournamentCareerLog(roster[i].careerLog);
+    }
+  }
+
   function getFighterAwards(state, fighter) {
     var result = [];
     var seen = {};
@@ -3771,6 +3948,8 @@
 
       place = normalizePlace(award.place || "", award.label || "", award.medal || "");
       if (!place && award.medal) { place = placeFromMedal(award.medal); }
+      // visible podium awards only
+      if ((award.source === "amateur" || award.competitionId || award.place || award.medal) && !isPodiumAwardPlace(place)) { return; }
       medal = award.medal || medalFromPlace(place);
 
       item = {
@@ -3803,6 +3982,9 @@
       var place = meta.place || "";
       var label = "";
       if (!text) { return; }
+      // bad tournament career log guard
+      if (/Турнир:/i.test(text) && /·\s*Место\s*·/i.test(text)) { return; }
+      if (meta.competitionId && !isPodiumAwardPlace(place)) { return; }
 
       match = text.match(/^Турнир:\s*(.+?)\s*·\s*(Победитель|Серебро|Бронза|1 место|2 место|3 место)/i);
       if (match) {
@@ -3872,29 +4054,23 @@
   function addFighterAward(state, fighter, awardLabel, source, meta) {
     var data = meta || {};
     var awardSource = source || "award";
-    var medal = data.medal || (data.place === "1 место" ? "gold" : (data.place === "2 место" ? "silver" : (data.place === "3 место" ? "bronze" : "")));
+    var place = normalizeAwardPlaceStrict(data.place || "", awardLabel || "", data.medal || "");
+    var medal;
+    var cleanLabel;
     var exists;
     if (!fighter || !awardLabel) { return; }
+    if (awardSource === "amateur" || data.competitionId || data.place) {
+      if (!isPodiumAwardPlace(place)) { return; }
+      cleanLabel = cleanTournamentAwardLabelStrict(awardLabel, place);
+      medal = podiumMedalFromPlaceStrict(place);
+    } else {
+      cleanLabel = awardLabel;
+      medal = data.medal || "";
+    }
     fighter.awards = fighter.awards instanceof Array ? fighter.awards : [];
-
-    exists = fighter.awards.some(function (award) {
-      return award.label === awardLabel &&
-        award.source === awardSource &&
-        (award.competitionId || "") === (data.competitionId || "") &&
-        (award.place || "") === (data.place || "") &&
-        (Number(award.week) || 0) === (Number(state.week) || 0);
-    });
-
+    exists = fighter.awards.some(function (award) { return award.label === cleanLabel && award.source === awardSource && (award.competitionId || "") === (data.competitionId || "") && (award.place || "") === (place || data.place || "") && (Number(award.week) || 0) === (Number(state.week) || 0); });
     if (!exists) {
-      fighter.awards.unshift({
-        id: U.uid("award"),
-        week: state.week,
-        label: awardLabel,
-        source: awardSource,
-        medal: medal,
-        competitionId: data.competitionId || "",
-        place: data.place || ""
-      });
+      fighter.awards.unshift({ id: U.uid("award"), week: state.week, label: cleanLabel, source: awardSource, medal: medal, competitionId: data.competitionId || "", place: place || data.place || "" });
       if (fighter.awards.length > 60) { fighter.awards.length = 60; }
     }
   }
@@ -4058,6 +4234,7 @@
     state.amateurPath = state.amateurPath && typeof state.amateurPath === "object" ? state.amateurPath : { completed: {}, medals: [], lastCompetitionWeekById: {}, points: 0 };
     state.amateurPath.completed = state.amateurPath.completed || {};
     state.amateurPath.medals = state.amateurPath.medals instanceof Array ? state.amateurPath.medals : [];
+    normalizeTournamentAwards(state);
     state.amateurPath.lastCompetitionWeekById = state.amateurPath.lastCompetitionWeekById || {};
     state.amateurPath.points = Number(state.amateurPath.points) || 0;
     state.offers = state.offers instanceof Array ? state.offers : [];
@@ -4087,7 +4264,8 @@
       state.roster[i].titles = state.roster[i].titles instanceof Array ? state.roster[i].titles : [];
       state.roster[i].careerLog = state.roster[i].careerLog instanceof Array ? state.roster[i].careerLog : [];
       state.roster[i].storyFlags = state.roster[i].storyFlags instanceof Array ? state.roster[i].storyFlags : [];
-      state.roster[i].awards = state.roster[i].awards instanceof Array ? state.roster[i].awards : [];
+      state.roster[i].awards = cleanAmateurAwardList(state.roster[i].awards instanceof Array ? state.roster[i].awards : []);
+      state.roster[i].careerLog = cleanBadTournamentCareerLog(state.roster[i].careerLog);
       state.roster[i].trainingPoints = Number(state.roster[i].trainingPoints) || 0;
       state.roster[i].birthMonth = state.roster[i].birthMonth || U.randomInt(1, 12);
       state.roster[i].birthWeek = state.roster[i].birthWeek || U.randomInt(1, 4);
@@ -4263,6 +4441,7 @@ restPlayer: restPlayer,
     applyRelationshipChoice: applyRelationshipChoice,
     maybeCreateRelationshipEvent: maybeCreateRelationshipEvent,
     adjustRelationship: adjustRelationship,
-    normalizeRelationships: normalizeRelationships
+    normalizeRelationships: normalizeRelationships,
+    normalizeGoalSystems: normalizeGoalSystems
   };
 }());

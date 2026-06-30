@@ -601,6 +601,14 @@
     return buildFightModal(state, session, "");
   }
 
+  function isPodiumPlace(place) {
+    return place === "1 место" || place === "2 место" || place === "3 место";
+  }
+
+  function visibleTournamentPlace(place) {
+    return isPodiumPlace(place) ? place : "";
+  }
+
   function placeNumber(place) {
     var match = String(place || "").match(/\d+/);
     return match ? Math.max(1, Number(match[0]) || 1) : 0;
@@ -613,39 +621,33 @@
 
   function tournamentRewardShare(place) {
     var n = placeNumber(place);
-    if (n <= 1) { return 1.00; }
+    if (n === 1) { return 1.00; }
     if (n === 2) { return 0.55; }
     if (n === 3) { return 0.34; }
-    if (n === 4) { return 0.22; }
-    if (n <= 8) { return 0.10; }
-    if (n <= 16) { return 0.045; }
-    if (n <= 32) { return 0.020; }
-    if (n <= 64) { return 0.010; }
-    return 0.004;
+    return 0;
   }
 
   function tournamentXpReward(comp, place) {
     var n = placeNumber(place);
     var base = Math.max(1, Number(comp.rewardRating) || 1);
     var share = tournamentRewardShare(place);
-    if (!n) { return 0; }
-    return Math.max(1, Math.round(base * 8 * share + base * (n <= 4 ? 1 : 0.35)));
+    if (n !== 1 && n !== 2 && n !== 3) { return 0; }
+    return Math.max(1, Math.round(base * 8 * share + base));
   }
 
   
 
   function tournamentMoneyReward(comp, place) {
     var base = Math.max(120, (Number(comp.rewardRating) || 1) * 260);
-    var n = placeNumber(place);
-    if (!n) { return 0; }
-    return Math.max(n <= 32 ? 10 : 0, Math.round(base * tournamentRewardShare(place)));
+    if (!isPodiumPlace(place)) { return 0; }
+    return Math.max(1, Math.round(base * tournamentRewardShare(place)));
   }
 
   function npcAwardLabel(comp, place) {
     if (place === "1 место") { return "Победитель · " + comp.label; }
     if (place === "2 место") { return "Серебро · " + comp.label; }
     if (place === "3 место") { return "Бронза · " + comp.label; }
-    return comp.label + " · " + place;
+    return "";
   }
 
   function npcMedalForPlace(place) {
@@ -657,14 +659,11 @@
 
   function awardNpcPlacement(state, fighter, comp, place) {
     var label;
-    if (!fighter || fighter.isPlayer || !place) { return; }
+    if (!fighter || fighter.isPlayer || !isPodiumPlace(place)) { return; }
     label = npcAwardLabel(comp, place);
+    if (!label) { return; }
     if (State.addFighterAward) {
-      State.addFighterAward(state, fighter, label, "amateur", {
-        medal: npcMedalForPlace(place),
-        competitionId: comp.id,
-        place: place
-      });
+      State.addFighterAward(state, fighter, label, "amateur", { medal: npcMedalForPlace(place), competitionId: comp.id, place: place });
     }
     fighter.careerLog = fighter.careerLog instanceof Array ? fighter.careerLog : [];
     fighter.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + label + ".", meta: { competitionId: comp.id, place: place } });
@@ -674,7 +673,6 @@
   function awardDirectOpponentPlacement(state, opponent, comp, playerPlace) {
     if (playerPlace === "1 место") { awardNpcPlacement(state, opponent, comp, "2 место"); }
     else if (playerPlace === "2 место") { awardNpcPlacement(state, opponent, comp, "1 место"); }
-    else if (playerPlace === "3 место") { awardNpcPlacement(state, opponent, comp, "4 место"); }
     else if (playerPlace === "4 место") { awardNpcPlacement(state, opponent, comp, "3 место"); }
   }
 
@@ -682,14 +680,21 @@
 
   function awardPlacement(state, comp, place, result) {
     var p = State.player(state);
-    var medal = place === "1 место" ? "gold" : (place === "2 место" ? "silver" : (place === "3 место" ? "bronze" : ""));
-    var prefix = place === "1 место" ? "Победитель" : (place === "2 место" ? "Серебро" : (place === "3 место" ? "Бронза" : "Место"));
-    var awardLabel = prefix + " · " + comp.label;
-    var moneyReward = tournamentMoneyReward(comp, place);
-    var xpReward = tournamentXpReward(comp, place);
-    var already = state.amateurPath.medals.some(function (medalItem) {
-      return medalItem.competitionId === comp.id && medalItem.place === place && medalItem.week === state.week;
-    });
+    var medal;
+    var prefix;
+    var awardLabel;
+    var moneyReward;
+    var xpReward;
+    var already;
+
+    if (!isPodiumPlace(place)) { return { moneyReward: 0, xpReward: 0 }; }
+
+    medal = place === "1 место" ? "gold" : (place === "2 место" ? "silver" : "bronze");
+    prefix = place === "1 место" ? "Победитель" : (place === "2 место" ? "Серебро" : "Бронза");
+    awardLabel = prefix + " · " + comp.label;
+    moneyReward = tournamentMoneyReward(comp, place);
+    xpReward = tournamentXpReward(comp, place);
+    already = state.amateurPath.medals.some(function (medalItem) { return medalItem.competitionId === comp.id && medalItem.place === place && medalItem.week === state.week; });
 
     if (already) { return { moneyReward: 0, xpReward: 0 }; }
 
@@ -697,33 +702,11 @@
     state.amateurPath.completed[comp.id] = true;
     state.amateurPath.points += xpReward;
     p.trainingPoints = (Number(p.trainingPoints) || 0) + xpReward;
-    state.amateurPath.medals.unshift({
-      id: U.uid("medal"),
-      week: state.week,
-      competitionId: comp.id,
-      label: comp.label,
-      awardLabel: awardLabel,
-      place: place,
-      result: result,
-      medal: medal,
-      moneyReward: moneyReward,
-      xpReward: xpReward
-    });
-
-    if (state.amateurPath.medals.length > 60) {
-      state.amateurPath.medals.length = 60;
-    }
-
-    if (State.addFighterAward) {
-      State.addFighterAward(state, p, awardLabel, "amateur", { medal: medal, competitionId: comp.id, place: place });
-    }
+    state.amateurPath.medals.unshift({ id: U.uid("medal"), week: state.week, competitionId: comp.id, label: comp.label, awardLabel: awardLabel, place: place, result: result, medal: medal, moneyReward: moneyReward, xpReward: xpReward });
+    if (state.amateurPath.medals.length > 60) { state.amateurPath.medals.length = 60; }
+    if (State.addFighterAward) { State.addFighterAward(state, p, awardLabel, "amateur", { medal: medal, competitionId: comp.id, place: place }); }
     if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
-    if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
-
-    if (p && p.careerLog) {
-      p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + ", $" + moneyReward + ", +" + xpReward + " опыта.", meta: { competitionId: comp.id, place: place } });
-    }
-
+    if (p && p.careerLog) { p.careerLog.unshift({ week: state.week, text: "Турнир: " + comp.label + " · " + awardLabel + ", $" + moneyReward + ", +" + xpReward + " опыта.", meta: { competitionId: comp.id, place: place } }); }
     return { moneyReward: moneyReward, xpReward: xpReward };
   }
 
@@ -829,7 +812,7 @@
       knockdown: roundData.knockdown,
       continueMode: continueMode,
       nextLabel: nextLabel,
-      finalPlace: finalPlace,
+      finalPlace: visibleTournamentPlace(finalPlace),
       alive: summarizeAlive(state, session),
       session: session
     };
@@ -916,7 +899,7 @@
       knockdown: payload.knockdown,
       continueMode: continueMode,
       nextLabel: nextLabel,
-      finalPlace: finalPlace,
+      finalPlace: visibleTournamentPlace(finalPlace),
       alive: summarizeAlive(state, session),
       session: session
     };
@@ -926,38 +909,18 @@
     var session = modal.session;
     var comp = getCompetition(session.competitionId);
     var place = session.finalPlace || "";
+    var visiblePlace = visibleTournamentPlace(place);
     var reward = { moneyReward: 0, xpReward: 0 };
 
-    if (session.continueMode === "next" || session.continueMode === "third") {
-      return buildFightModal(state, session, "");
-    }
+    if (session.continueMode === "next" || session.continueMode === "third") { return buildFightModal(state, session, ""); }
 
     state.amateurPath.lastCompetitionWeekById[comp.id] = state.week;
-    if (state.world && state.world.pendingTournamentInvite && state.world.pendingTournamentInvite.competitionId === comp.id) {
-      state.world.pendingTournamentInvite = null;
-    }
-    if (State.adjustFatigue && session.pendingFatigue) {
-      State.adjustFatigue(state, Math.min(100, session.pendingFatigue), "Турнир завершён");
-      session.pendingFatigue = 0;
-    }
+    if (state.world && state.world.pendingTournamentInvite && state.world.pendingTournamentInvite.competitionId === comp.id) { state.world.pendingTournamentInvite = null; }
+    if (State.adjustFatigue && session.pendingFatigue) { State.adjustFatigue(state, Math.min(100, session.pendingFatigue), "Турнир завершён"); session.pendingFatigue = 0; }
+    if (visiblePlace && !session.awarded) { reward = awardPlacement(state, comp, visiblePlace, visiblePlace); session.awarded = true; }
 
-    if (place && !session.awarded) {
-      reward = awardPlacement(state, comp, place, place);
-      session.awarded = true;
-    }
-
-    state.feed = place ? ("Турнир завершён: " + comp.label + " · " + place + ". Награда $" + reward.moneyReward + ", опыт +" + reward.xpReward + ".") : ("Вылет из турнира: " + comp.label + ".");
-    return {
-      type: "tournamentFinal",
-      label: comp.label,
-      result: place ? "Турнир завершён" : "Вылет",
-      place: place,
-      reward: reward.moneyReward,
-      xpReward: reward.xpReward,
-      fights: session.fights,
-      blocked: false,
-      alive: summarizeAlive(state, session)
-    };
+    state.feed = visiblePlace ? ("Турнир завершён: " + comp.label + " · " + visiblePlace + ". Награда $" + reward.moneyReward + ", опыт +" + reward.xpReward + ".") : ("Вылет из турнира: " + comp.label + ".");
+    return { type: "tournamentFinal", label: comp.label, result: visiblePlace ? "Турнир завершён" : "Вылет", place: visiblePlace, reward: reward.moneyReward, xpReward: reward.xpReward, fights: session.fights, blocked: false, alive: summarizeAlive(state, session) };
   }
 
   function completeCompetition() {
