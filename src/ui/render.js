@@ -794,9 +794,7 @@
 
   function renderRelationshipEventCard(state) {
     var event = state.relationshipEvent || null;
-    if (!event) {
-      return '<div class="content-card"><h3>Событие общения</h3><div class="muted small">Новых личных событий нет. Они появляются редко, раз в несколько недель.</div></div>';
-    }
+    if (!event) { return ""; }
 
     function optionHtml(option) {
       var effects = (option.effects || []).map(relationshipEffectHtml).filter(Boolean).join('');
@@ -830,7 +828,7 @@
   function renderCareerMilestonesCard(state, mode) {
     var list = State.careerMilestones ? State.careerMilestones(state) : [];
     var active = list.filter(function (item) { return !item.done; });
-    var completed = list.filter(function (item) { return item.done; });
+    var completed = list.filter(function (item) { return item.done; }).sort(function (left, right) { return (Number(right.week) || 0) - (Number(left.week) || 0); });
     var currentMode = mode || "active";
     var rows;
 
@@ -852,17 +850,15 @@
   }
 
   function renderCoachGoalCard(state) {
-    var goal = state.coachGoal || null;
+    var goal;
     var progress;
     var target;
     var percent;
     var reward;
     var nextWeek;
 
-    if (goal && goal.completed) {
-      if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
-      goal = null;
-    }
+    if (State.normalizeGoalSystems) { State.normalizeGoalSystems(state); }
+    goal = state.coachGoal || null;
 
     if (!goal && State.ensureCoachGoal) {
       goal = State.ensureCoachGoal(state);
@@ -887,6 +883,10 @@
 
   function renderGoalsTab(state) {
     var sub = state.goalsSubTab || "active";
+    if (["active", "completed", "coach"].indexOf(sub) === -1) {
+      sub = "active";
+      state.goalsSubTab = sub;
+    }
 
     function subButton(id, label) {
       return '<button class="small-btn ' + (sub === id ? 'primary' : '') + '" data-goals-subtab="' + id + '">' + label + '</button>';
@@ -955,8 +955,39 @@
       '<div class="content-card"><h3>' + (p.trackId === 'amateur' ? 'Награды' : 'Титулы') + '</h3>' + (p.trackId === 'amateur' ? renderFighterAwards(state, p) : renderFighterTitles(state, p)) + '</div>' +
       '<div class="skills" style="grid-column:1/-1"><div class="label">Навыки</div>' + renderStatProgressRows(p) + '</div>' +
       renderTrackRecords(p) +
+      renderFightHistoryCard(state, p, 12) +
       '<div class="content-card profile-actions-card" style="grid-column:1/-1"><h3>Управление карьерой</h3><div class="row"><button class="primary" data-profile-modal="travel">Перелёт</button><button data-profile-modal="weight">Смена веса</button><button data-profile-modal="path">Смена пути</button></div></div>' +
     '</div>';
+  }
+
+  function renderFightHistoryCard(state, fighter, limit) {
+    var history;
+    if (State.normalizeFightHistory) { State.normalizeFightHistory(state, fighter); }
+    history = fighter && fighter.fightHistory instanceof Array ? fighter.fightHistory : [];
+    if (!history.length) {
+      return '<div class="content-card" style="grid-column:1/-1"><h3>История боёв</h3><div class="muted small">Пока нет записанных боёв.</div></div>';
+    }
+
+    function row(entry) {
+      var opponentButton = entry.opponentId ? '<button class="small-btn" data-fighter="' + U.escapeHtml(entry.opponentId) + '">' + U.escapeHtml(entry.opponentName || "Соперник") + '</button>' : U.escapeHtml(entry.opponentName || "Соперник");
+      var context = entry.isTournament ? ('Турнир: ' + (entry.tournamentName || 'турнир') + (entry.roundLabel ? ' · ' + entry.roundLabel : '')) : (entry.source === "contract" ? "Контрактный бой" : "Обычный бой");
+      var ovrLine = 'OVR ' + (Number(entry.playerOvr) || 0) + ' vs ' + (Number(entry.opponentOvr) || 0);
+      var tags = [];
+      if (entry.strongerWin) { tags.push('<span class="pill gold">победа над сильнее</span>'); }
+      if (entry.isRematch) { tags.push('<span class="pill blue">реванш</span>'); }
+      if (entry.method) { tags.push('<span class="pill">' + U.escapeHtml(entry.method) + '</span>'); }
+
+      return '<div class="f1-history-row fight-history-row">' +
+        '<div class="f1-history-week">Неделя ' + (entry.week || '—') + '</div>' +
+        '<div class="f1-history-text"><div class="split-row"><span><strong>' + U.escapeHtml(entry.result || '—') + '</strong> · ' + opponentButton + '</span><strong>' + U.escapeHtml(ovrLine) + '</strong></div>' +
+        '<div class="muted small">' + U.escapeHtml(context) + '</div>' +
+        '<div class="row">' + tags.join('') + '</div></div>' +
+      '</div>';
+    }
+
+    return '<div class="content-card" style="grid-column:1/-1"><div class="split-row"><h3>История боёв</h3><strong>' + history.length + '</strong></div><div class="f1-history-list">' +
+      history.slice(0, limit || 12).map(row).join('') +
+    '</div></div>';
   }
 
   function renderTrackRecords(fighter) {

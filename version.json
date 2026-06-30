@@ -1,7 +1,7 @@
 {
-  "version": "2.8.10.3",
-  "mode": "tournament-awards-podium-fix",
-  "cacheVersion": "fight-simulator-tournament-awards-podium-fix-2.8.10.3",
+  "version": "2.8.11.1",
+  "mode": "fight-history-hotfix",
+  "cacheVersion": "fight-simulator-fight-history-hotfix-2.8.11.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
