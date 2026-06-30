@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "relationship-choice-events-hotfix-2.8.9.1",
-  "saveSchemaVersion": 2891,
+  "appVersion": "goals-tab-layout-2.8.9.2",
+  "saveSchemaVersion": 2892,
   "tracks": {
     "amateur": {
       "id": "amateur",

@@ -252,6 +252,7 @@
     var tabs = [
       ["dashboard", "🏠 Обзор"],
       ["profile", "🥊 Профиль"],
+      ["goals", "🎯 Цели"],
       ["favorites", "⭐ Избранные"],
       ["news", "📰 Новости"],
       ["training", "📈 Статы"],
@@ -263,10 +264,10 @@
     ];
 
     if (p.trackId !== "pro") {
-      tabs.splice(2, 0, ["fights", "🔥 Бои"]);
+      tabs.splice(3, 0, ["fights", "🔥 Бои"]);
     }
     if (p.trackId === "pro") {
-      tabs.splice(3, 0, ["pro", "💼 Профи"]);
+      tabs.splice(4, 0, ["pro", "💼 Профи"]);
     }
     if (p.trackId === "amateur") {
       tabs.splice(tabs.length - 2, 0, ["world", "🌍 Люб. путь"]);
@@ -794,7 +795,7 @@
   function renderRelationshipEventCard(state) {
     var event = state.relationshipEvent || null;
     if (!event) {
-      return '<div class="content-card"><h3>Событие недели</h3><div class="muted small">Новых личных событий нет. Они появляются редко, раз в несколько недель.</div></div>';
+      return '<div class="content-card"><h3>Событие общения</h3><div class="muted small">Новых личных событий нет. Они появляются редко, раз в несколько недель.</div></div>';
     }
 
     function optionHtml(option) {
@@ -802,19 +803,10 @@
       return '<button class="relationship-choice-btn" data-relationship-choice="' + U.escapeHtml(option.id) + '"><span>' + U.escapeHtml(option.label) + '</span><small>' + effects + '</small></button>';
     }
 
-    return '<div class="content-card relationship-event-card"><div class="split-row"><h3>Событие недели</h3><strong>' + U.escapeHtml(event.personName || '') + '</strong></div>' +
+    return '<div class="content-card relationship-event-card"><div class="split-row"><h3>Событие общения</h3><strong>' + U.escapeHtml(event.personName || '') + '</strong></div>' +
       '<div class="name-line">' + U.escapeHtml(event.title || 'Событие') + '</div>' +
       '<div class="muted small">' + U.escapeHtml(event.text || '') + '</div>' +
       '<div class="relationship-choice-list">' + (event.options || []).map(optionHtml).join('') + '</div>' +
-    '</div>';
-  }
-
-  function renderRelationshipSummaryCard(state) {
-    var summary = State.relationshipSummary ? State.relationshipSummary(state) : { count: (state.people || []).length, coach: null, rival: null };
-    return '<div class="content-card"><h3>Связи</h3>' +
-      '<div class="split-row"><span>Людей</span><strong>' + (summary.count || 0) + '</strong></div>' +
-      '<div class="split-row"><span>Тренер</span><strong>' + (summary.coach ? U.escapeHtml(relationshipScoreText(summary.coach)) : '—') + '</strong></div>' +
-      '<div class="split-row"><span>Главный соперник</span><strong>' + (summary.rival ? U.escapeHtml(relationshipScoreText(summary.rival)) : '—') + '</strong></div>' +
     '</div>';
   }
 
@@ -837,15 +829,24 @@
 
   function renderCareerMilestonesCard(state) {
     var list = State.careerMilestones ? State.careerMilestones(state) : [];
-    var done = list.filter(function (item) { return item.done; }).length;
-    var rows = list.slice(0, 8).map(function (item) {
-      return '<div class="split-row"><span>' + (item.done ? '✓ ' : '· ') + U.escapeHtml(item.label) + '</span><strong>' + (item.done ? ('нед. ' + item.week) : '—') + '</strong></div>';
-    }).join("");
-    return '<div class="content-card"><h3>Карьерные вехи</h3>' +
-      '<div class="split-row"><span>Выполнено</span><strong>' + done + '/' + list.length + '</strong></div>' +
-      rows +
-      (list.length > 8 ? '<div class="muted small">+ ещё ' + (list.length - 8) + ' целей</div>' : '') +
-    '</div>';
+    var active = list.filter(function (item) { return !item.done; });
+    var completed = list.filter(function (item) { return item.done; });
+    var activeRows;
+    var doneRows;
+
+    function activeRow(item) {
+      return '<div class="split-row"><span>· ' + U.escapeHtml(item.label) + '</span><strong>+' + (Number(item.rewardPoints) || 0) + ' очк. · $' + (Number(item.rewardMoney) || 0) + '</strong></div>';
+    }
+
+    function doneRow(item) {
+      return '<div class="split-row"><span>✓ ' + U.escapeHtml(item.label) + '</span><strong>нед. ' + (item.week || '—') + ' · +' + (Number(item.rewardPoints) || 0) + ' очк. · $' + (Number(item.rewardMoney) || 0) + '</strong></div>';
+    }
+
+    activeRows = active.length ? active.slice(0, 12).map(activeRow).join("") : '<div class="muted small">Активных карьерных вех пока нет.</div>';
+    doneRows = completed.length ? completed.slice(0, 16).map(doneRow).join("") : '<div class="muted small">Выполненных карьерных вех пока нет.</div>';
+
+    return '<div class="content-card"><h3>Активные вехи</h3>' + activeRows + '</div>' +
+      '<div class="content-card"><h3>Выполненные вехи</h3><div class="split-row"><span>Выполнено</span><strong>' + completed.length + '/' + list.length + '</strong></div>' + doneRows + '</div>';
   }
 
   function renderCoachGoalCard(state) {
@@ -872,6 +873,13 @@
     '</div>';
   }
 
+  function renderGoalsTab(state) {
+    return '<div class="grid two goals-grid">' +
+      renderCoachGoalCard(state) +
+      renderCareerMilestonesCard(state) +
+    '</div>';
+  }
+
   function renderDashboardTab(state) {
     var p = State.player(state);
     var club = window.FS.Clubs ? window.FS.Clubs.playerClub(state) : null;
@@ -891,10 +899,6 @@
         '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
       '</div>' +
       renderCareerStatsCard(state) +
-      renderCareerMilestonesCard(state) +
-      renderCoachGoalCard(state) +
-      renderRelationshipEventCard(state) +
-      renderRelationshipSummaryCard(state) +
     '</div>';
   }
 
@@ -1454,13 +1458,13 @@
     var roleLabels = Data.peopleRoles || { coach: "Тренер", playerCoach: "Тренер", clubmate: "Одноклубник", formerOpponent: "Бывший соперник", rival: "Соперник", promoter: "Промоутер", teamCoach: "Тренер сборной" };
     if (State.normalizeRelationships) { State.normalizeRelationships(state); }
     if (!people.length) {
-      return '<div class="content-card"><h3>Люди</h3><div class="muted small">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>';
+      return renderRelationshipEventCard(state) + "<div class=\"content-card\"><h3>Люди</h3><div class=\"muted small\">Пока никого нет. Выбери зал — сюда добавятся тренер и иногда одноклубники.</div></div>";
     }
-    return '<div class="content-card"><h3>Люди</h3><div class="people-list">' + people.map(function (person) {
+    return renderRelationshipEventCard(state) + "<div class=\"content-card\"><h3>Люди</h3><div class=\"people-list\">" + people.map(function (person) {
       var relation = Number(person.relationship) || 0;
-      var last = person.lastInteraction ? '<div class="muted small">Последнее: ' + U.escapeHtml(person.lastInteraction) + '</div>' : '';
-      return '<div class="split-row"><div><button class="small-btn" data-person="' + U.escapeHtml(person.id) + '">' + U.escapeHtml(person.name || 'Без имени') + '</button><div class="muted small">' + U.escapeHtml(person.note || '') + '</div>' + last + '</div><span><span class="pill">' + U.escapeHtml(roleLabels[person.role] || person.role || 'Контакт') + '</span><span class="pill">Отношение ' + relation + '/100</span></span></div>';
-    }).join('') + '</div></div>';
+      var last = person.lastInteraction ? '<div class=\"muted small\">Последнее: ' + U.escapeHtml(person.lastInteraction) + '</div>' : '';
+      return "<div class=\"split-row\"><div><button class=\"small-btn\" data-person=\"" + U.escapeHtml(person.id) + "\">" + U.escapeHtml(person.name || "Без имени") + "</button><div class=\"muted small\">" + U.escapeHtml(person.note || "") + "</div>" + last + "</div><span><span class=\"pill\">" + U.escapeHtml(roleLabels[person.role] || person.role || "Контакт") + "</span><span class=\"pill\">Отношение " + relation + "/100</span></span></div>";
+    }).join("") + "</div></div>";
   }
 
   function renderSettingsTab(state) {
@@ -1483,6 +1487,7 @@
 
     if (tab === "dashboard") { content = renderDashboardTab(state); }
     else if (tab === "profile") { content = renderProfileTab(state); }
+    else if (tab === "goals") { content = renderGoalsTab(state); }
     else if (tab === "fights") { content = renderFightsTab(state); }
     else if (tab === "favorites") { content = renderFavoritesTab(state); }
     else if (tab === "news") { content = renderNewsTab(state); }
@@ -1526,6 +1531,7 @@
           '<div class="f1-more-grid">' +
             (p.trackId === 'amateur' ? moreItem('world', '🌍', 'Люб. путь') : '') +
             (p.trackId === 'pro' ? moreItem('pro', '💼', 'Профи') : '') +
+            moreItem('goals', '🎯', 'Цели') +
             moreItem('training', '📈', 'Статы') +
             moreItem('ranking', '🏆', 'Рейтинг') +
             moreItem('myclub', '🏟️', 'Мой клуб') +

@@ -1,7 +1,7 @@
 {
-  "version": "relationship-choice-events-hotfix-2.8.9.1",
-  "mode": "relationship-choice-events-hotfix",
-  "cacheVersion": "fight-simulator-relationship-choice-events-hotfix-2.8.9.1",
+  "version": "goals-tab-layout-2.8.9.2",
+  "mode": "goals-tab-layout",
+  "cacheVersion": "fight-simulator-goals-tab-layout-2.8.9.2",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

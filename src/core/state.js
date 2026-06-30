@@ -3025,6 +3025,158 @@
 
   
 
+  function normalizePersonRelationship(state, person) {
+    var score;
+    if (!person || !person.id) { return null; }
+    score = Number(person.relationship);
+    if (!isFinite(score)) { score = Number(person.relationshipScore); }
+    if (!isFinite(score)) { score = 0; }
+    person.relationship = U.clamp(Math.round(score), -100, 100);
+    person.lastInteractionWeek = Number(person.lastInteractionWeek) || Number(state.week) || 1;
+    person.lastInteraction = person.lastInteraction || "";
+    return person;
+  }
+
+  function normalizeRelationships(state) {
+    var i;
+    state.people = state.people instanceof Array ? state.people : [];
+    for (i = 0; i < state.people.length; i += 1) { normalizePersonRelationship(state, state.people[i]); }
+    state.relationshipEvent = state.relationshipEvent && typeof state.relationshipEvent === "object" ? state.relationshipEvent : null;
+    state.nextRelationshipEventWeek = Number(state.nextRelationshipEventWeek) || ((Number(state.week) || 1) + U.randomInt(5, 10));
+    return state.people;
+  }
+
+  function findPerson(state, personId) {
+    var list = normalizeRelationships(state);
+    var i;
+    for (i = 0; i < list.length; i += 1) { if (list[i] && list[i].id === personId) { return list[i]; } }
+    return null;
+  }
+
+  function adjustRelationship(state, personId, amount, text) {
+    var person = findPerson(state, personId);
+    var delta = Math.round(Number(amount) || 0);
+    if (!person || !delta) { return 0; }
+    person.relationship = U.clamp((Number(person.relationship) || 0) + delta, -100, 100);
+    person.lastInteractionWeek = state.week;
+    person.lastInteraction = text || (delta > 0 ? "отношение выросло" : "отношение ухудшилось");
+    return person.relationship;
+  }
+
+  function relationshipEventPeople(state) {
+    var people = normalizeRelationships(state).filter(function (person) {
+      return person && person.id && person.name && person.personType && ["coach", "fighter"].indexOf(person.personType) !== -1;
+    });
+    people.sort(function (left, right) {
+      function weight(person) {
+        if (person.role === "playerCoach") { return 100; }
+        if (person.role === "formerOpponent") { return 85; }
+        if (person.role === "clubmate") { return 65; }
+        if (person.role === "teamCoach") { return 70; }
+        return 40;
+      }
+      return weight(right) - weight(left) || (Number(right.lastInteractionWeek) || 0) - (Number(left.lastInteractionWeek) || 0);
+    });
+    return people.slice(0, 16);
+  }
+
+  function relationshipEffect(type, value, label, personId) {
+    return { type: type, value: Number(value) || 0, label: label || "", personId: personId || "" };
+  }
+
+  function makeRelationshipEventForPerson(state, person) {
+    var role = person.role || "";
+    var personId = person.id;
+    var title;
+    var text;
+    var options;
+
+    if (role === "playerCoach" || person.personType === "coach") {
+      title = "После тренировки";
+      text = person.name + " предлагает остаться и разобрать ошибки. Можно вложиться в работу или восстановиться.";
+      options = [
+        { id: "coach_stay", label: "Остаться с тренером", effects: [ relationshipEffect("points", 1, "очки"), relationshipEffect("relationship", 3, "отношение", personId), relationshipEffect("fatigue", 8, "усталость") ] },
+        { id: "coach_rest", label: "Сказать, что устал", effects: [ relationshipEffect("fatigue", -8, "усталость"), relationshipEffect("relationship", -2, "отношение", personId) ] }
+      ];
+    } else if (role === "formerOpponent") {
+      title = "Сообщение от соперника";
+      text = person.name + " пишет после последнего боя. Можно ответить спокойно, резко или не отвечать.";
+      options = [
+        { id: "rival_calm", label: "Ответить спокойно", effects: [ relationshipEffect("relationship", 4, "отношение", personId) ] },
+        { id: "rival_sharp", label: "Ответить резко", effects: [ relationshipEffect("relationship", -5, "отношение", personId), relationshipEffect("points", 1, "очки") ] },
+        { id: "rival_ignore", label: "Игнорировать", effects: [ relationshipEffect("relationship", -1, "отношение", personId) ] }
+      ];
+    } else {
+      title = "Вечер после зала";
+      text = person.name + " зовёт провести вечер после тренировки. Можно пойти, отказаться или остаться на дополнительную работу.";
+      options = [
+        { id: "clubmate_go", label: "Пойти", effects: [ relationshipEffect("relationship", 5, "отношение", personId), relationshipEffect("money", -200, "деньги"), relationshipEffect("fatigue", 10, "усталость") ] },
+        { id: "clubmate_decline", label: "Отказаться и восстановиться", effects: [ relationshipEffect("relationship", -2, "отношение", personId), relationshipEffect("fatigue", -5, "усталость") ] },
+        { id: "clubmate_extra", label: "Остаться на допработу", effects: [ relationshipEffect("points", 1, "очки"), relationshipEffect("relationship", 2, "отношение", personId), relationshipEffect("fatigue", 12, "усталость") ] }
+      ];
+    }
+
+    return { id: U.uid("relationship_event"), week: state.week, personId: personId, personName: person.name, title: title, text: text, options: options };
+  }
+
+  function maybeCreateRelationshipEvent(state) {
+    var people;
+    var person;
+    if (!state) { return null; }
+    normalizeRelationships(state);
+    if (state.relationshipEvent) { return state.relationshipEvent; }
+    if (Number(state.week) < Number(state.nextRelationshipEventWeek || 0)) { return null; }
+    people = relationshipEventPeople(state);
+    if (!people.length) {
+      state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
+      return null;
+    }
+    person = people[U.randomInt(0, Math.max(0, people.length - 1))];
+    state.relationshipEvent = makeRelationshipEventForPerson(state, person);
+    state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
+    return state.relationshipEvent;
+  }
+
+  function applyRelationshipEffect(state, event, effect) {
+    var p = player(state);
+    var value = Number(effect && effect.value) || 0;
+    var personId = (effect && effect.personId) || (event && event.personId) || "";
+    if (!p || !effect || !value) { return; }
+    if (effect.type === "relationship") { adjustRelationship(state, personId, value, event.title); }
+    else if (effect.type === "fatigue") { adjustFatigue(state, value, "Событие отношений"); }
+    else if (effect.type === "money") { if (value > 0) { addMoney(state, value, "Событие отношений"); } else { spendMoney(state, Math.abs(value), "Событие отношений"); } }
+    else if (effect.type === "points") { p.trainingPoints = (Number(p.trainingPoints) || 0) + value; }
+  }
+
+  function applyRelationshipChoice(state, optionId) {
+    var event = state && state.relationshipEvent;
+    var option;
+    var i;
+    var p = player(state);
+    if (!event || !(event.options instanceof Array)) { return false; }
+    option = event.options.find(function (item) { return item && item.id === optionId; });
+    if (!option) { return false; }
+    for (i = 0; i < (option.effects || []).length; i += 1) { applyRelationshipEffect(state, event, option.effects[i]); }
+    if (p) {
+      p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+      p.careerLog.unshift({ week: state.week, text: "Событие отношений: " + event.title + " · " + option.label + "." });
+      if (p.careerLog.length > 60) { p.careerLog.length = 60; }
+    }
+    if (window.FS.World && window.FS.World.createNews) { window.FS.World.createNews(state, "career", "Выбор недели: " + event.title + " · " + option.label + ".", { personId: event.personId }); }
+    state.feed = "Выбор применён: " + option.label + ".";
+    state.relationshipEvent = null;
+    state.nextRelationshipEventWeek = (Number(state.week) || 1) + U.randomInt(5, 10);
+    updateDebtStatus(state, "relationshipChoice");
+    return true;
+  }
+
+  function relationshipSummary(state) {
+    var people = normalizeRelationships(state);
+    var coach = people.find(function (person) { return person.role === "playerCoach"; });
+    var rival = people.filter(function (person) { return person.role === "formerOpponent"; }).sort(function (a, b) { return Math.abs(Number(b.relationship) || 0) - Math.abs(Number(a.relationship) || 0); })[0];
+    return { count: people.length, coach: coach || null, rival: rival || null };
+  }
+
   function restPlayer(state) {
     var reduction = Data.economy && Data.economy.fatigue ? (Number(Data.economy.fatigue.restWeek) || 20) : 20;
     adjustFatigue(state, -reduction, "Неделя восстановления");
@@ -3180,13 +3332,14 @@
     var earned = p && p.careerMilestones && typeof p.careerMilestones === "object" ? p.careerMilestones : {};
     return milestoneDefs().map(function (def) {
       var item = earned[def.id];
+      var reward = milestoneReward(def.id);
       return {
         id: def.id,
         label: def.label,
         done: !!item,
         week: item ? item.week : 0,
-        rewardPoints: item ? item.rewardPoints : 0,
-        rewardMoney: item ? item.rewardMoney : 0
+        rewardPoints: item ? item.rewardPoints : reward.points,
+        rewardMoney: item ? item.rewardMoney : reward.money
       };
     });
   }
@@ -3240,10 +3393,12 @@
       stats.currentLossStreak = 0;
     }
 
+    adjustRelationship(state, "person_" + opponent.id, result === "Победа" ? 2 : (result === "Поражение" ? 1 : 2), payload.isTournament ? "турнирный бой" : "бой");
     if (payload.isRematch) {
       if (result === "Победа") { stats.rematchWins += 1; }
       else if (result === "Поражение") { stats.rematchLosses += 1; }
       else { stats.rematchDraws += 1; }
+      adjustRelationship(state, "person_" + opponent.id, 3, "реванш");
     }
 
     checkCareerMilestones(state);
@@ -3451,6 +3606,7 @@
     p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
     p.careerLog.unshift({ week: state.week, text: "Цель тренера выполнена: " + goal.label + ". Награда: +" + (Number(goal.rewardPoints) || 0) + " очко прокачки, $" + (Number(goal.rewardMoney) || 0) + "." });
 
+    if (p.coachId) { adjustRelationship(state, p.coachId, 5, "цель тренера выполнена"); }
     state.feed = "Цель тренера выполнена: " + goal.label + ".";
     if (window.FS.World && window.FS.World.createNews) {
       window.FS.World.createNews(state, "career", "Цель тренера выполнена: " + p.name + " — " + goal.label + ".", { fighterId: p.id });
@@ -4088,6 +4244,11 @@ restPlayer: restPlayer,
     recordFighterFormEvent: recordFighterFormEvent,
     recordPlayerFightStats: recordPlayerFightStats,
     checkCareerMilestones: checkCareerMilestones,
-    careerMilestones: careerMilestones
+    careerMilestones: careerMilestones,
+    relationshipSummary: relationshipSummary,
+    applyRelationshipChoice: applyRelationshipChoice,
+    maybeCreateRelationshipEvent: maybeCreateRelationshipEvent,
+    adjustRelationship: adjustRelationship,
+    normalizeRelationships: normalizeRelationships
   };
 }());
