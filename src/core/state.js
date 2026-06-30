@@ -3556,11 +3556,23 @@
   function ensureCoachGoal(state) {
     var p = player(state);
     var goal;
+    var nextWeek;
     if (!state || !p) { return null; }
+
     state.coachGoal = state.coachGoal && typeof state.coachGoal === "object" ? state.coachGoal : null;
+    state.nextCoachGoalWeek = Number(state.nextCoachGoalWeek) || 0;
     goal = state.coachGoal;
 
+    if (goal && goal.completed) {
+      goal.completedWeek = Number(goal.completedWeek) || state.week;
+      state.nextCoachGoalWeek = Number(state.nextCoachGoalWeek) || (goal.completedWeek + 4);
+      state.coachGoal = null;
+      return null;
+    }
+
     if (!goal) {
+      nextWeek = Number(state.nextCoachGoalWeek) || 0;
+      if (nextWeek && state.week < nextWeek) { return null; }
       state.coachGoal = makeCoachGoal(state);
       return state.coachGoal;
     }
@@ -3571,14 +3583,6 @@
     goal.rewardMoney = Number(goal.rewardMoney) || 0;
     goal.startWeek = Number(goal.startWeek) || state.week;
     goal.dueWeek = Number(goal.dueWeek) || (state.week + 4);
-
-    if (goal.completed) {
-      goal.completedWeek = Number(goal.completedWeek) || state.week;
-      if (state.week >= goal.completedWeek + 4) {
-        state.coachGoal = makeCoachGoal(state);
-      }
-      return state.coachGoal;
-    }
 
     if (state.week > goal.dueWeek) {
       p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
@@ -3591,26 +3595,36 @@
 
   function completeCoachGoal(state, goal) {
     var p = player(state);
+    var rewardPoints;
+    var rewardMoney;
+    var label;
     if (!p || !goal || goal.completed) { return false; }
 
     goal.progress = goal.target;
     goal.completed = true;
     goal.completedWeek = state.week;
+    rewardPoints = Number(goal.rewardPoints) || 0;
+    rewardMoney = Number(goal.rewardMoney) || 0;
+    label = goal.label || "цель тренера";
 
-    p.trainingPoints = (Number(p.trainingPoints) || 0) + (Number(goal.rewardPoints) || 0);
-    if (Number(goal.rewardMoney) > 0) {
-      p.money = (Number(p.money) || 0) + Number(goal.rewardMoney);
-      pushFinanceLog(p, state, "Награда тренера: " + goal.label, Number(goal.rewardMoney));
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + rewardPoints;
+    if (rewardMoney > 0) {
+      p.money = (Number(p.money) || 0) + rewardMoney;
+      pushFinanceLog(p, state, "Награда тренера: " + label, rewardMoney);
     }
 
     p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
-    p.careerLog.unshift({ week: state.week, text: "Цель тренера выполнена: " + goal.label + ". Награда: +" + (Number(goal.rewardPoints) || 0) + " очко прокачки, $" + (Number(goal.rewardMoney) || 0) + "." });
+    p.careerLog.unshift({ week: state.week, text: "Цель тренера выполнена: " + label + ". Награда: +" + rewardPoints + " очко прокачки, $" + rewardMoney + "." });
+    if (p.careerLog.length > 60) { p.careerLog.length = 60; }
 
     if (p.coachId) { adjustRelationship(state, p.coachId, 5, "цель тренера выполнена"); }
-    state.feed = "Цель тренера выполнена: " + goal.label + ".";
+    state.feed = "Цель тренера выполнена: " + label + ".";
     if (window.FS.World && window.FS.World.createNews) {
-      window.FS.World.createNews(state, "career", "Цель тренера выполнена: " + p.name + " — " + goal.label + ".", { fighterId: p.id });
+      window.FS.World.createNews(state, "career", "Цель тренера выполнена: " + p.name + " — " + label + ".", { fighterId: p.id });
     }
+
+    state.nextCoachGoalWeek = state.week + 4;
+    state.coachGoal = null;
     updateDebtStatus(state, "coachGoal");
     return true;
   }

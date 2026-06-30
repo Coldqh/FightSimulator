@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "goals-tab-layout-2.8.9.2",
-  "saveSchemaVersion": 2892,
+  "appVersion": "goals-subtabs-hotfix-2.8.9.3.1",
+  "saveSchemaVersion": 28931,
   "tracks": {
     "amateur": {
       "id": "amateur",

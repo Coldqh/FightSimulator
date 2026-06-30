@@ -1,7 +1,7 @@
 {
-  "version": "goals-tab-layout-2.8.9.2",
-  "mode": "goals-tab-layout",
-  "cacheVersion": "fight-simulator-goals-tab-layout-2.8.9.2",
+  "version": "goals-subtabs-hotfix-2.8.9.3.1",
+  "mode": "goals-subtabs-hotfix",
+  "cacheVersion": "fight-simulator-goals-subtabs-hotfix-2.8.9.3.1",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

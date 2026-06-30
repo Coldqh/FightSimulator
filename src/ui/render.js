@@ -827,12 +827,12 @@
     '</div>';
   }
 
-  function renderCareerMilestonesCard(state) {
+  function renderCareerMilestonesCard(state, mode) {
     var list = State.careerMilestones ? State.careerMilestones(state) : [];
     var active = list.filter(function (item) { return !item.done; });
     var completed = list.filter(function (item) { return item.done; });
-    var activeRows;
-    var doneRows;
+    var currentMode = mode || "active";
+    var rows;
 
     function activeRow(item) {
       return '<div class="split-row"><span>· ' + U.escapeHtml(item.label) + '</span><strong>+' + (Number(item.rewardPoints) || 0) + ' очк. · $' + (Number(item.rewardMoney) || 0) + '</strong></div>';
@@ -842,11 +842,13 @@
       return '<div class="split-row"><span>✓ ' + U.escapeHtml(item.label) + '</span><strong>нед. ' + (item.week || '—') + ' · +' + (Number(item.rewardPoints) || 0) + ' очк. · $' + (Number(item.rewardMoney) || 0) + '</strong></div>';
     }
 
-    activeRows = active.length ? active.slice(0, 12).map(activeRow).join("") : '<div class="muted small">Активных карьерных вех пока нет.</div>';
-    doneRows = completed.length ? completed.slice(0, 16).map(doneRow).join("") : '<div class="muted small">Выполненных карьерных вех пока нет.</div>';
+    if (currentMode === "completed") {
+      rows = completed.length ? completed.map(doneRow).join("") : '<div class="muted small">Выполненных карьерных вех пока нет.</div>';
+      return '<div class="content-card"><h3>Выполненные вехи</h3><div class="split-row"><span>Выполнено</span><strong>' + completed.length + '/' + list.length + '</strong></div>' + rows + '</div>';
+    }
 
-    return '<div class="content-card"><h3>Активные вехи</h3>' + activeRows + '</div>' +
-      '<div class="content-card"><h3>Выполненные вехи</h3><div class="split-row"><span>Выполнено</span><strong>' + completed.length + '/' + list.length + '</strong></div>' + doneRows + '</div>';
+    rows = active.length ? active.map(activeRow).join("") : '<div class="muted small">Активных карьерных вех пока нет.</div>';
+    return '<div class="content-card"><h3>Активные вехи</h3><div class="split-row"><span>Осталось</span><strong>' + active.length + '</strong></div>' + rows + '</div>';
   }
 
   function renderCoachGoalCard(state) {
@@ -855,18 +857,28 @@
     var target;
     var percent;
     var reward;
-    var status;
+    var nextWeek;
+
+    if (goal && goal.completed) {
+      if (State.ensureCoachGoal) { State.ensureCoachGoal(state); }
+      goal = null;
+    }
+
+    if (!goal && State.ensureCoachGoal) {
+      goal = State.ensureCoachGoal(state);
+    }
+
     if (!goal) {
-      return '<div class="content-card"><h3>Цель тренера</h3><div class="muted small">Цель появится после недельного хода.</div></div>';
+      nextWeek = Number(state.nextCoachGoalWeek) || 0;
+      return '<div class="content-card"><h3>Цель тренера</h3><div class="muted small">' + (nextWeek && state.week < nextWeek ? ('Новая цель появится на ' + nextWeek + ' неделе.') : 'Активной цели тренера нет.') + '</div></div>';
     }
 
     progress = Math.max(0, Number(goal.progress) || 0);
     target = Math.max(1, Number(goal.target) || 1);
     percent = Math.max(0, Math.min(100, Math.round((progress / target) * 100)));
     reward = '+' + (Number(goal.rewardPoints) || 0) + ' очко, $' + (Number(goal.rewardMoney) || 0);
-    status = goal.completed ? 'Выполнено' : ('до недели ' + (goal.dueWeek || '—'));
 
-    return '<div class="content-card coach-goal-card"><div class="split-row"><h3>Цель тренера</h3><strong>' + U.escapeHtml(status) + '</strong></div>' +
+    return '<div class="content-card coach-goal-card"><div class="split-row"><h3>Цель тренера</h3><strong>до недели ' + (goal.dueWeek || '—') + '</strong></div>' +
       '<div class="split-row"><span>' + U.escapeHtml(goal.label || 'Задача') + '</span><strong>' + Math.min(progress, target) + '/' + target + '</strong></div>' +
       '<div class="progress"><span style="width:' + percent + '%"></span></div>' +
       '<div class="split-row"><span>Награда</span><strong>' + U.escapeHtml(reward) + '</strong></div>' +
@@ -874,9 +886,19 @@
   }
 
   function renderGoalsTab(state) {
-    return '<div class="grid two goals-grid">' +
-      renderCoachGoalCard(state) +
-      renderCareerMilestonesCard(state) +
+    var sub = state.goalsSubTab || "active";
+
+    function subButton(id, label) {
+      return '<button class="small-btn ' + (sub === id ? 'primary' : '') + '" data-goals-subtab="' + id + '">' + label + '</button>';
+    }
+
+    return '<div class="content-card goals-subtabs"><div class="row">' +
+      subButton("active", "Активные") +
+      subButton("completed", "Выполнено") +
+      subButton("coach", "Цель тренера") +
+    '</div></div>' +
+    '<div class="goals-tab-body">' +
+      (sub === "completed" ? renderCareerMilestonesCard(state, "completed") : (sub === "coach" ? renderCoachGoalCard(state) : renderCareerMilestonesCard(state, "active"))) +
     '</div>';
   }
 

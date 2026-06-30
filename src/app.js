@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.9.2&target=2.8.9.2&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.9.3.1&target=2.8.9.3.1&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -649,6 +649,10 @@
       importSave();
     } else if (button.dataset.action === "close-modal") {
       state.modal = null;
+      saveAndRender();
+    } else if (button.dataset.goalsSubtab) {
+      state.goalsSubTab = button.dataset.goalsSubtab;
+      state.selectedTab = "goals";
       saveAndRender();
     } else if (button.dataset.tab) {
       state.selectedTab = button.dataset.tab;
