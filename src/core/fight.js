@@ -1215,6 +1215,137 @@
     return true;
   }
 
+  function sparringStatClone(fighter) {
+    var stats = fighter && fighter.stats ? fighter.stats : {};
+    return {
+      power: Number(stats.power) || 1,
+      technique: Number(stats.technique) || 1,
+      speed: Number(stats.speed) || 1,
+      stamina: Number(stats.stamina) || 1,
+      defense: Number(stats.defense || stats.health) || 1
+    };
+  }
+
+  function makeFallbackSparringPartner(player) {
+    var stats = sparringStatClone(player);
+    return {
+      id: "sparring_partner",
+      name: "Спарринг-партнёр",
+      isPlayer: false,
+      trackId: player.trackId,
+      weightClassId: player.weightClassId,
+      countryId: player.countryId,
+      homeCountryId: player.homeCountryId || player.countryId,
+      originCountryId: player.originCountryId || player.countryId,
+      record: { wins: 0, losses: 0, draws: 0, kos: 0 },
+      stats: {
+        power: U.clamp(stats.power + U.randomInt(-6, 5), 1, U.findTrack(player.trackId).maxStat),
+        technique: U.clamp(stats.technique + U.randomInt(-6, 5), 1, U.findTrack(player.trackId).maxStat),
+        speed: U.clamp(stats.speed + U.randomInt(-6, 5), 1, U.findTrack(player.trackId).maxStat),
+        stamina: U.clamp(stats.stamina + U.randomInt(-6, 5), 1, U.findTrack(player.trackId).maxStat),
+        defense: U.clamp(stats.defense + U.randomInt(-6, 5), 1, U.findTrack(player.trackId).maxStat)
+      }
+    };
+  }
+
+  function sparringPartnerFor(state, player) {
+    var candidates = [];
+    var seen = {};
+    var club;
+    var playerOvr;
+
+    function add(fighter, source) {
+      if (!fighter || fighter.isPlayer || fighter.retired || !fighter.id || seen[fighter.id] || !fighter.stats) { return; }
+      if (fighter.trackId !== player.trackId) { return; }
+      if (player.trackId !== "street" && fighter.weightClassId && player.weightClassId && fighter.weightClassId !== player.weightClassId) { return; }
+      seen[fighter.id] = true;
+      candidates.push({ fighter: fighter, source: source || "world" });
+    }
+
+    if (window.FS.Clubs && player.gymId && window.FS.Clubs.playerClub && window.FS.Clubs.clubRoster) {
+      club = window.FS.Clubs.playerClub(state);
+      if (club) { (window.FS.Clubs.clubRoster(state, club.id) || []).forEach(function (fighter) { add(fighter, "club"); }); }
+    }
+
+    (state.roster || []).forEach(function (fighter) { add(fighter, "world"); });
+    if (!candidates.length) { return makeFallbackSparringPartner(player); }
+
+    playerOvr = U.statAverage(player.stats);
+    candidates.sort(function (left, right) {
+      var leftClub = left.source === "club" ? 0 : 8;
+      var rightClub = right.source === "club" ? 0 : 8;
+      var leftDiff = Math.abs(U.statAverage(left.fighter.stats) - playerOvr) + leftClub;
+      var rightDiff = Math.abs(U.statAverage(right.fighter.stats) - playerOvr) + rightClub;
+      return leftDiff - rightDiff;
+    });
+
+    return candidates[0].fighter || makeFallbackSparringPartner(player);
+  }
+
+  function sparringStatsLine(roundData) {
+    return "Урон: " + (roundData.playerDamage || 0) + ":" + (roundData.opponentDamage || 0) + ". Попадания: " + (roundData.playerLanded || 0) + ":" + (roundData.opponentLanded || 0) + ". HP: " + (roundData.playerHpLeft || 0) + "/" + (roundData.playerMaxHp || 0) + " — " + (roundData.opponentHpLeft || 0) + "/" + (roundData.opponentMaxHp || 0) + ".";
+  }
+
+  function sparringInsight(roundData) {
+    var playerDamage = Number(roundData.playerDamage) || 0;
+    var opponentDamage = Number(roundData.opponentDamage) || 0;
+    var playerLanded = Number(roundData.playerLanded) || 0;
+    var opponentLanded = Number(roundData.opponentLanded) || 0;
+    var lines = [];
+
+    if (playerDamage > opponentDamage) { lines.push("Ты перебил партнёра по урону: " + playerDamage + ":" + opponentDamage + "."); }
+    else if (opponentDamage > playerDamage) { lines.push("Партнёр перебил тебя по урону: " + opponentDamage + ":" + playerDamage + "."); }
+    else { lines.push("По урону ровно: " + playerDamage + ":" + opponentDamage + "."); }
+
+    lines.push("Попадания: " + playerLanded + ":" + opponentLanded + ".");
+    if (roundData.knockdown) { lines.push("Спарринг остановлен после тяжёлого эпизода в раунде " + roundData.knockdown.round + "."); }
+    return lines;
+  }
+
+  function resolveSparringSession(state) {
+    var p = State.player(state);
+    var partner;
+    var roundData;
+    var gained = 2;
+    var fatigueCost = 12;
+
+    if (!p) { return false; }
+    if (State.isLockedByFatigue && State.isLockedByFatigue(state)) {
+      return State.fatigueLockedModal ? State.fatigueLockedModal(state) : false;
+    }
+
+    partner = sparringPartnerFor(state, p);
+    window.FS.__currentFightState = state;
+    window.FS.__currentTournamentSession = null;
+    roundData = simulateRounds(p, partner, 1);
+
+    p.trainingPoints = (Number(p.trainingPoints) || 0) + gained;
+    if (State.adjustFatigue) { State.adjustFatigue(state, fatigueCost, "Спарринг"); }
+    else { p.fatigue = U.clamp((Number(p.fatigue) || 0) + fatigueCost, 0, 100); }
+
+    p.careerLog = p.careerLog instanceof Array ? p.careerLog : [];
+    p.careerLog.unshift({ week: state.week, text: "Спарринг: 1 раунд с " + partner.name + ". +" + gained + " очка прокачки, усталость " + (Number(p.fatigue) || 0) + "/100." });
+    if (p.careerLog.length > 60) { p.careerLog.length = 60; }
+
+    if (State.recordCoachGoalEvent) { State.recordCoachGoalEvent(state, "training", { count: 1, type: "sparring" }); }
+    state.feed = "Спарринг: +" + gained + " очка прокачки. Усталость +" + fatigueCost + ".";
+    state.modal = {
+      type: "sparringResult",
+      opponentName: partner.name,
+      week: state.week,
+      playerRating: U.statAverage(p.stats),
+      opponentRating: U.statAverage(partner.stats),
+      gainedPoints: gained,
+      fatigue: fatigueCost,
+      statsLine: sparringStatsLine(roundData),
+      insight: sparringInsight(roundData),
+      roundLog: roundData.log || [],
+      knockdown: roundData.knockdown || null
+    };
+    return true;
+  }
+
+
   function resolvePlayerFight(state, offerId) {
     return startInteractiveFight(state, offerId);
   }
@@ -1250,6 +1381,7 @@
   }
 
   window.FS.Fight = {
+    resolveSparringSession: resolveSparringSession,
     buildFightPreview: buildFightPreview,
     resolvePlayerFight: resolvePlayerFight,
     startInteractiveFight: startInteractiveFight,

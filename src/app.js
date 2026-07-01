@@ -285,7 +285,8 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.16&target=2.8.16&t=" + Date.now());
+      var targetVersion = (Data && Data.appVersion) ? Data.appVersion : "latest";
+      window.location.replace("./reset-cache.html?fromUpdateButton=" + encodeURIComponent(targetVersion) + "&target=" + encodeURIComponent(targetVersion) + "&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -472,6 +473,7 @@
     if (!state || !button || !button.dataset || !State.isLockedByFatigue || !State.isLockedByFatigue(state)) { return false; }
 
     if (button.dataset.action === "train-week") { return true; }
+    if (button.dataset.action === "sparring-week") { return true; }
 
     if (button.dataset.acceptFight ||
         button.dataset.skipFight ||
@@ -625,6 +627,11 @@
     } else if (button.dataset.action === "train-week") {
       State.trainPlayer(state);
       World.advanceWeek(state, "training");
+      saveAndRender();
+    } else if (button.dataset.action === "sparring-week") {
+      if (Fight.resolveSparringSession && Fight.resolveSparringSession(state)) {
+        World.advanceWeek(state, "training");
+      }
       saveAndRender();
     } else if (button.dataset.action === "rest-week") {
       World.advanceWeek(state, "rest");

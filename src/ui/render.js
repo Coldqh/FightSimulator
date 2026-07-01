@@ -928,7 +928,7 @@
         '<div class="split-row"><span>Баланс</span><strong>$' + (p.money || 0) + '</strong></div>' +
         '<div class="split-row"><span>Очки прокачки</span><strong>' + (p.trainingPoints || 0) + '</strong></div>' +
         '<div class="split-row"><span>Ежемесячные расходы</span><strong>$' + (breakdown.total || 0) + '</strong></div>' +
-        '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button></div>' +
+        '<div class="row dashboard-actions" style="margin-top:12px"><button data-action="next-week">Следующая неделя</button><button class="primary" data-action="train-week"' + trainingDisabled + '>Тренировка</button><button data-action="sparring-week"' + trainingDisabled + '>Спарринг</button></div>' +
       '</div>' +
       renderCareerStatsCard(state) +
     '</div>';
@@ -1370,6 +1370,7 @@
   function renderTrainingTab(state) {
     var p = State.player(state);
     var points = Number(p.trainingPoints) || 0;
+    var trainingFatigueDisabled = f1FatigueDisabledAttr(state);
     var amounts = [1, 3, 5, 10, 20];
 
     function statRow(stat) {
@@ -1384,6 +1385,7 @@
     }
 
     return '<div class="content-card training-card"><h3>Характеристики</h3><div class="split-row"><span>Очки прокачки</span><strong>' + points + '</strong></div><div class="split-row"><span>Усталость</span><strong>' + (p.fatigue || 0) + '/100</strong></div>' +
+      '<div class="row" style="margin:10px 0 12px"><button class="primary" data-action="sparring-week"' + trainingFatigueDisabled + '>Спарринг</button><span class="muted small">1 раунд, +2 очка, без рекорда</span></div>' +
       '<div class="training-list">' + Data.statKeys.map(statRow).join('') + '</div></div>';
   }
 
@@ -2275,6 +2277,16 @@
       var playerCoach = previewPlayer ? f1CoachFor(state, previewPlayer) : null;
       var opponentCoach = previewOpponent ? f1CoachFor(state, previewOpponent) : null;
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.label) + "</h2><div class=\"muted small\">Предпросмотр боя · " + U.escapeHtml(modal.weightClassLabel) + "</div></div><div class=\"modal-body\"><div class=\"grid two\"><div class=\"stat-card\"><div class=\"label\">Ты</div><div class=\"value\">" + f1EffectiveOvrText(modal.playerPersonalRating || modal.playerRating, modal.playerCoachBonus || 0, modal.playerRating) + "</div><div class=\"muted small\">" + U.escapeHtml(modal.playerRecord) + "</div></div><div class=\"stat-card\"><div class=\"label\">Соперник</div><div class=\"value\">" + f1EffectiveOvrText(modal.opponentPersonalRating || modal.opponentRating, modal.opponentCoachBonus || 0, modal.opponentRating) + "</div><div class=\"muted small\">" + U.escapeHtml(modal.opponentName) + " · " + U.escapeHtml(modal.opponentRecord) + "</div></div></div><div class=\"pills\"><span class=\"pill\">" + modal.rounds + " раунда</span><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Статистика</div><div class=\"muted small\">OVR: " + f1EffectiveOvrText(modal.playerPersonalRating || modal.playerRating, modal.playerCoachBonus || 0, modal.playerRating) + " — " + f1EffectiveOvrText(modal.opponentPersonalRating || modal.opponentRating, modal.opponentCoachBonus || 0, modal.opponentRating) + ". Рекорд: " + U.escapeHtml(modal.playerRecord) + " — " + U.escapeHtml(modal.opponentRecord) + ". Тренеры: " + (playerCoach ? U.escapeHtml(playerCoach.name) + " OVR " + f1CoachOvr(playerCoach) : "нет") + " — " + (opponentCoach ? U.escapeHtml(opponentCoach.name) + " OVR " + f1CoachOvr(opponentCoach) : "нет") + ".</div></div></div><div class=\"modal-actions\"><button data-action=\"close-modal\">Отмена</button><button data-skip-fight=\"" + U.escapeHtml(modal.offerId) + "\">Пропустить бой</button><button class=\"primary\" data-accept-fight=\"" + U.escapeHtml(modal.offerId) + "\">Выйти на ринг</button></div></div></div>";
+    }
+
+    if (modal.type === "sparringResult") {
+      return '<div class="modal-backdrop"><div class="modal"><div class="modal-head"><h2>Спарринг</h2><div class="muted small">Неделя ' + modal.week + ' · ' + U.escapeHtml(modal.opponentName || "Спарринг-партнёр") + '</div></div><div class="modal-body">' +
+        '<div class="big-result draw">1 раунд</div>' +
+        '<div class="grid two"><div class="content-card"><h3>Итог</h3><div class="split-row"><span>Очки прокачки</span><strong>+' + (modal.gainedPoints || 0) + '</strong></div><div class="split-row"><span>Усталость</span><strong>+' + (modal.fatigue || 0) + '</strong></div></div>' +
+        '<div class="content-card"><h3>Статистика</h3><div class="muted small">' + U.escapeHtml(modal.statsLine || "Нет статистики.") + '</div></div></div>' +
+        '<div class="content-card" style="margin-top:12px"><h3>Разбор</h3>' + ((modal.insight || []).length ? (modal.insight || []).map(function (line) { return '<div class="muted small">' + U.escapeHtml(line) + '</div>'; }).join("") : '<div class="muted small">Раунд завершён.</div>') + '</div>' +
+        ((modal.roundLog || []).length ? '<div class="content-card" style="margin-top:12px"><h3>Лог раунда</h3>' + (modal.roundLog || []).slice(-20).map(function (line) { return '<div class="muted small">' + U.escapeHtml(line) + '</div>'; }).join("") + '</div>' : '') +
+      '</div><div class="modal-actions"><button class="primary" data-action="close-modal">Продолжить</button></div></div></div>';
     }
 
     if (modal.type === "fightResult") {
