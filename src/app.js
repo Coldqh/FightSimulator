@@ -285,7 +285,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.15&target=2.8.15&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.16&target=2.8.16&t=" + Date.now());
     }
 
     function clearFightCaches() {

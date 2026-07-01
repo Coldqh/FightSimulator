@@ -12,8 +12,8 @@
     "undefined_last_good",
     "fight_simulator_autosave"
   ],
-  "appVersion": "2.8.15",
-  "saveSchemaVersion": 281500,
+  "appVersion": "2.8.16",
+  "saveSchemaVersion": 281600,
   "tracks": {
     "amateur": {
       "id": "amateur",
@@ -6928,6 +6928,801 @@
     "rival": "Соперник",
     "promoter": "Промоутер",
     "teamCoach": "Тренер сборной"
+  },
+  "appearance": {
+    "schemaVersion": "appearance-v1-data-only",
+    "notes": "Data-only modular avatar descriptors. No image assets are rendered in this version.",
+    "parts": {
+      "bodyTypes": [
+        {
+          "id": "body_compact",
+          "label": "компактное телосложение"
+        },
+        {
+          "id": "body_lean",
+          "label": "сухое телосложение"
+        },
+        {
+          "id": "body_athletic",
+          "label": "атлетичное телосложение"
+        },
+        {
+          "id": "body_stocky",
+          "label": "коренастое телосложение"
+        },
+        {
+          "id": "body_tall",
+          "label": "высокое телосложение"
+        }
+      ],
+      "skinTones": [
+        {
+          "id": "skin_very_light",
+          "label": "очень светлая кожа"
+        },
+        {
+          "id": "skin_light",
+          "label": "светлая кожа"
+        },
+        {
+          "id": "skin_fair_olive",
+          "label": "светло-оливковая кожа"
+        },
+        {
+          "id": "skin_olive",
+          "label": "оливковая кожа"
+        },
+        {
+          "id": "skin_tan",
+          "label": "смуглая кожа"
+        },
+        {
+          "id": "skin_brown",
+          "label": "коричневая кожа"
+        },
+        {
+          "id": "skin_dark_brown",
+          "label": "тёмно-коричневая кожа"
+        },
+        {
+          "id": "skin_deep",
+          "label": "очень тёмная кожа"
+        }
+      ],
+      "faceShapes": [
+        {
+          "id": "face_oval",
+          "label": "овальное лицо"
+        },
+        {
+          "id": "face_square",
+          "label": "квадратное лицо"
+        },
+        {
+          "id": "face_round",
+          "label": "круглое лицо"
+        },
+        {
+          "id": "face_long",
+          "label": "вытянутое лицо"
+        },
+        {
+          "id": "face_wide",
+          "label": "широкое лицо"
+        }
+      ],
+      "eyes": [
+        {
+          "id": "eyes_neutral",
+          "label": "обычные глаза"
+        },
+        {
+          "id": "eyes_deep",
+          "label": "глубоко посаженные глаза"
+        },
+        {
+          "id": "eyes_round",
+          "label": "округлые глаза"
+        },
+        {
+          "id": "eyes_narrow",
+          "label": "узкие глаза"
+        },
+        {
+          "id": "eyes_hooded",
+          "label": "нависающие веки"
+        },
+        {
+          "id": "eyes_east_asian",
+          "label": "восточноазиатский разрез глаз"
+        }
+      ],
+      "noses": [
+        {
+          "id": "nose_straight",
+          "label": "прямой нос"
+        },
+        {
+          "id": "nose_broad",
+          "label": "широкий нос"
+        },
+        {
+          "id": "nose_flat",
+          "label": "приплюснутый нос"
+        },
+        {
+          "id": "nose_narrow",
+          "label": "узкий нос"
+        },
+        {
+          "id": "nose_aquiline",
+          "label": "орлиный нос"
+        },
+        {
+          "id": "nose_rounded",
+          "label": "округлый нос"
+        }
+      ],
+      "mouths": [
+        {
+          "id": "mouth_neutral",
+          "label": "обычный рот"
+        },
+        {
+          "id": "mouth_wide",
+          "label": "широкий рот"
+        },
+        {
+          "id": "mouth_thin",
+          "label": "тонкие губы"
+        },
+        {
+          "id": "mouth_full",
+          "label": "полные губы"
+        }
+      ],
+      "hair": [
+        {
+          "id": "hair_black_short",
+          "label": "короткие чёрные волосы"
+        },
+        {
+          "id": "hair_dark_short",
+          "label": "короткие тёмные волосы"
+        },
+        {
+          "id": "hair_brown_short",
+          "label": "короткие каштановые волосы"
+        },
+        {
+          "id": "hair_blond_short",
+          "label": "короткие светлые волосы"
+        },
+        {
+          "id": "hair_shaved",
+          "label": "бритая голова"
+        },
+        {
+          "id": "hair_wavy_dark",
+          "label": "тёмные волнистые волосы"
+        },
+        {
+          "id": "hair_curly_black",
+          "label": "чёрные кудрявые волосы"
+        },
+        {
+          "id": "hair_coily_short",
+          "label": "короткие курчавые волосы"
+        }
+      ],
+      "facialHair": [
+        {
+          "id": "facial_none",
+          "label": "без растительности"
+        },
+        {
+          "id": "facial_stubble",
+          "label": "щетина"
+        },
+        {
+          "id": "facial_mustache",
+          "label": "усы"
+        },
+        {
+          "id": "facial_goatee",
+          "label": "эспаньолка"
+        },
+        {
+          "id": "facial_short_beard",
+          "label": "короткая борода"
+        }
+      ]
+    },
+    "regionPresets": {
+      "default": {
+        "skin": [
+          "skin_light",
+          "skin_fair_olive",
+          "skin_olive",
+          "skin_tan"
+        ],
+        "eyes": [
+          "eyes_neutral",
+          "eyes_deep",
+          "eyes_round",
+          "eyes_hooded"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_rounded",
+          "nose_broad",
+          "nose_narrow"
+        ],
+        "face": [
+          "face_oval",
+          "face_square",
+          "face_round",
+          "face_long"
+        ],
+        "hair": [
+          "hair_dark_short",
+          "hair_black_short",
+          "hair_brown_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_wide",
+          "mouth_thin"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_compact",
+          "body_stocky"
+        ],
+        "facialHairChance": 32,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "slavic": {
+        "skin": [
+          "skin_very_light",
+          "skin_light",
+          "skin_fair_olive",
+          "skin_olive"
+        ],
+        "eyes": [
+          "eyes_neutral",
+          "eyes_deep",
+          "eyes_round",
+          "eyes_hooded"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_narrow",
+          "nose_aquiline",
+          "nose_rounded"
+        ],
+        "face": [
+          "face_oval",
+          "face_square",
+          "face_round",
+          "face_long"
+        ],
+        "hair": [
+          "hair_dark_short",
+          "hair_brown_short",
+          "hair_blond_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_thin",
+          "mouth_wide"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_stocky",
+          "body_tall"
+        ],
+        "facialHairChance": 38,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "anglo": {
+        "skin": [
+          "skin_very_light",
+          "skin_light",
+          "skin_fair_olive",
+          "skin_tan"
+        ],
+        "eyes": [
+          "eyes_neutral",
+          "eyes_deep",
+          "eyes_round",
+          "eyes_hooded"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_rounded",
+          "nose_narrow",
+          "nose_aquiline"
+        ],
+        "face": [
+          "face_oval",
+          "face_square",
+          "face_long",
+          "face_round"
+        ],
+        "hair": [
+          "hair_brown_short",
+          "hair_dark_short",
+          "hair_blond_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_wide",
+          "mouth_thin"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_stocky",
+          "body_tall"
+        ],
+        "facialHairChance": 36,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "germanic": {
+        "skin": [
+          "skin_very_light",
+          "skin_light",
+          "skin_fair_olive"
+        ],
+        "eyes": [
+          "eyes_neutral",
+          "eyes_deep",
+          "eyes_round",
+          "eyes_hooded"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_narrow",
+          "nose_aquiline",
+          "nose_rounded"
+        ],
+        "face": [
+          "face_oval",
+          "face_square",
+          "face_long"
+        ],
+        "hair": [
+          "hair_blond_short",
+          "hair_brown_short",
+          "hair_dark_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_thin",
+          "mouth_wide"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_tall",
+          "body_stocky"
+        ],
+        "facialHairChance": 34,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "latin": {
+        "skin": [
+          "skin_light",
+          "skin_fair_olive",
+          "skin_olive",
+          "skin_tan",
+          "skin_brown"
+        ],
+        "eyes": [
+          "eyes_neutral",
+          "eyes_deep",
+          "eyes_hooded",
+          "eyes_round"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_rounded",
+          "nose_broad",
+          "nose_aquiline"
+        ],
+        "face": [
+          "face_oval",
+          "face_square",
+          "face_round",
+          "face_wide"
+        ],
+        "hair": [
+          "hair_black_short",
+          "hair_dark_short",
+          "hair_wavy_dark",
+          "hair_curly_black",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_wide",
+          "mouth_full"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_compact",
+          "body_stocky"
+        ],
+        "facialHairChance": 42,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "east_asia": {
+        "skin": [
+          "skin_light",
+          "skin_fair_olive",
+          "skin_olive"
+        ],
+        "eyes": [
+          "eyes_east_asian",
+          "eyes_narrow",
+          "eyes_hooded"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_flat",
+          "nose_rounded",
+          "nose_narrow"
+        ],
+        "face": [
+          "face_oval",
+          "face_round",
+          "face_wide"
+        ],
+        "hair": [
+          "hair_black_short",
+          "hair_dark_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_thin",
+          "mouth_wide"
+        ],
+        "body": [
+          "body_lean",
+          "body_compact",
+          "body_athletic"
+        ],
+        "facialHairChance": 18,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee"
+        ]
+      },
+      "central_asia": {
+        "skin": [
+          "skin_light",
+          "skin_fair_olive",
+          "skin_olive",
+          "skin_tan"
+        ],
+        "eyes": [
+          "eyes_narrow",
+          "eyes_hooded",
+          "eyes_east_asian",
+          "eyes_neutral"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_rounded",
+          "nose_broad",
+          "nose_narrow"
+        ],
+        "face": [
+          "face_wide",
+          "face_oval",
+          "face_square",
+          "face_round"
+        ],
+        "hair": [
+          "hair_black_short",
+          "hair_dark_short",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_wide",
+          "mouth_thin"
+        ],
+        "body": [
+          "body_athletic",
+          "body_stocky",
+          "body_compact",
+          "body_lean"
+        ],
+        "facialHairChance": 32,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "arabic": {
+        "skin": [
+          "skin_fair_olive",
+          "skin_olive",
+          "skin_tan",
+          "skin_brown"
+        ],
+        "eyes": [
+          "eyes_deep",
+          "eyes_hooded",
+          "eyes_neutral",
+          "eyes_narrow"
+        ],
+        "nose": [
+          "nose_aquiline",
+          "nose_straight",
+          "nose_broad",
+          "nose_rounded"
+        ],
+        "face": [
+          "face_oval",
+          "face_long",
+          "face_square",
+          "face_wide"
+        ],
+        "hair": [
+          "hair_black_short",
+          "hair_dark_short",
+          "hair_wavy_dark",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_thin",
+          "mouth_wide"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_stocky",
+          "body_tall"
+        ],
+        "facialHairChance": 52,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "african": {
+        "skin": [
+          "skin_brown",
+          "skin_dark_brown",
+          "skin_deep"
+        ],
+        "eyes": [
+          "eyes_deep",
+          "eyes_neutral",
+          "eyes_round"
+        ],
+        "nose": [
+          "nose_broad",
+          "nose_flat",
+          "nose_rounded"
+        ],
+        "face": [
+          "face_wide",
+          "face_square",
+          "face_oval",
+          "face_round"
+        ],
+        "hair": [
+          "hair_coily_short",
+          "hair_shaved",
+          "hair_curly_black",
+          "hair_black_short"
+        ],
+        "mouth": [
+          "mouth_full",
+          "mouth_wide",
+          "mouth_neutral"
+        ],
+        "body": [
+          "body_athletic",
+          "body_lean",
+          "body_stocky",
+          "body_tall"
+        ],
+        "facialHairChance": 44,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      },
+      "south_asia": {
+        "skin": [
+          "skin_olive",
+          "skin_tan",
+          "skin_brown",
+          "skin_dark_brown"
+        ],
+        "eyes": [
+          "eyes_deep",
+          "eyes_hooded",
+          "eyes_neutral"
+        ],
+        "nose": [
+          "nose_straight",
+          "nose_aquiline",
+          "nose_broad",
+          "nose_rounded"
+        ],
+        "face": [
+          "face_oval",
+          "face_long",
+          "face_square",
+          "face_wide"
+        ],
+        "hair": [
+          "hair_black_short",
+          "hair_dark_short",
+          "hair_wavy_dark",
+          "hair_shaved"
+        ],
+        "mouth": [
+          "mouth_neutral",
+          "mouth_wide",
+          "mouth_full"
+        ],
+        "body": [
+          "body_lean",
+          "body_athletic",
+          "body_stocky",
+          "body_compact"
+        ],
+        "facialHairChance": 46,
+        "facialHair": [
+          "facial_stubble",
+          "facial_mustache",
+          "facial_goatee",
+          "facial_short_beard"
+        ]
+      }
+    },
+    "countryGroups": {
+      "russia": "slavic",
+      "ukraine": "slavic",
+      "belarus": "slavic",
+      "poland": "slavic",
+      "czechia": "slavic",
+      "slovakia": "slavic",
+      "serbia": "slavic",
+      "croatia": "slavic",
+      "bulgaria": "slavic",
+      "romania": "slavic",
+      "moldova": "slavic",
+      "usa": "anglo",
+      "canada": "anglo",
+      "uk": "anglo",
+      "ireland": "anglo",
+      "australia": "anglo",
+      "new_zealand": "anglo",
+      "jamaica": "anglo",
+      "trinidad_and_tobago": "anglo",
+      "germany": "germanic",
+      "netherlands": "germanic",
+      "belgium": "germanic",
+      "sweden": "germanic",
+      "norway": "germanic",
+      "denmark": "germanic",
+      "finland": "germanic",
+      "mexico": "latin",
+      "argentina": "latin",
+      "brazil": "latin",
+      "cuba": "latin",
+      "spain": "latin",
+      "colombia": "latin",
+      "peru": "latin",
+      "chile": "latin",
+      "ecuador": "latin",
+      "uruguay": "latin",
+      "paraguay": "latin",
+      "bolivia": "latin",
+      "dominican_republic": "latin",
+      "puerto_rico": "latin",
+      "costa_rica": "latin",
+      "panama": "latin",
+      "nicaragua": "latin",
+      "honduras": "latin",
+      "guatemala": "latin",
+      "el_salvador": "latin",
+      "haiti": "latin",
+      "japan": "east_asia",
+      "south_korea": "east_asia",
+      "china": "east_asia",
+      "north_korea": "east_asia",
+      "kazakhstan": "central_asia",
+      "uzbekistan": "central_asia",
+      "kyrgyzstan": "central_asia",
+      "tajikistan": "central_asia",
+      "turkmenistan": "central_asia",
+      "mongolia": "central_asia",
+      "iran": "arabic",
+      "iraq": "arabic",
+      "saudi_arabia": "arabic",
+      "uae": "arabic",
+      "qatar": "arabic",
+      "syria": "arabic",
+      "jordan": "arabic",
+      "egypt": "arabic",
+      "morocco": "arabic",
+      "algeria": "arabic",
+      "tunisia": "arabic",
+      "israel": "arabic",
+      "libya": "arabic",
+      "ghana": "african",
+      "uganda": "african",
+      "tanzania": "african",
+      "cameroon": "african",
+      "senegal": "african",
+      "angola": "african",
+      "mozambique": "african",
+      "zimbabwe": "african",
+      "zambia": "african",
+      "dr_congo": "african",
+      "cote_d_ivoire": "african",
+      "mali": "african",
+      "burkina_faso": "african",
+      "nigeria": "african",
+      "south_africa": "african",
+      "kenya": "african",
+      "ethiopia": "african",
+      "india": "south_asia",
+      "pakistan": "south_asia",
+      "bangladesh": "south_asia",
+      "sri_lanka": "south_asia",
+      "nepal": "south_asia"
+    }
   }
 };
 }());

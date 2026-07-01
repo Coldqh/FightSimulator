@@ -1,7 +1,7 @@
 {
-  "version": "2.8.15",
-  "mode": "render-purity-rivalry-source",
-  "cacheVersion": "fight-simulator-render-purity-rivalry-source-2.8.15",
+  "version": "2.8.16",
+  "mode": "appearance-data-core",
+  "cacheVersion": "fight-simulator-appearance-data-core-2.8.16",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

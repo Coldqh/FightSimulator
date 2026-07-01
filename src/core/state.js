@@ -2384,6 +2384,115 @@
 
   
 
+  var APPEARANCE_SCHEMA_VERSION = "appearance-v1-data-only";
+
+  function stableAppearanceHash(input) {
+    var text = String(input || "");
+    var hash = 2166136261;
+    var i;
+    for (i = 0; i < text.length; i += 1) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function appearancePick(list, seed, salt) {
+    var safe = list && list.length ? list : ["unknown"];
+    var index = stableAppearanceHash(String(seed) + "|" + String(salt || "")) % safe.length;
+    return safe[index];
+  }
+
+  function appearanceChance(seed, salt, chance) {
+    var value = stableAppearanceHash(String(seed) + "|" + String(salt || "")) % 100;
+    return value < (Number(chance) || 0);
+  }
+
+  function appearanceGroupForCountry(country) {
+    var appearance = Data.appearance || {};
+    var explicit = appearance.countryGroups || {};
+    var id = country && country.id ? country.id : "";
+    var group = country && (country.localPoolId || country.continentId) ? (country.localPoolId || country.continentId) : "";
+    if (explicit[id]) { return explicit[id]; }
+    if (["slavic", "latin", "anglo", "germanic", "east_asia", "central_asia", "arabic", "african", "south_asia"].indexOf(group) !== -1) { return group; }
+    if (country && country.continentId === "africa") { return "african"; }
+    if (country && country.continentId === "asia") { return "central_asia"; }
+    if (country && country.continentId === "south_america") { return "latin"; }
+    if (country && country.continentId === "north_america") { return "anglo"; }
+    if (country && country.continentId === "europe") { return "slavic"; }
+    return "default";
+  }
+
+  function appearancePresetForCountry(countryId) {
+    var country = U.findCountry(countryId);
+    var appearance = Data.appearance || {};
+    var presets = appearance.regionPresets || {};
+    var groupId = appearanceGroupForCountry(country);
+    var preset = presets[groupId] || presets.default || {};
+    return {
+      id: groupId,
+      skin: preset.skin || ["skin_light"],
+      eyes: preset.eyes || ["eyes_neutral"],
+      nose: preset.nose || ["nose_straight"],
+      face: preset.face || ["face_oval"],
+      hair: preset.hair || ["hair_dark_short"],
+      mouth: preset.mouth || ["mouth_neutral"],
+      body: preset.body || ["body_athletic"],
+      facialHairChance: Number(preset.facialHairChance) || 0,
+      facialHair: preset.facialHair || ["facial_stubble"]
+    };
+  }
+
+  function createAppearance(countryId, seed, options) {
+    var opts = options || {};
+    var appearanceSeed = Math.abs(Number(opts.appearanceSeed) || stableAppearanceHash([countryId, seed, opts.trackId || "", opts.weightClassId || ""].join("|")));
+    var preset = appearancePresetForCountry(countryId);
+    var hasFacialHair = appearanceChance(appearanceSeed, "facialHair", preset.facialHairChance);
+    return {
+      schemaVersion: APPEARANCE_SCHEMA_VERSION,
+      seed: appearanceSeed,
+      countryId: countryId,
+      presetId: preset.id,
+      bodyTypeId: appearancePick(preset.body, appearanceSeed, "body"),
+      skinToneId: appearancePick(preset.skin, appearanceSeed, "skin"),
+      faceShapeId: appearancePick(preset.face, appearanceSeed, "face"),
+      eyeTypeId: appearancePick(preset.eyes, appearanceSeed, "eyes"),
+      noseTypeId: appearancePick(preset.nose, appearanceSeed, "nose"),
+      mouthTypeId: appearancePick(preset.mouth, appearanceSeed, "mouth"),
+      hairTypeId: appearancePick(preset.hair, appearanceSeed, "hair"),
+      facialHairId: hasFacialHair ? appearancePick(preset.facialHair, appearanceSeed, "facialHairType") : "facial_none"
+    };
+  }
+
+  function normalizeFighterAppearance(fighter, index) {
+    var countryId;
+    var seed;
+    if (!fighter) { return null; }
+    countryId = fighter.originCountryId || fighter.homeCountryId || fighter.nameCountryId || fighter.countryId || "usa";
+    seed = Math.abs(Number(fighter.appearanceSeed) || Number(fighter.seed) || (index || 1));
+    if (!fighter.appearance || fighter.appearance.schemaVersion !== APPEARANCE_SCHEMA_VERSION) {
+      fighter.appearanceSeed = seed;
+      fighter.appearance = createAppearance(countryId, seed, {
+        appearanceSeed: seed,
+        trackId: fighter.trackId || "",
+        weightClassId: fighter.weightClassId || ""
+      });
+      return fighter.appearance;
+    }
+    fighter.appearanceSeed = Math.abs(Number(fighter.appearance.seed) || seed);
+    fighter.appearance.countryId = fighter.appearance.countryId || countryId;
+    fighter.appearance.presetId = fighter.appearance.presetId || appearancePresetForCountry(countryId).id;
+    fighter.appearance.bodyTypeId = fighter.appearance.bodyTypeId || "body_athletic";
+    fighter.appearance.skinToneId = fighter.appearance.skinToneId || "skin_light";
+    fighter.appearance.faceShapeId = fighter.appearance.faceShapeId || "face_oval";
+    fighter.appearance.eyeTypeId = fighter.appearance.eyeTypeId || "eyes_neutral";
+    fighter.appearance.noseTypeId = fighter.appearance.noseTypeId || "nose_straight";
+    fighter.appearance.mouthTypeId = fighter.appearance.mouthTypeId || "mouth_neutral";
+    fighter.appearance.hairTypeId = fighter.appearance.hairTypeId || "hair_dark_short";
+    fighter.appearance.facialHairId = fighter.appearance.facialHairId || "facial_none";
+    return fighter.appearance;
+  }
+
   function createRecord(seed) {
     return recordByTrackAndRating("amateur", Math.abs(seed) % 100, "", 18);
   }
@@ -2395,6 +2504,13 @@
     var stanceId = opts.stanceId || "";
     var age = typeof opts.age === "number" ? opts.age : U.clamp(18 + (Math.abs(seed) % 18), 18, 42);
     var stats = opts.stats || U.createStats(trackId, U.clamp(baseValue, 1, 200));
+    var appearanceCountryId = opts.originCountryId || opts.homeCountryId || opts.nameCountryId || countryId;
+    var appearanceSeed = Math.abs(Number(opts.appearanceSeed) || stableAppearanceHash([appearanceCountryId, seed, trackId, weightClassId].join("|")));
+    var appearance = opts.appearance && opts.appearance.schemaVersion === APPEARANCE_SCHEMA_VERSION ? opts.appearance : createAppearance(appearanceCountryId, seed, {
+      appearanceSeed: appearanceSeed,
+      trackId: trackId,
+      weightClassId: weightClassId
+    });
     Object.keys(stats).forEach(function (key) { stats[key] = U.clamp(Math.round(Number(stats[key]) || 1), 1, 200); });
     var rankId = opts.rankId || "";
     var record = opts.record || recordByTrackAndRating(trackId, U.statAverage(stats), rankId, age);
@@ -2445,11 +2561,14 @@
       expenseMultiplier: Number(opts.expenseMultiplier) || 1,
       hardModeDebt: !!opts.hardModeDebt,
       archetypeId: opts.archetypeId || "",
+      appearanceSeed: appearanceSeed,
+      appearance: appearance,
       lastMoveWeek: 1,
       lastFightWeek: 0,
       seed: seed
     };
 
+    normalizeFighterAppearance(fighter, 0);
     fighter.trackRecords[trackId] = cloneRecord(record);
     updateDerivedFighterFields(fighter);
     return fighter;
@@ -4582,6 +4701,7 @@
       state.roster[i].expenseMultiplier = Number(state.roster[i].expenseMultiplier) || 1;
       state.roster[i].hardModeDebt = !!state.roster[i].hardModeDebt;
       state.roster[i].archetypeId = state.roster[i].archetypeId || "";
+      normalizeFighterAppearance(state.roster[i], i);
       ensureTrackRecords(state.roster[i]);
       clampFighterStats(state.roster[i]);
       updateDerivedFighterFields(state.roster[i]);
@@ -4742,6 +4862,9 @@ restPlayer: restPlayer,
     normalizeFightHistory: normalizeFightHistory,
     rivalrySeriesText: rivalrySeriesText,
     rivalryForFighter: rivalryForFighter,
-    normalizeRivalries: normalizeRivalries
+    normalizeRivalries: normalizeRivalries,
+    appearancePresetForCountry: appearancePresetForCountry,
+    normalizeFighterAppearance: normalizeFighterAppearance,
+    createAppearance: createAppearance
   };
 }());
