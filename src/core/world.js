@@ -8,7 +8,7 @@
   var State = window.FS.State;
 
   function createNews(state, tone, text, meta) {
-    var allowed = ["club", "team", "tournament", "medal", "champion", "migration", "fight", "career"];
+    var allowed = ["club", "team", "tournament", "medal", "champion", "migration", "fight", "career", "world", "story"];
     var payload;
     var i;
     var week = Number(state && state.week) || 1;
