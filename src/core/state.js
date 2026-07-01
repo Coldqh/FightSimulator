@@ -2940,6 +2940,7 @@
     }).slice(0, 30);
 
     p.rivalries = output;
+    if (state.world && state.world.playerRivalries) { delete state.world.playerRivalries; }
     output.forEach(function (rivalry) { syncRivalryPerson(state, rivalry); });
     if (state.people.length > 120) { state.people.length = 120; }
     return p.rivalries;
@@ -3879,14 +3880,13 @@
       options.push({ type: "low_fatigue", label: "Снизь усталость до 40/100", target: 1, unit: "готовность" });
     }
 
-    if (state.world && state.world.playerRivalries) {
-      var hasRival = Object.keys(state.world.playerRivalries).some(function (id) {
-        var rivalry = state.world.playerRivalries[id];
-        return rivalry && rivalry.rematchWeek && rivalry.rematchWeek <= state.week;
-      });
-      if (hasRival) {
-        options.push({ type: "win_rematch", label: "Выиграй реванш", target: 1, unit: "реванш" });
-      }
+    var p = player(state);
+    var rivalries = p && p.rivalries instanceof Array ? p.rivalries : (p && typeof normalizeRivalries === "function" ? normalizeRivalries(state, p) : []);
+    var hasRival = rivalries.some(function (rivalry) {
+      return rivalry && ((Number(rivalry.fights) || 0) >= 2 || (Number(rivalry.losses) || 0) > 0 || (Number(rivalry.rematches) || 0) > 0);
+    });
+    if (hasRival) {
+      options.push({ type: "win_rematch", label: "Выиграй реванш", target: 1, unit: "реванш" });
     }
 
     return options;

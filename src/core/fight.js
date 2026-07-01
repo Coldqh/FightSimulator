@@ -707,11 +707,11 @@
     }
   }
 
-  function updatePlayerCareerStats(state, p, opponent, result, method) {
+  function updatePlayerCareerStats(state, p, opponent, result, method, isRematch) {
     if (State.recordPlayerFightStats) {
       return State.recordPlayerFightStats(state, opponent, result, method, {
         isTournament: false,
-        isRematch: false,
+        isRematch: !!isRematch,
         playerOvr: U.statAverage(p.stats),
         opponentOvr: U.statAverage(opponent.stats)
       });
@@ -719,64 +719,27 @@
     return null;
   }
 
-  function updatePlayerRivalry(state, p, opponent, result, method, scoreLine) {
-    var rivalries;
-    var key;
-    var item;
+  function updatePlayerRivalry(state, p, opponent, result, method, scoreLine, isRematch) {
     var close;
     var playerOvr;
     var opponentOvr;
+    var rivalry;
+    var series;
     var note;
-    var wasRematch;
     if (!state || !p || !opponent || opponent.isPlayer) { return; }
 
-    state.world = state.world && typeof state.world === "object" ? state.world : {};
-    rivalries = state.world.playerRivalries && typeof state.world.playerRivalries === "object" ? state.world.playerRivalries : {};
-    state.world.playerRivalries = rivalries;
-
-    key = opponent.id;
-    item = rivalries[key] || {
-      opponentId: opponent.id,
-      trackId: opponent.trackId,
-      firstWeek: state.week,
-      fights: 0,
-      playerWins: 0,
-      opponentWins: 0,
-      draws: 0,
-      closeFights: 0,
-      rematchWeek: 0
-    };
-
-    wasRematch = item.fights > 0;
     close = isCloseFight(result, method, scoreLine);
     playerOvr = U.statAverage(p.stats);
     opponentOvr = U.statAverage(opponent.stats);
 
-    item.fights += 1;
-    item.lastWeek = state.week;
-    item.lastResult = result;
-    item.lastMethod = method;
-    item.lastScoreLine = scoreLine || "";
-    item.lastPlayerOvr = playerOvr;
-    item.lastOpponentOvr = opponentOvr;
-    item.rematchAnnouncedWeek = 0;
+    if (State.normalizeRivalries) { State.normalizeRivalries(state, p); }
+    rivalry = State.rivalryForFighter ? State.rivalryForFighter(state, opponent.id) : null;
+    series = rivalry && rivalry.series ? rivalry.series : "";
 
-    if (result === "Победа") { item.playerWins += 1; }
-    else if (result === "Поражение") { item.opponentWins += 1; }
-    else { item.draws += 1; }
-
-    if (close) { item.closeFights += 1; }
-
-    if ((close || wasRematch) && p.trackId !== "pro") {
-      item.rematchWeek = state.week + U.randomInt(4, 8);
-    }
-
-    rivalries[key] = item;
-
-    if (close || wasRematch) {
-      note = wasRematch ?
-        ("Реванш · счёт " + item.playerWins + "-" + item.opponentWins + "-" + item.draws) :
-        "Близкий бой · реванш возможен";
+    if (close || isRematch || rivalry) {
+      note = isRematch ?
+        ("Реванш · счёт " + (series || "—")) :
+        (close ? "Близкий бой · реванш возможен" : "Соперник · серия " + (series || "—"));
       if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
         window.FS.Clubs.rememberPlayerRival(state, opponent, note);
       }
@@ -786,14 +749,9 @@
       safeCreateFightNews(state, "Близкий бой: " + p.name + " — " + opponent.name + " · " + result + " (" + (scoreLine || method) + ").", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
     }
 
-    if (wasRematch) {
-      if (p.careerStats) {
-        if (result === "Победа") { p.careerStats.rematchWins = (Number(p.careerStats.rematchWins) || 0) + 1; }
-        else if (result === "Поражение") { p.careerStats.rematchLosses = (Number(p.careerStats.rematchLosses) || 0) + 1; }
-        else { p.careerStats.rematchDraws = (Number(p.careerStats.rematchDraws) || 0) + 1; }
-      }
+    if (isRematch) {
       if (State.checkCareerMilestones) { State.checkCareerMilestones(state); }
-      safeCreateFightNews(state, "Реванш: " + p.name + " снова встретился с " + opponent.name + ". Счёт серии " + item.playerWins + "-" + item.opponentWins + "-" + item.draws + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
+      safeCreateFightNews(state, "Реванш: " + p.name + " снова встретился с " + opponent.name + ". Счёт серии " + (series || "—") + ".", { fighterId: p.id, opponentId: opponent.id, firstId: p.id, secondId: opponent.id });
     }
 
     if (result === "Победа" && opponentOvr >= playerOvr + 6) {
@@ -805,9 +763,9 @@
     }
   }
 
-  function recordPlayerEngagement(state, p, opponent, result, method, scoreLine) {
-    updatePlayerCareerStats(state, p, opponent, result, method);
-    updatePlayerRivalry(state, p, opponent, result, method, scoreLine);
+  function recordPlayerEngagement(state, p, opponent, result, method, scoreLine, isRematch) {
+    updatePlayerCareerStats(state, p, opponent, result, method, isRematch);
+    updatePlayerRivalry(state, p, opponent, result, method, scoreLine, isRematch);
   }
 
   function applyFightResult(state, p, opponent, result, method, scoreLine) {
@@ -847,7 +805,7 @@
     if (p.recentOpponentIds.length > 8) { p.recentOpponentIds.length = 8; }
     if (opponent.recentOpponentIds.length > 8) { opponent.recentOpponentIds.length = 8; }
 
-    recordPlayerEngagement(state, p, opponent, result, method, scoreLine || "");
+    recordPlayerEngagement(state, p, opponent, result, method, scoreLine || "", wasRematch);
     if (State.recordFighterFormEvent) {
       State.recordFighterFormEvent(p, result, state.week);
       State.recordFighterFormEvent(opponent, result === "Победа" ? "Поражение" : (result === "Поражение" ? "Победа" : "Ничья"), state.week);

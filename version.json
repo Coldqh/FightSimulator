@@ -1,7 +1,7 @@
 {
-  "version": "2.8.14.4",
-  "mode": "relationship-event-delivery",
-  "cacheVersion": "fight-simulator-relationship-event-delivery-2.8.14.4",
+  "version": "2.8.15",
+  "mode": "render-purity-rivalry-source",
+  "cacheVersion": "fight-simulator-render-purity-rivalry-source-2.8.15",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

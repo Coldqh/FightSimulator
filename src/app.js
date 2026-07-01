@@ -106,7 +106,29 @@
 
   function persistNow() {
     if (state && State.player(state)) {
+      preparePlayableState("persist");
       Storage.save(state);
+    }
+  }
+
+  function preparePlayableState(reason) {
+    var gameplayFixKey;
+    var modalType;
+    if (!state || !State.player(state)) { return; }
+
+    modalType = state.modal && state.modal.type;
+    if (modalType === "activeFight" || modalType === "fightCount") { return; }
+
+    gameplayFixKey = [Data.appVersion, state.roster ? state.roster.length : 0].join("|");
+    if (state._lastGameplayFixKey !== gameplayFixKey) {
+      applyIntegratedGameplayFixes(state);
+      state._lastGameplayFixKey = gameplayFixKey;
+    }
+
+    State.repairState(state);
+
+    if ((!state.offers || !(state.offers instanceof Array) || !state.offers.length)) {
+      World.refreshOffers(state);
     }
   }
 
@@ -128,6 +150,7 @@
       var shouldPersist = persistQueued;
       renderQueued = false;
       persistQueued = false;
+      if (shouldPersist) { preparePlayableState("saveAndRender"); }
       render();
       if (shouldPersist) {
         window.setTimeout(function () {
@@ -262,7 +285,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.14.4&target=2.8.14.4&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.15&target=2.8.15&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -422,8 +445,6 @@
   }
 
   function render() {
-    var gameplayFixKey;
-    var modalType;
     try {
       if (!bootReady && !state) {
         app.innerHTML = "";
@@ -433,20 +454,6 @@
       if (!state || !State.player(state)) {
         app.innerHTML = Render.start(Storage.savedSummary ? Storage.savedSummary() : null);
         return;
-      }
-
-      modalType = state.modal && state.modal.type;
-      if (modalType !== "activeFight" && modalType !== "fightCount") {
-        gameplayFixKey = [Data.appVersion, state.roster ? state.roster.length : 0].join("|");
-        if (state._lastGameplayFixKey !== gameplayFixKey) {
-          applyIntegratedGameplayFixes(state);
-          state._lastGameplayFixKey = gameplayFixKey;
-        }
-        State.repairState(state);
-      }
-
-      if ((!state.offers || !(state.offers instanceof Array) || !state.offers.length) && modalType !== "activeFight" && modalType !== "fightCount") {
-        World.refreshOffers(state);
       }
 
       app.innerHTML = Render.dashboard(state);

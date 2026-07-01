@@ -976,7 +976,6 @@
   function filteredFightHistory(state, fighter) {
     var filter = state.historyFilter || "all";
     var history;
-    if (State.normalizeFightHistory) { State.normalizeFightHistory(state, fighter); }
     history = fighter && fighter.fightHistory instanceof Array ? fighter.fightHistory : [];
 
     return history.filter(function (entry) {
@@ -1008,7 +1007,6 @@
     var stronger;
     var ko;
     var lastFive;
-    if (State.normalizeFightHistory) { State.normalizeFightHistory(state, fighter); }
     history = fighter && fighter.fightHistory instanceof Array ? fighter.fightHistory : [];
     total = history.length;
     tournament = history.filter(function (entry) { return entry && entry.isTournament; }).length;
@@ -1090,7 +1088,7 @@
   }
 
   function renderRivalriesCard(state, fighter) {
-    var rivalries = State.normalizeRivalries ? State.normalizeRivalries(state, fighter) : ((fighter && fighter.rivalries) || []);
+    var rivalries = fighter && fighter.rivalries instanceof Array ? fighter.rivalries : [];
     if (!rivalries.length) {
       return '<div class="content-card rivalry-card" style="grid-column:1/-1"><h3>Соперничества</h3><div class="muted small">Пока нет устойчивых соперничеств. Они появятся после повторных или важных боёв.</div></div>';
     }
@@ -1115,8 +1113,12 @@
 
   function renderFighterRivalryCard(state, fighter) {
     var rivalry;
-    if (!fighter || fighter.isPlayer || !State.rivalryForFighter) { return ""; }
-    rivalry = State.rivalryForFighter(state, fighter.id);
+    var p;
+    var list;
+    if (!fighter || fighter.isPlayer) { return ""; }
+    p = State.player(state);
+    list = p && p.rivalries instanceof Array ? p.rivalries : [];
+    rivalry = list.find(function (item) { return item && item.opponentId === fighter.id; }) || null;
     if (!rivalry) { return ""; }
 
     return '<div class="content-card rivalry-card" style="margin-top:12px"><h3>Серия с игроком</h3>' +
