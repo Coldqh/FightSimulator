@@ -1,0 +1,19 @@
+# Fight Simulator local patch artifacts
+.patch_backups/
+patch-files/
+apply-*.bat
+apply-*.cjs
+apply-*.ps1
+*.bak
+*.bak-*
+*.broken-*
+*.tmp
+fix-version.cjs
+# Patch safety local files
+.patch_backups/
+patch-files/
+apply-*.bat
+apply-*.cjs
+*.bak-*
+*.broken-*
+fix-version.cjs

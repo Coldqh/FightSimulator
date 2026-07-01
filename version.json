@@ -1,7 +1,7 @@
 {
-  "version": "2.8.19",
-  "mode": "training-sparring-mvp",
-  "cacheVersion": "fight-simulator-training-sparring-mvp-2.8.19",
+  "version": "2.8.20",
+  "mode": "patch-infrastructure",
+  "cacheVersion": "fight-simulator-patch-infrastructure-2.8.20",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
