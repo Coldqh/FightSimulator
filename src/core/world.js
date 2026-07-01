@@ -1301,10 +1301,6 @@ function simulateInternationalGymMoves(state) {
       pushNews(state, "club", "Изменения в клубе: состав и тренерский штаб обновлены.", { clubId: p.gymId });
     }
 
-    if (State.maybeCreateRelationshipEvent && (!state.modal || state.modal.type === "relationshipEvent")) {
-      State.maybeCreateRelationshipEvent(state);
-    }
-
     U.pushLimited(state.world.weekReports, {
       id: U.uid("week"),
       week: state.week,
@@ -1315,6 +1311,7 @@ function simulateInternationalGymMoves(state) {
     simulateTournamentNews(state);
     handleScheduledTournamentStart(state);
     if (!state.modal) { scheduleTournamentNotice(state); }
+    if (State.maybeCreateRelationshipEvent) { State.maybeCreateRelationshipEvent(state); }
     state.world.lastWeekPerfMs = 0;
   }
 

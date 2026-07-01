@@ -262,7 +262,7 @@
     persistNow();
 
     function go() {
-      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.14.3&target=2.8.14.3&t=" + Date.now());
+      window.location.replace("./reset-cache.html?fromUpdateButton=2.8.14.4&target=2.8.14.4&t=" + Date.now());
     }
 
     function clearFightCaches() {
@@ -650,7 +650,11 @@
     } else if (button.dataset.action === "import-save") {
       importSave();
     } else if (button.dataset.action === "close-modal") {
+      var closingModalType = state.modal && state.modal.type;
       state.modal = null;
+      if (closingModalType !== "relationshipEvent" && state.relationshipEvent) {
+        state.modal = { type: "relationshipEvent", eventId: state.relationshipEvent.id || "" };
+      }
       saveAndRender();
     } else if (button.dataset.peopleFilter) {
       var validPeopleFilters = { all: true, coaches: true, rivals: true, clubmates: true, team: true };
