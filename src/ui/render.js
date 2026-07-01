@@ -809,6 +809,15 @@
     '</div>';
   }
 
+  function renderFightInsightCard(insight) {
+    if (!insight || !insight.title) { return ""; }
+    return '<div class="content-card fight-insight-card" style="margin-top:12px"><h3>Почему такой результат</h3>' +
+      '<div class="name-line">' + U.escapeHtml(insight.title) + '</div>' +
+      '<div class="stack compact-stack" style="margin-top:10px">' +
+        (insight.lines || []).map(function (line) { return '<div class="muted small">' + U.escapeHtml(line) + '</div>'; }).join('') +
+      '</div></div>';
+  }
+
   function renderCareerStatsCard(state) {
     var p = State.player(state);
     var stats = p && p.careerStats ? p.careerStats : {};
@@ -2247,7 +2256,7 @@
     }
 
     if (modal.type === "tournamentResult") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Результат турнира</h2><div class=\"muted small\">" + U.escapeHtml(modal.label) + "</div></div><div class=\"modal-body\"><div class=\"big-result " + Fight.resultClass(modal.result) + "\">" + U.escapeHtml(modal.result) + "</div><div class=\"muted\">Соперник: " + U.escapeHtml(modal.opponentName) + " · OVR " + modal.opponentRating + "</div><div class=\"pills\"><span class=\"pill\">Метод: " + U.escapeHtml(modal.method) + "</span><span class=\"pill\">Счёт: " + U.escapeHtml(modal.scoreLine) + "</span><span class=\"pill blue\">Шанс до боя " + modal.winChance + "%</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div><div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Статистика</div><div class=\"muted small\">" + U.escapeHtml(modal.statsLine || "") + "</div>" + (modal.knockdown ? "<div class=\"pill red\" style=\"margin-top:10px\">Нокдаун: раунд " + modal.knockdown.round + "</div>" : "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-tournament-continue=\"1\">" + (modal.continueMode === "next" || modal.continueMode === "third" ? "Продолжить турнир" : "Завершить турнир") + "</button></div></div></div>";
+      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Результат турнира</h2><div class=\"muted small\">" + U.escapeHtml(modal.label) + "</div></div><div class=\"modal-body\"><div class=\"big-result " + Fight.resultClass(modal.result) + "\">" + U.escapeHtml(modal.result) + "</div><div class=\"muted\">Соперник: " + U.escapeHtml(modal.opponentName) + " · OVR " + modal.opponentRating + "</div><div class=\"pills\"><span class=\"pill\">Метод: " + U.escapeHtml(modal.method) + "</span><span class=\"pill\">Счёт: " + U.escapeHtml(modal.scoreLine) + "</span><span class=\"pill blue\">Шанс до боя " + modal.winChance + "%</span><button class=\"small-btn\" data-tournament-participants=\"1\">Участники</button></div>" + renderFightInsightCard(modal.insight) + "<div class=\"content-card\" style=\"margin-top:12px\"><div class=\"label\">Статистика</div><div class=\"muted small\">" + U.escapeHtml(modal.statsLine || "") + "</div>" + (modal.knockdown ? "<div class=\"pill red\" style=\"margin-top:10px\">Нокдаун: раунд " + modal.knockdown.round + "</div>" : "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-tournament-continue=\"1\">" + (modal.continueMode === "next" || modal.continueMode === "third" ? "Продолжить турнир" : "Завершить турнир") + "</button></div></div></div>";
     }
 
     if (modal.type === "tournamentFinal") {
@@ -2265,6 +2274,7 @@
     if (modal.type === "fightResult") {
       return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Итог боя</h2><div class=\"muted small\">Неделя " + modal.week + " · " + U.escapeHtml(modal.opponentName) + "</div></div><div class=\"modal-body\">" +
         "<div class=\"big-result " + Fight.resultClass(modal.result) + "\">" + U.escapeHtml(modal.result) + "</div>" +
+        renderFightInsightCard(modal.insight) +
         "<div class=\"grid two\"><div class=\"content-card\"><h3>Кратко</h3><div class=\"split-row\"><span>Метод</span><strong>" + U.escapeHtml(modal.method) + "</strong></div><div class=\"split-row\"><span>Шанс до боя</span><strong>" + modal.winChance + "%</strong></div><div class=\"split-row\"><span>Гонорар</span><strong>$" + modal.purse + "</strong></div></div>" +
         "<div class=\"content-card\"><h3>Статистика</h3><div class=\"muted small\">" + U.escapeHtml(modal.statsLine || "Нет статистики.") + "</div></div></div>" +
         (modal.statsLine === "Бой решён автоматически." ? "" : "<div class=\"content-card\" style=\"margin-top:12px\"><h3>Лог ударов</h3>" + (modal.roundLog || []).slice(-80).map(function (line) { return "<div class=\"muted small\">" + U.escapeHtml(line) + "</div>"; }).join("") + "</div>") +

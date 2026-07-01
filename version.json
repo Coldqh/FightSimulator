@@ -1,7 +1,7 @@
 {
-  "version": "2.8.17",
-  "mode": "core-stability",
-  "cacheVersion": "fight-simulator-core-stability-2.8.17",
+  "version": "2.8.18",
+  "mode": "fight-explainability",
+  "cacheVersion": "fight-simulator-fight-explainability-2.8.18",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

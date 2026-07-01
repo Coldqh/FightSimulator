@@ -367,7 +367,8 @@
     return winner.id;
   }
 
-  function applyPlayerTournamentResult(state, player, opponent, result, method) {
+  function applyPlayerTournamentResult(state, player, opponent, result, method, context) {
+    var payload = context || {};
     if (result === "Победа") {
       player.record.wins += 1;
       opponent.record.losses += 1;
@@ -392,8 +393,14 @@
       State.recordPlayerFightStats(state, opponent, result, method, {
         isTournament: true,
         isRematch: false,
-        playerOvr: U.statAverage(player.stats),
-        opponentOvr: U.statAverage(opponent.stats)
+        source: "tournament",
+        playerOvr: Number(payload.playerOvr) || U.statAverage(player.stats),
+        opponentOvr: Number(payload.opponentOvr) || U.statAverage(opponent.stats),
+        tournamentName: payload.tournamentName || payload.competitionLabel || "",
+        competitionId: payload.competitionId || "",
+        roundLabel: payload.roundLabel || "",
+        scoreLine: payload.scoreLine || "",
+        place: payload.place || ""
       });
     }
 
@@ -407,8 +414,8 @@
         result: result,
         method: method,
         opponentId: opponent.id,
-        playerOvr: U.statAverage(player.stats),
-        opponentOvr: U.statAverage(opponent.stats),
+        playerOvr: Number(payload.playerOvr) || U.statAverage(player.stats),
+        opponentOvr: Number(payload.opponentOvr) || U.statAverage(opponent.stats),
         isRematch: false,
         isTournament: true
       });
@@ -744,7 +751,7 @@
       method = "решение судей";
       scoreLine = roundData.playerPoints + ":" + roundData.opponentPoints;
     }
-    applyPlayerTournamentResult(state, p, opponent, result, method);
+    applyPlayerTournamentResult(state, p, opponent, result, method, { tournamentName: comp.label, competitionId: comp.id, roundLabel: session.roundLabel || session.rounds[session.roundIndex], playerOvr: U.statAverage(p.stats), opponentOvr: U.statAverage(opponent.stats) });
     if (window.FS.Clubs && window.FS.Clubs.rememberFightRelationship) { window.FS.Clubs.rememberFightRelationship(state, opponent); }
     if (window.FS.Clubs && window.FS.Clubs.syncCoachRecords) { window.FS.Clubs.syncCoachRecords(state); }
 
@@ -808,6 +815,7 @@
       opponentRating: U.statAverage(opponent.stats),
       playerRating: U.statAverage(p.stats),
       statsLine: "Урон: " + roundData.playerDamage + ":" + roundData.opponentDamage + ". Попадания: " + roundData.playerLanded + ":" + roundData.opponentLanded + ". HP: " + roundData.playerHpLeft + "/" + roundData.playerMaxHp + " — " + roundData.opponentHpLeft + "/" + roundData.opponentMaxHp + ".",
+      insight: window.FS.Fight && window.FS.Fight.buildFightInsight ? window.FS.Fight.buildFightInsight({ result: result, method: method, scoreLine: scoreLine, knockdown: roundData.knockdown, playerDamage: roundData.playerDamage, opponentDamage: roundData.opponentDamage, playerLanded: roundData.playerLanded, opponentLanded: roundData.opponentLanded, playerThrown: 0, opponentThrown: 0, winChance: chance }) : null,
       roundLog: roundData.log,
       knockdown: roundData.knockdown,
       continueMode: continueMode,
@@ -835,7 +843,7 @@
       return { type: "tournamentFinal", label: comp.label, blocked: true, reason: "Соперник исчез из турнира.", fights: session.fights || [] };
     }
 
-    applyPlayerTournamentResult(state, p, opponent, result, method);
+    applyPlayerTournamentResult(state, p, opponent, result, method, { tournamentName: comp.label, competitionId: comp.id, roundLabel: session.roundLabel || session.rounds[session.roundIndex], playerOvr: U.statAverage(p.stats), opponentOvr: U.statAverage(opponent.stats) });
 
     session.fights.push({
       round: session.roundLabel,
@@ -895,6 +903,7 @@
       opponentRating: U.statAverage(opponent.stats),
       playerRating: U.statAverage(p.stats),
       statsLine: payload.statsLine,
+      insight: payload.insight || null,
       roundLog: payload.roundLog,
       knockdown: payload.knockdown,
       continueMode: continueMode,
