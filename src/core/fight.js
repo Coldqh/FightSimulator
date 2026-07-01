@@ -744,7 +744,7 @@
     } else if (staminaKnown && Math.abs(staminaDiff) >= 18) {
       title = staminaDiff > 0 ? "Главный фактор: ты лучше сохранил стамину." : "Главный фактор: ты сильнее просел по стамине.";
     } else if (info.method === "решение судей") {
-      title = "Бой ушёл на очки: решали раунды и общий объём работы.";
+      title = "";
     } else {
       title = "Итог боя сложился из урона, точности и состояния к концу боя.";
     }
@@ -783,6 +783,11 @@
     var rivalry;
     var series;
     var note;
+    var fightCountForRivalry;
+    var lastRivalryFightCount;
+    var recentVsOpponent;
+    var rivalryCooldownReady;
+    var shouldRememberRival;
     if (!state || !p || !opponent || opponent.isPlayer) { return; }
 
     close = isCloseFight(result, method, scoreLine);
@@ -793,12 +798,19 @@
     rivalry = State.rivalryForFighter ? State.rivalryForFighter(state, opponent.id) : null;
     series = rivalry && rivalry.series ? rivalry.series : "";
 
-    if (close || isRematch || rivalry) {
-      note = isRematch ?
+    fightCountForRivalry = p.fightHistory instanceof Array ? p.fightHistory.length : ((Number(p.record && p.record.wins) || 0) + (Number(p.record && p.record.losses) || 0) + (Number(p.record && p.record.draws) || 0));
+    lastRivalryFightCount = Number(p.lastRivalryFightCount) || 0;
+    recentVsOpponent = p.recentOpponentIds instanceof Array ? p.recentOpponentIds.filter(function (id) { return id === opponent.id; }).length : 0;
+    rivalryCooldownReady = !lastRivalryFightCount || (fightCountForRivalry - lastRivalryFightCount >= 15);
+    shouldRememberRival = !!rivalry || !!isRematch || recentVsOpponent >= 2 || (close && rivalryCooldownReady);
+
+    if (shouldRememberRival) {
+      note = isRematch || recentVsOpponent >= 2 ?
         ("Реванш · счёт " + (series || "—")) :
-        (close ? "Близкий бой · реванш возможен" : "Соперник · серия " + (series || "—"));
+        (rivalry ? "Соперник · серия " + (series || "—") : "Близкий бой · реванш возможен");
       if (window.FS.Clubs && window.FS.Clubs.rememberPlayerRival) {
         window.FS.Clubs.rememberPlayerRival(state, opponent, note);
+        if (!rivalry && !isRematch && recentVsOpponent < 2) { p.lastRivalryFightCount = fightCountForRivalry; }
       }
     }
 

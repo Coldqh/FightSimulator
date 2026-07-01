@@ -1737,17 +1737,23 @@
       var series = seriesText(person);
       var club = clubText(person);
       var last = person.lastInteraction ? 'последнее: ' + person.lastInteraction : '';
-      var bits = [
-        country,
+      var isCoach = person.personType === "coach" || person.role === "coach" || person.role === "playerCoach" || person.role === "teamCoach";
+      var textBits;
+      var lineBits = [];
+
+      if (person.role === "playerCoach" || role === "Личный тренер") { role = "Тренер"; }
+      textBits = [
         role,
         series,
-        club ? 'клуб ' + club : '',
+        (!isCoach && club) ? 'клуб ' + club : '',
         last
       ].filter(Boolean);
+      if (country) { lineBits.push(country); }
+      textBits.forEach(function (bit) { lineBits.push(U.escapeHtml(bit)); });
 
       return '<div class="people-compact-row" style="width:100%;box-sizing:border-box;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap">' +
         '<button class="small-btn" data-person="' + U.escapeHtml(person.id) + '">' + U.escapeHtml(person.name || "Без имени") + '</button>' +
-        '<span class="muted small" style="min-width:0;overflow:hidden;text-overflow:ellipsis">' + bits.map(U.escapeHtml).join(' · ') + '</span>' +
+        '<span class="muted small" style="min-width:0;overflow:hidden;text-overflow:ellipsis">' + lineBits.join(' · ') + '</span>' +
         '<span class="pill ' + relationClass + '">отношение ' + (relation > 0 ? '+' : '') + relation + '</span>' +
       '</div>';
     }

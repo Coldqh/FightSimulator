@@ -290,9 +290,15 @@
     existing = list.find(function (item) { return item && item.id === person.id; });
     if (existing) {
       Object.keys(person).forEach(function (key) { existing[key] = person[key]; });
+      if (window.FS.State && window.FS.State.normalizeRelationships) { window.FS.State.normalizeRelationships(state); }
     } else {
+      person.relationship = Number(person.relationship);
+      if (!isFinite(person.relationship)) { person.relationship = 0; }
+      person.lastInteractionWeek = Number(person.lastInteractionWeek) || Number(state.week) || 1;
+      person.lastInteraction = person.lastInteraction || "";
       list.unshift(person);
       if (list.length > 120) { list.length = 120; }
+      if (window.FS.State && window.FS.State.normalizeRelationships) { window.FS.State.normalizeRelationships(state); }
     }
   }
 
@@ -672,7 +678,7 @@
     if (!p) { return; }
     selected = findFighterCoach(state, p);
     if (selected) {
-      rememberCoachPerson(state, selected, "playerCoach", "Твой тренер · OVR " + coachOvr(selected));
+      rememberCoachPerson(state, selected, "playerCoach", "Тренер · OVR " + coachOvr(selected));
     }
   }
 
@@ -710,7 +716,7 @@
     }
     p.coachId = coach.id;
     p.careerLog.unshift({ week: state.week, text: "Выбран тренер: " + coach.name + "." });
-    rememberCoachPerson(state, coach, "playerCoach", "Твой тренер · " + club.name);
+    rememberCoachPerson(state, coach, "playerCoach", "Тренер");
     syncCoachRecords(state);
     state.feed = "Тренер выбран: " + coach.name + ".";
     return true;
@@ -739,7 +745,7 @@
 
   function rememberFightRelationship(state, opponent) {
     if (!opponent || opponent.isPlayer) { return false; }
-    if (U.randomInt(1, 100) > 12) { return false; }
+    if (U.randomInt(1, 100) > 5) { return false; }
     rememberFighterPerson(state, opponent, "formerOpponent", "Бывший соперник · " + U.findTrack(opponent.trackId).label);
     return true;
   }

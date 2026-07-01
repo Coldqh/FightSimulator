@@ -1,7 +1,7 @@
 {
-  "version": "2.8.18",
-  "mode": "fight-explainability",
-  "cacheVersion": "fight-simulator-fight-explainability-2.8.18",
+  "version": "2.8.18b",
+  "mode": "ui-rivalry-tuning",
+  "cacheVersion": "fight-simulator-ui-rivalry-tuning-2.8.18b",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
