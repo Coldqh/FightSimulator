@@ -1,7 +1,7 @@
 /* Fight World service worker - Core Stability 2.8.17 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-render-modals-split-2.8.23";
+const CACHE_VERSION = "fight-simulator-architecture-render-tabs-fight-outcomes-2.8.25";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -28,6 +28,8 @@ const PRECACHE_URLS = [
   "./src/core/world.js",
   "./src/core/fight.js",
   "./src/ui/render.js",
+  "./src/core/fight/outcomes.js",
+  "./src/ui/render/tabs.js",
   "./src/app.js"
 ];
 

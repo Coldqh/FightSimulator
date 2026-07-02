@@ -1,7 +1,7 @@
 {
-  "version": "2.8.23",
-  "mode": "architecture-render-modals-split",
-  "cacheVersion": "fight-simulator-render-modals-split-2.8.23",
+  "version": "2.8.25",
+  "mode": "architecture-render-tabs-fight-outcomes",
+  "cacheVersion": "fight-simulator-architecture-render-tabs-fight-outcomes-2.8.25",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
