@@ -2097,17 +2097,8 @@
 
     if (modal.type === "relationshipEvent") { return renderRelationshipEventModal(state); }
 
-    if (modal.type === "gameOver") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Игра окончена") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "Карьера завершена.") + "</div><div class=\"pill red\">Баланс $" + (modal.money || 0) + "</div></div><div class=\"modal-actions\"><button class=\"danger\" data-action=\"reset-career\">Начать заново</button></div></div></div>";
-    }
-
-    if (modal.type === "debtNotice") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>" + U.escapeHtml(modal.title || "Деньги") + "</h2></div><div class=\"modal-body\"><div class=\"content-card\">" + U.escapeHtml(modal.text || "") + "</div><div class=\"pills\"><span class=\"pill gold\">Баланс $" + modal.money + "</span>" + (modal.weeksLeft ? "<span class=\"pill red\">Осталось " + modal.weeksLeft + " нед.</span>" : "") + "</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"close-modal\">Понял</button></div></div></div>";
-    }
-
-    if (modal.type === "fatigueLock") {
-      return "<div class=\"modal-backdrop\"><div class=\"modal\"><div class=\"modal-head\"><h2>Усталость выше 75/100</h2></div><div class=\"modal-body\"><div class=\"content-card\">Боец перегружен. Сейчас нельзя тренироваться, драться и идти в турниры. Остальные разделы работают.</div></div><div class=\"modal-actions\"><button class=\"primary\" data-action=\"rest-week\">Отдых</button></div></div></div>";
-    }
+    var basicModalHtml = window.FS.RenderModals && window.FS.RenderModals.renderBasic ? window.FS.RenderModals.renderBasic(state) : null;
+    if (basicModalHtml) { return basicModalHtml; }
 
     if (modal.type === "activeFight") {
       return "<div class=\"modal-backdrop fight-fullscreen-backdrop\"><div class=\"modal fight-modal fight-fullscreen-modal\"><div class=\"modal-head\"><h2>Бой на ринге</h2><div class=\"muted small\">Раунд " + modal.round + "/" + modal.roundsTotal + " · ход " + modal.turn + " · выйти нельзя до завершения боя</div></div><div class=\"modal-body\"><div class=\"fight-layout\"><div>" + renderRing(modal) + renderFightControls(modal) + "</div><div class=\"fight-side\"><h3>Ты</h3>" + statBar("HP", modal.player.hp, modal.player.maxHp, "hp") + statBar("Стамина", modal.player.stamina, modal.player.maxStamina, "stamina") + "<h3>" + U.escapeHtml(modal.opponentName) + "</h3>" + statBar("HP", modal.opponent.hp, modal.opponent.maxHp, "hp") + statBar("Стамина", modal.opponent.stamina, modal.opponent.maxStamina, "stamina") + "<div class=\"pills\"><span class=\"pill gold\">$" + modal.purse + "</span><span class=\"pill blue\">Шанс " + modal.winChance + "%</span></div><div class=\"fight-log\">" + modal.log.map(function (line) { return "<div>" + U.escapeHtml(line) + "</div>"; }).join("") + "</div></div></div></div></div></div>";

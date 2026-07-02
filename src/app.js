@@ -517,28 +517,11 @@
   });
 
   document.addEventListener("change", function (event) {
-    var target = event.target;
-
-    if (!state || !target || !target.dataset) {
-      return;
-    }
-
-    if (target.dataset.action === "set-country") {
-      State.setPlayerCountry(state, target.value);
-      if (window.FS.Clubs) {
-        window.FS.Clubs.ensureClubs(state);
-      }
-      World.refreshOffers(state);
-      saveAndRender();
-    } else if (target.dataset.action === "set-track") {
-      if (State.setPlayerTrack(state, target.value)) {
-        World.refreshOffers(state);
-      }
-      saveAndRender();
-    } else if (target.dataset.action === "set-weight-class") {
-      State.setPlayerWeightClass(state, target.value);
-      World.refreshOffers(state);
-      saveAndRender();
+    if (window.FS.ChangeRouter && window.FS.ChangeRouter.handleChange) {
+      window.FS.ChangeRouter.handleChange(event, {
+        getState: function () { return state; },
+        saveAndRender: saveAndRender
+      });
     }
   });
 

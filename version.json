@@ -1,7 +1,7 @@
 {
-  "version": "2.8.21",
-  "mode": "architecture-action-router",
-  "cacheVersion": "fight-simulator-action-router-2.8.21",
+  "version": "2.8.23",
+  "mode": "architecture-render-modals-split",
+  "cacheVersion": "fight-simulator-render-modals-split-2.8.23",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
