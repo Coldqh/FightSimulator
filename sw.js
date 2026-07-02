@@ -1,7 +1,7 @@
 /* Fight World service worker - Core Stability 2.8.17 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-fighter-styles-camp-ui-2.8.27.1";
+const CACHE_VERSION = "fight-simulator-final-gameplay-pack-3.0.0";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -37,6 +37,11 @@ const PRECACHE_URLS = [
   "./src/ui/render/fighter-styles.js",
   "./src/ui/render/fight-camp.js",
   "./src/app/actions/fight-camp-actions.js",
+  "./src/core/final/objectives.js",
+  "./src/core/final/injuries.js",
+  "./src/core/final/final-effects.js",
+  "./src/ui/render/final-pack.js",
+  "./src/app/actions/final-pack-actions.js",
   "./src/app.js"
 ];
 

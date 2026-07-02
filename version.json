@@ -1,7 +1,8 @@
 {
-  "version": "2.8.27.1",
+  "version": "3.0.0",
   "mode": "fighter-styles-camp-ui",
-  "cacheVersion": "fight-simulator-fighter-styles-camp-ui-2.8.27.1",
+  "cacheVersion": "fight-simulator-final-gameplay-pack-3.0.0",
   "resetPage": "reset-cache.html",
-  "localCleanPort": 5189
+  "localCleanPort": 5189,
+  "appVersion": "3.0.0"
 }
