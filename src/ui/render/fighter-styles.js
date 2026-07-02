@@ -15,7 +15,7 @@
   }
 
   function regEsc(value) {
-    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return String(value || "").replace(/[.*+?^${}()|[]\]/g, "\$&");
   }
 
   function pill(fighter) {
@@ -26,12 +26,13 @@
   function addRowStyles(html, state) {
     var roster = state && state.roster instanceof Array ? state.roster : [];
     var out = String(html || "");
+    if (state && state.selectedTab === "fights") return out;
     roster.forEach(function (fighter) {
       var id;
       var re;
       if (!fighter || !fighter.id) return;
       id = regEsc(esc(fighter.id));
-      re = new RegExp('(<div class="f1-person-row[^>]*data-row-fighter="' + id + '"[\\s\\S]*?<div class="f1-row-name">[^<]*</div>)', 'g');
+      re = new RegExp('(<div class="f1-person-row[^>]*data-row-fighter="' + id + '"[\s\S]*?<div class="f1-row-name">[^<]*</div>)', 'g');
       out = out.replace(re, function (match) {
         if (match.indexOf('fighter-style-pill') !== -1) return match;
         return match + pill(fighter);
