@@ -1,7 +1,7 @@
 {
-  "version": "2.8.25",
-  "mode": "architecture-render-tabs-fight-outcomes",
-  "cacheVersion": "fight-simulator-architecture-render-tabs-fight-outcomes-2.8.25",
+  "version": "2.8.26",
+  "mode": "gameplay-fight-camp-mvp",
+  "cacheVersion": "fight-simulator-fight-camp-mvp-2.8.26",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }

@@ -1,7 +1,7 @@
 /* Fight World service worker - Core Stability 2.8.17 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-architecture-render-tabs-fight-outcomes-2.8.25";
+const CACHE_VERSION = "fight-simulator-fight-camp-mvp-2.8.26";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 
@@ -30,6 +30,10 @@ const PRECACHE_URLS = [
   "./src/ui/render.js",
   "./src/core/fight/outcomes.js",
   "./src/ui/render/tabs.js",
+  "./src/core/fight/camp.js",
+  "./src/core/fight/camp-effects.js",
+  "./src/ui/render/fight-camp.js",
+  "./src/app/actions/fight-camp-actions.js",
   "./src/app.js"
 ];
 
