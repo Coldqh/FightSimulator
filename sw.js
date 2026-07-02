@@ -1,7 +1,7 @@
 /* Fight World service worker - Core Stability 2.8.17 */
 "use strict";
 
-const CACHE_VERSION = "fight-simulator-patch-infrastructure-2.8.20";
+const CACHE_VERSION = "fight-simulator-action-router-2.8.21";
 const STATIC_CACHE = CACHE_VERSION + "-static";
 const RUNTIME_CACHE = CACHE_VERSION + "-runtime";
 

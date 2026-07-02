@@ -1,7 +1,7 @@
 {
-  "version": "2.8.20",
-  "mode": "patch-infrastructure",
-  "cacheVersion": "fight-simulator-patch-infrastructure-2.8.20",
+  "version": "2.8.21",
+  "mode": "architecture-action-router",
+  "cacheVersion": "fight-simulator-action-router-2.8.21",
   "resetPage": "reset-cache.html",
   "localCleanPort": 5189
 }
